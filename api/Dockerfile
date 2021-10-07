@@ -1,0 +1,12 @@
+FROM python:3.8.11-slim
+
+ARG PACKAGE_NAME
+ARG PACKAGE_VERSION
+
+COPY dist/$PACKAGE_NAME-$PACKAGE_VERSION-py3-none-any.whl $PACKAGE_NAME-$PACKAGE_VERSION-py3-none-any.whl
+
+RUN echo $PACKAGE_NAME > PACKAGE_NAME
+RUN echo $PACKAGE_VERSION > PACKAGE_VERSION
+RUN pip install $PACKAGE_NAME-$PACKAGE_VERSION-py3-none-any.whl
+
+CMD ["uvicorn", "--host", "0.0.0.0", "mppapi:app"]
