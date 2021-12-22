@@ -1,0 +1,56 @@
+Artifact Types:
+(Kind of things we should be able to search for)
+
+[urn:umaine:ascc:mpp:artifact]:digital:json
+[urn:umaine:ascc:mpp:artifact]:digital:file
+[urn:umaine:ascc:mpp:artifact]:digital:filebucket
+[urn:umaine:ascc:mpp:artifact]:digital:voxelspace
+[urn:umaine:ascc:mpp:artifact]:digital:pointcloud
+[urn:umaine:ascc:mpp:artifact]:digital:rosbag2
+[urn:umaine:ascc:mpp:artifact]:digital:gcode
+[urn:umaine:ascc:mpp:artifact]:digital:stl
+[urn:umaine:ascc:mpp:artifact]:digital:astm.d638.dimensions
+[urn:umaine:ascc:mpp:artifact]:digital:astm.d638.stressstrain
+[urn:umaine:ascc:mpp:artifact]:digital:astm.d638.strength
+[urn:umaine:ascc:mpp:artifact]:digital:astm.d638.yieldstrength
+[urn:umaine:ascc:mpp:artifact]:digital:astm.d638.elasticmod
+[urn:umaine:ascc:mpp:artifact]:digital:astm.d638.aniso.stressstrain
+[urn:umaine:ascc:mpp:artifact]:digital:astm.d638.aniso.tensilestrength
+[urn:umaine:ascc:mpp:artifact]:digital:astm.d638.aniso.yieldstrength
+[urn:umaine:ascc:mpp:artifact]:digital:astm.d638.aniso.elasticmod
+[urn:umaine:ascc:mpp:artifact]:digital:astm.d695.dimensions
+[urn:umaine:ascc:mpp:artifact]:digital:astm.d695.stressstrain
+[urn:umaine:ascc:mpp:artifact]:digital:astm.d695.strength
+[urn:umaine:ascc:mpp:artifact]:digital:astm.d695.yieldstrength
+[urn:umaine:ascc:mpp:artifact]:digital:astm.d695.elasticmod
+[urn:umaine:ascc:mpp:artifact]:digital:astm.d696.lcte
+[urn:umaine:ascc:mpp:artifact]:digital:astm.d5930.tc
+
+[urn:umaine:ascc:mpp:artifact]:material:part
+[urn:umaine:ascc:mpp:artifact]:material:batch
+
+Operation Types:
+[urn:umaine:ascc:mpp:operation]:upload
+[urn:umaine:ascc:mpp:operation]:track
+
+[urn:umaine:ascc:mpp:operation]:purchase:bulkmaterial
+
+[urn:umaine:ascc:mpp:operation]:build:fdm
+[urn:umaine:ascc:mpp:operation]:build:injectionmold
+
+[urn:umaine:ascc:mpp:operation]:prepare:manualcut
+[urn:umaine:ascc:mpp:operation]:prepare:waterjetcut
+
+[urn:umaine:ascc:mpp:operation]:prepare:envcondition
+
+[urn:umaine:ascc:mpp:operation]:characterize:tensiletest
+[urn:umaine:ascc:mpp:operation]:characterize:compressiontest
+[urn:umaine:ascc:mpp:operation]:characterize:coeffthermalexpansion
+
+Material System Types:
+[urn:umaine:ascc:mpp:material]:vendor:3dsfdm:polycarbonate
+[urn:umaine:ascc:mpp:material]:vendor:3dsfdm:abs
+
+[urn:umaine:ascc:mpp:material]:system(:process:envcondition@24hr_90C(:build:fdm@1_x_2cm_320C(:3dsfdm:polycarbonate)))
+[urn:umaine:ascc:mpp:material]:system(:process:envcondition@24hr_90C(:build:fdm@1_x_2cm_pc_320C_abs_250C(:3dsfdm:polycarbonate,:3dsfdm:abs)))
+

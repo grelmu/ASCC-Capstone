@@ -1,5 +1,0 @@
-.venv
-**/.ipynb_checkpoints
-**/*.pyc
-**/__pycache__
-dist
