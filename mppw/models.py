@@ -1,20 +1,30 @@
 from typing import Optional
-from sqlmodel import SQLModel, Field, Session, create_engine
-from sqlalchemy import select, insert
-import sqlmodel.main
+import pydantic
+import bson
 
-# DRAGONS: We're limited to a single set of models in a single DB here -
-# the metadata tracked by SQLModel can't be divided into separate
-# models
-registry = sqlmodel.main.default_registry
+class PyObjectId(bson.ObjectId):
 
-class ConfigKv(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    key: str
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, v):
+        if not bson.ObjectId.is_valid(v):
+            raise ValueError('Invalid objectid')
+        return bson.ObjectId(v)
+
+    @classmethod
+    def __modify_schema__(cls, field_schema):
+        field_schema.update(type='string')
+  
+
+class ConfigKv(pydantic.BaseModel):
+    key: Optional[PyObjectId] = pydantic.Field(alias='_id')
     value: Optional[str]
 
-class User(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
+class User(pydantic.BaseModel):
+    id: Optional[PyObjectId] = pydantic.Field(alias='_id')
     username: str
     hashed_password: str
     disabled: bool = False
@@ -24,45 +34,63 @@ class User(SQLModel, table=True):
 #     name: str
 #     description: str
 
+import pymongo
+import pymongo.collection
+import pymongo.errors
+import pymongo.database
+import pymongo.client_session
+
 class BaseRepository:
-    def __init__(self, session: Session) -> None:
+
+    def __init__(self, session: pymongo.client_session.ClientSession):
+
         self.session = session
-        self.use_auto_commit = True
-
-    def auto_commit(self):
-        if not self.use_auto_commit: return
-        self.commit()
-
-    def commit(self):
-        self.session.commit()
+        self.client: pymongo.MongoClient = session.client
+        self.db: pymongo.database.Database = self.client.get_default_database()
 
 class ConfigKvRepository(BaseRepository):
 
+    """
+    NOTE that the API here is intended to mimic a dict
+    """
+
     def get(self, key, default_value=None):
-        kv = self.session.execute(select(ConfigKv).where(ConfigKv.key == key)).one_or_none()
-        return kv[0] if kv is not None else default_value
+        doc = self.db["config_kv"].find_one({ "_id": key })
+        if doc is None: return default_value
+        return doc["value"]
 
     def set(self, key, value):
-        kv = ConfigKv(key=key, value=value)
-        self.session.add(kv)
-        self.auto_commit()
-        return kv
+        doc = { "_id": key, "value": value }
+        self.db["config_kv"].replace_one({ "_id": key }, doc, upsert=True)
 
     def setdefault(self, key, default_value):
-        kv = self.session.execute(select(ConfigKv).where(ConfigKv.key == key)).one_or_none()
-        if kv is None:
-            kv = (self.set(key, default_value),)
-        return kv[0]
+        doc = { "_id": key, "value": default_value }
+        updated = self.db["config_kv"].find_one_and_update(
+            { "_id": key },
+            { "$setOnInsert": { "value": default_value } }, 
+            upsert=True, return_document=pymongo.collection.ReturnDocument.AFTER)
+        return updated["value"]
+
+def undef_id(doc):
+    doc = dict(doc)
+    if doc["_id"] is None:
+        del doc["_id"]
+    return doc
 
 class UserRepository(BaseRepository):
 
     def create_user(self, user: User):
-        self.session.add(user)
-        self.auto_commit()
+        result = self.db["user"].insert_one(undef_id(user.dict(by_alias=True)))
+        user.id = result.inserted_id
+        return user
 
     def get_user_by_username(self, username: str):
-        user = self.session.execute(select(User).where(User.username == username)).one_or_none()
-        return user[0] if user else None
+        doc = self.db["user"].find_one({ "username": username })
+        if doc is None: return None
+        return User(**doc)
+
+    def get_all_users(self):
+        return map(lambda doc: User(**doc), list(self.db["user"].find()))
 
     # def create_scope(self, scope: Scope):
     #     self.session.add(scope)
@@ -76,7 +104,7 @@ class UserRepository(BaseRepository):
 
 class RepositoryLayer:
 
-    def __init__(self, session: Session):
+    def __init__(self, session: pymongo.client_session.ClientSession):
         self.session = session
 
     def get(self, clazz):

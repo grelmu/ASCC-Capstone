@@ -22,7 +22,7 @@ def create_app(model_storage_layer: storage.ModelStorageLayer,
     app.state.model_storage_layer = model_storage_layer
 
     def request_repo_layer():
-        with app.state.storage_layer.new_session() as session:
+        with app.state.model_storage_layer.start_session() as session:
             yield models.RepositoryLayer(session)
 
     app.state.request_repo_layer = request_repo_layer

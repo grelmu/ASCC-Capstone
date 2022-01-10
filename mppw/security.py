@@ -5,16 +5,17 @@ from fastapi import APIRouter, Depends, Security, status, HTTPException
 from fastapi.security import SecurityScopes, OAuth2PasswordRequestForm, OAuth2PasswordBearer
 
 import pydantic
+import json
+import bson
+
 import passlib.pwd
 import passlib.context
 import jose.jwt
-from sqlmodel import Session
 
 from datetime import datetime, timedelta
 
 from mppw import logger
 from . import models
-from . import storage
 
 LOCAL_JWT_ALGORITHM = "HS256"
 LOCAL_ACCESS_TOKEN_EXPIRE_MINUTES = 300
@@ -41,7 +42,7 @@ def create_router(app):
 
         logger.info("Ensuring admin user...")
 
-        with Session(app.state.model_storage_layer.engine) as session:
+        with app.state.model_storage_layer.start_session() as session:
             
             user_repo = models.UserRepository(session)
 
@@ -66,12 +67,12 @@ def create_router(app):
 
         logger.info("Ensuring JWT secret key...")
 
-        with Session(app.state.model_storage_layer.engine) as session:
+        with app.state.model_storage_layer.start_session() as session:
             
             kv_repo = models.ConfigKvRepository(session)
 
             jwt_key_key = "%s.local_jwt_secret_key" % __name__
-            app.state.local_jwt_secret_key = kv_repo.setdefault(jwt_key_key, passlib.pwd.genword(length=32, charset="hex")).value
+            app.state.local_jwt_secret_key = kv_repo.setdefault(jwt_key_key, passlib.pwd.genword(length=32, charset="hex"))
 
     #
     # Local authentication 
@@ -122,9 +123,9 @@ def create_router(app):
         user_scopes = []
         try:
             payload = decode_local_access_token(token, app.state.local_jwt_secret_key)
-            safe_user = payload.get("sub")
+            safe_user = payload.get("user")
             user_scopes = payload.get("scopes")
-        except jose.JWTError:
+        except jose.JWTError as ex:
             raise credentials_exception
 
         if safe_user is None:
@@ -140,8 +141,8 @@ def create_router(app):
         return safe_user
 
     def get_current_active_user(current_user: models.User = Security(get_current_user)):
-        if current_user.disabled:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Inactive user")
+        #if current_user.disabled:
+        #    raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Inactive user")
         return current_user
 
     app.state.request_current_active_user = get_current_active_user
@@ -155,8 +156,13 @@ def create_router(app):
         token_type: str
 
     class SafeUser(pydantic.BaseModel):
-        id: typing.Optional[int]
+        id: typing.Optional[models.PyObjectId]
         username: str
+
+        class Config:
+            json_encoders = {
+                bson.ObjectId: str
+            }
         
     @router.post("/" + LOCAL_TOKEN_ENDPOINT, response_model=Token)
     def post_login_for_local_access_token(form_data: OAuth2PasswordRequestForm = Depends(OAuth2PasswordRequestForm),
@@ -179,7 +185,11 @@ def create_router(app):
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        access_token = encode_local_access_token({"sub": SafeUser(user), "scopes": form_data.scopes}, app.state.local_jwt_secret_key)
+        access_token = encode_local_access_token({
+            "sub": user.username,
+            "user": json.loads(SafeUser(**user.dict()).json()),
+            "scopes": form_data.scopes}, app.state.local_jwt_secret_key)
+
         return {"access_token": access_token, "token_type": "bearer"}
 
     @router.get("/users/me/", response_model=SafeUser)
@@ -187,9 +197,12 @@ def create_router(app):
         return current_user
 
     @router.get("/users/", response_model=typing.List[SafeUser])
-    def get_users_me(current_user: models.User = Security(get_current_active_user)):
-        return current_user
-
+    def get_all_users(current_user: models.User = Security(get_current_active_user, scopes=[ADMIN_SCOPE_NAME]),
+                      repo_layer: models.RepositoryLayer = Depends(app.state.request_repo_layer)):
+        
+        user_repo = repo_layer.get(models.UserRepository)
+        return list(map(lambda u: SafeUser(**u.dict()), user_repo.get_all_users()))
+        
     app.include_router(router)
 
 #
