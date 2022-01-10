@@ -22,14 +22,19 @@ First the app must be built and packaged as a container, then it can be run alon
 
 ```
 $ poetry run docker-mppw build
-$ poetry run docker-mppw compose up [-d]
+$ MONGODB_ADMIN_PASSWORD=<password> [MPPW_ADMIN_PASSWORD=<other_password>] \
+    poetry run docker-mppw compose up [-d]
 ```
 
 Navigate in a browser to `http://localhost/version` to see the API working.
 
+> NOTE that the `MONGODB_ADMIN_PASSWORD` is **required**.  The `MPPW_ADMIN_PASSWORD` for the API itself will default to the `MONGODB_ADMIN_PASSWORD` if not specified.  The default admin username is `admin` in both cases.
+
 > NOTE that by using FastAPI, we automatically also have a full API listing available at `http://localhost/docs` which is very useful for exploration and testing.
 
-> NOTE that the container deployment targets HTTP default port `:80` to allow both dev and deployed work, and the containerized deploy does **not** expose database ports directly.
+> NOTE that the container deployment targets HTTP default port `:80` while the local dev deployment targets `:8000` to allow both dev and deployed work.  Also, the containerized deploy does **not** expose database ports directly.
+
+The standard docker deployment is considered fully productionized, and deployment options can be overridden for stage or development deployments via additional compose files (see `containers\mppw-stack.dev.yml`).  This makes it simpler to ensure that our production deployments don't require extra undocumented configuration (because they actually require fewer configuration files).
 
 ## Run local dev app with Docker MongoDB
 

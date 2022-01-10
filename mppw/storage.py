@@ -36,6 +36,11 @@ class ModelStorageLayer:
         if upgrade_storage_on_startup:
             layer.upgrade_schema()
         
+        # Don't store the sensitive credentials anywhere but the environment, which we can clear
+        # if/when required
+        layer.get_admin_username = lambda: os.environ.get("MONGODB_ADMIN_USERNAME")
+        layer.get_admin_password = lambda: os.environ.get("MONGODB_ADMIN_PASSWORD")
+
         return layer
 
     def __init__(self, mdb_url, admin_username, admin_password):

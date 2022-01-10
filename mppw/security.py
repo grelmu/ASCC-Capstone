@@ -46,17 +46,16 @@ def create_router(app):
             
             user_repo = models.UserRepository(session)
 
-            admin_username = os.environ.get("ADMIN_USERNAME", "admin")
+            admin_username = os.environ.get("MPPW_ADMIN_USERNAME", app.state.model_storage_layer.get_admin_username())
+            if not admin_username:
+                raise Exception(f"Cannot infer admin username, please specify MPPW_ADMIN_USERNAME env variable")
             admin_user = user_repo.get_user_by_username(admin_username)
-            if admin_user is not None: return admin_user 
+            if admin_user is not None: return admin_user
 
-            admin_password = os.environ.get("ADMIN_PASSWORD", None)
-            if admin_password is None:
-                admin_password = passlib.pwd.genword(entropy="secure", charset="hex")
-                admin_password_file = os.environ.get("ADMIN_PASSWORD_FILE", ".admin_password")
-                with open(admin_password_file, 'w') as f:
-                    f.write(admin_password)
-            
+            admin_password = os.environ.get("MPPW_ADMIN_PASSWORD", app.state.model_storage_layer.get_admin_password())
+            if not admin_password:
+                raise Exception(f"Cannot infer admin password, please specify MPPW_ADMIN_PASSWORD env variable")
+
             admin_user = models.User(username=admin_username,
                                      hashed_password=password_context.hash(admin_password),)
 
