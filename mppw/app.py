@@ -6,11 +6,7 @@ import fastapi.staticfiles
 from mppw import logger
 from mppw import __version__ as __mppw_version__
 
-from . import storage
-from . import models
-from . import services
-
-def create_app(model_storage_layer: storage.ModelStorageLayer):
+def create_app(storage_layer):
 
     app = fastapi.FastAPI()
 
@@ -18,9 +14,15 @@ def create_app(model_storage_layer: storage.ModelStorageLayer):
     # Setup storage basics
     #
 
-    storage.init_app_model_storage_layer(app, model_storage_layer)
+    from . import storage
 
-    models.init_request_repo_layer(app)
+    storage.init_app_storage_layer(app, storage_layer)
+
+    from . import repositories
+    
+    repositories.init_request_repo_layer(app)
+
+    from . import services
 
     services.init_request_service_layer(app)
 

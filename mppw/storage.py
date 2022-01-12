@@ -11,6 +11,18 @@ from mppw import __file__ as __mppw_file__
 
 import pymongo_migrate.mongo_migrate
 
+def from_env(upgrade_storage_on_startup=None):
+    if os.environ.get("MONGODB_URL"):
+        return MongoDBStorageLayer.from_env(upgrade_storage_on_startup)
+    else:
+        raise Exception("Could not detect storage layer from environment variables")
+
+def init_app_storage_layer(app: fastapi.FastAPI, storage_layer):
+    app.state.storage_layer = storage_layer
+
+def app_storage_layer(app: fastapi.FastAPI):
+    return app.state.storage_layer
+
 def add_username_password(url_str, username, password):
     if url_str is None: return None
     if username is None: return url_str
@@ -19,21 +31,26 @@ def add_username_password(url_str, username, password):
     url.password = password
     return str(url)
 
-class ModelStorageLayer:
+#
+# MongoDB Storage layer implementation
+#
+
+class MongoDBStorageLayer:
 
     @staticmethod
-    def from_env():
+    def from_env(upgrade_storage_on_startup=None):
         
         mdb_url = os.environ.get("MONGODB_URL")
         admin_username = os.environ.get("MONGODB_ADMIN_USERNAME")
         admin_password = os.environ.get("MONGODB_ADMIN_PASSWORD")
         
-        layer = ModelStorageLayer(
+        layer = MongoDBStorageLayer(
             mdb_url,
             admin_username,
             admin_password)
 
-        upgrade_storage_on_startup = bool(os.environ.get('UPGRADE_STORAGE_ON_STARTUP', True))
+        upgrade_storage_on_startup = bool(os.environ.get('UPGRADE_STORAGE_ON_STARTUP', True)) \
+            if upgrade_storage_on_startup is None else upgrade_storage_on_startup
 
         if upgrade_storage_on_startup:
             layer.upgrade_schema()
@@ -79,9 +96,3 @@ class ModelStorageLayer:
 
     def start_session(self):
         return self.mdb_client.start_session(causal_consistency=True)
-
-def init_app_model_storage_layer(app: fastapi.FastAPI, model_storage_layer: ModelStorageLayer):
-    app.state.storage_model_storage_layer = model_storage_layer
-
-def app_model_storage_layer(app: fastapi.FastAPI) -> ModelStorageLayer:
-    return app.state.storage_model_storage_layer

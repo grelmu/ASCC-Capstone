@@ -17,10 +17,9 @@ import jose.jwt
 from datetime import datetime, timedelta
 
 from mppw import logger
-from . import storage
-from .storage import app_model_storage_layer
 from . import models
-from .models import request_repo_layer
+from . import repositories
+from .repositories import app_storage_layer, request_repo_layer, using_app_repo_layer
 
 LOCAL_JWT_ALGORITHM = "HS256"
 LOCAL_ACCESS_TOKEN_EXPIRE_MINUTES = 300
@@ -49,18 +48,18 @@ def create_router(app):
 
         logger.info("Ensuring admin user...")
 
-        with app_model_storage_layer(app).start_session() as session:
-            
-            user_repo = models.UserRepository(session)
+        def ensure_admin_user(repo_layer):
 
-            admin_username = os.environ.get("MPPW_ADMIN_USERNAME") or app_model_storage_layer(app).get_admin_username()
+            user_repo = repo_layer.users
+
+            admin_username = os.environ.get("MPPW_ADMIN_USERNAME") or app_storage_layer(app).get_admin_username()
             if not admin_username:
                 raise Exception(f"Cannot infer admin username, please specify MPPW_ADMIN_USERNAME env variable")
             
             admin_user = user_repo.query(username=admin_username)
             if admin_user is not None: return admin_user
 
-            admin_password = os.environ.get("MPPW_ADMIN_PASSWORD") or app_model_storage_layer(app).get_admin_password()
+            admin_password = os.environ.get("MPPW_ADMIN_PASSWORD") or app_storage_layer(app).get_admin_password()
             if not admin_password:
                 raise Exception(f"Cannot infer admin password, please specify MPPW_ADMIN_PASSWORD env variable")
 
@@ -69,17 +68,21 @@ def create_router(app):
 
             user_repo.create(admin_user)
 
+        using_app_repo_layer(app, ensure_admin_user)
+
     @router.on_event('startup')
     def init_jwt_secret_key():
 
         logger.info("Ensuring JWT secret key...")
 
-        with app_model_storage_layer(app).start_session() as session:
+        def ensure_key(repo_layer):
             
-            kv_repo = models.ConfigKvRepository(session)
+            kv_repo = repo_layer.kv
 
             jwt_key_key = "%s.local_jwt_secret_key" % __name__
             init_app_local_jwt_secret_key(app, kv_repo.setdefault(jwt_key_key, passlib.pwd.genword(length=32, charset="hex")))
+
+        using_app_repo_layer(app, ensure_key)
 
     #
     # Local authentication 
@@ -173,9 +176,9 @@ def create_router(app):
         
     @router.post("/" + LOCAL_TOKEN_ENDPOINT, response_model=Token)
     def post_login_for_local_access_token(form_data: OAuth2PasswordRequestForm = Depends(OAuth2PasswordRequestForm),
-                                          repo_layer: models.RepositoryLayer = Depends(request_repo_layer(app))):
+                                          repo_layer = Depends(request_repo_layer(app))):
 
-        user_repo = repo_layer.get(models.UserRepository)
+        user_repo = repo_layer.users
         user = local_authenticate_user(form_data.username, form_data.password, user_repo)
 
         if not user:
@@ -205,9 +208,9 @@ def create_router(app):
 
     @router.get("/users/", response_model=typing.List[SafeUser])
     def get_all_users(current_user: models.User = Security(request_user(app), scopes=[ADMIN_SCOPE_NAME]),
-                      repo_layer: models.RepositoryLayer = Depends(request_repo_layer(app))):
+                      repo_layer = Depends(request_repo_layer(app))):
         
-        user_repo = repo_layer.get(models.UserRepository)
+        user_repo = repo_layer.users
         return list(map(lambda u: SafeUser(**u.dict()), user_repo.query()))
         
     return router
