@@ -2,6 +2,7 @@ import fastapi
 from fastapi import Security, Depends
 import typing
 from typing import Union, List
+import pydantic
 
 from mppw import logger
 from . import models
@@ -12,6 +13,10 @@ from .security import request_user, PROVENANCE_SCOPE
 def create_router(app):
 
     router = fastapi.APIRouter(prefix="/api/artifacts")
+
+    # class InitializedArtifact(pydantic.BaseModel):
+    #     initialize: bool
+    #     artifact: models.DigitalArtifact
 
     @router.post("/", response_model=Union[models.MaterialArtifact, models.DigitalArtifact])
     def create(artifact: Union[models.MaterialArtifact, models.DigitalArtifact],
@@ -43,5 +48,13 @@ def create_router(app):
         
         art_repo = repo_layer.get(models.ArtifactRepository)
         return art_repo.delete(id) > 0
+
+    @router.post("/initialize/{id}", response_model=bool)
+    def initialize(id: str,
+                   current_user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+                   repo_layer: models.RepositoryLayer = Depends(request_repo_layer(app))):
+        
+        art_repo = repo_layer.get(models.ArtifactRepository)
+        return art_repo.create(artifact)
 
     return router

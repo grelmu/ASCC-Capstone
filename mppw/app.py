@@ -8,6 +8,7 @@ from mppw import __version__ as __mppw_version__
 
 from . import storage
 from . import models
+from . import services
 
 def create_app(model_storage_layer: storage.ModelStorageLayer):
 
@@ -20,6 +21,8 @@ def create_app(model_storage_layer: storage.ModelStorageLayer):
     storage.init_app_model_storage_layer(app, model_storage_layer)
 
     models.init_request_repo_layer(app)
+
+    services.init_request_service_layer(app)
 
     #
     # Setup core endpoints

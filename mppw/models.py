@@ -1,4 +1,4 @@
-from typing import Optional, List, ClassVar, Any
+from typing import Optional, List, ClassVar, Any, Union
 import fastapi
 import fastapi.encoders
 import pydantic
@@ -24,12 +24,12 @@ class PyObjectId(bson.ObjectId):
         field_schema.update(type='string')
   
 class ConfigKv(pydantic.BaseModel):
-    key: Optional[PyObjectId] = pydantic.Field(alias='_id')
+    key: str
     value: Optional[str]
 
 class DocModel(pydantic.BaseModel):
 
-    id: Optional[PyObjectId] = pydantic.Field(alias='_id')
+    id: Optional[Union[PyObjectId, str]]
 
     class Config(pydantic.BaseConfig):
         json_encoders = {
@@ -94,8 +94,8 @@ class ArtifactTransform(pydantic.BaseModel):
     URN_PREFIX: ClassVar = "urn:x-mfg:transform"
 
     kind_urn: str
-    input_artifacts: List[PyObjectId]
-    output_artifacts: List[PyObjectId]
+    input_artifacts: List[Union[PyObjectId, str]]
+    output_artifacts: List[Union[PyObjectId, str]]
     parameters: Any
     
 class Operation(DocModel):
@@ -108,9 +108,9 @@ class Operation(DocModel):
     tags: List[str]
 
     system_name: Optional[str]
-    system_id: Optional[PyObjectId]
+    system_id: Optional[Union[PyObjectId, str]]
     human_operator_names: List[str]
-    human_operator_ids: List[PyObjectId]
+    human_operator_ids: List[Union[PyObjectId, str]]
 
     start_at: Optional[datetime.datetime]
     end_at: Optional[datetime.datetime]
@@ -141,49 +141,70 @@ class BaseRepository:
         self.client: pymongo.MongoClient = session.client
         self.db: pymongo.database.Database = self.client.get_default_database()
 
+#
+# MongoDB repository implementation
+#
+
 class ConfigKvRepository(BaseRepository):
 
     """
     NOTE that the API here is intended to mimic a dict
     """
 
+    @property
+    def collection(self) -> pymongo.collection.Collection:
+        return self.db["config_kv"]
+
     def get(self, key, default_value=None):
-        doc = self.db["config_kv"].find_one({ "_id": key })
+        doc = self.collection.find_one({ "_id": key })
         if doc is None: return default_value
         return doc["value"]
 
     def set(self, key, value):
         doc = { "_id": key, "value": value }
-        self.db["config_kv"].replace_one({ "_id": key }, doc, upsert=True)
+        self.collection.replace_one({ "_id": key }, doc, upsert=True)
 
     def setdefault(self, key, default_value):
-        doc = { "_id": key, "value": default_value }
-        updated = self.db["config_kv"].find_one_and_update(
+        updated = self.collection.find_one_and_update(
             { "_id": key },
             { "$setOnInsert": { "value": default_value } }, 
             upsert=True, return_document=pymongo.collection.ReturnDocument.AFTER)
         return updated["value"]
 
-def undef_id(doc):
-    doc = dict(doc)
+def model_to_doc(model):
+    if model is None: return None
+    doc = model.dict()
+    if "id" in doc:
+        doc["_id"] = doc["id"]
+        del doc["id"]
     if doc["_id"] is None:
         del doc["_id"]
     return doc
 
+def doc_to_model(doc, clazz):
+    if doc is None: return None
+    doc = dict(doc)
+    if "_id" in doc:
+        doc["id"] = doc["_id"]
+        del doc["_id"]
+    return clazz(**doc)
+
 class UserRepository(BaseRepository):
 
-    def create_user(self, user: User):
-        result = self.db["user"].insert_one(undef_id(user.dict(by_alias=True)))
+    @property
+    def collection(self) -> pymongo.collection.Collection:
+        return self.db["users"]
+
+    def create(self, user: User):
+        result = self.collection.insert_one(model_to_doc(user))
         user.id = result.inserted_id
         return user
 
-    def get_user_by_username(self, username: str):
-        doc = self.db["user"].find_one({ "username": username })
-        if doc is None: return None
-        return User(**doc)
-
-    def query_users(self):
-        return map(lambda doc: User(**doc), list(self.db["user"].find()))
+    def query(self, username=None):
+        if username is None:
+            return map(lambda doc: doc_to_model(doc, User), list(self.collection.find()))
+        else:
+            return doc_to_model(self.collection.find_one({ "username": username }), User)
 
     # def create_scope(self, scope: Scope):
     #     self.session.add(scope)
@@ -203,12 +224,11 @@ class ArtifactRepository(BaseRepository):
 
     @staticmethod
     def doc_to_artifact(doc):
-        if doc is None:
-            return None
+        if doc is None: return None
         elif doc["type_urn"].startswith(MaterialArtifact.URN_PREFIX):
-            return MaterialArtifact(**doc)
+            return doc_to_model(doc, MaterialArtifact)
         elif doc["type_urn"].startswith(DigitalArtifact.URN_PREFIX):
-            return DigitalArtifact(**doc)
+            return doc_to_model(doc, DigitalArtifact)
         else:
             raise UnknownArtifactTypeException()
 
@@ -217,7 +237,7 @@ class ArtifactRepository(BaseRepository):
         return self.db["artifacts"]
 
     def create(self, artifact: Artifact):
-        result = self.collection.insert_one(undef_id(artifact.dict(by_alias=True)))
+        result = self.collection.insert_one(model_to_doc(artifact))
         artifact.id = result.inserted_id
         return artifact
 
@@ -238,14 +258,14 @@ class OperationRepository(BaseRepository):
         if doc is None:
             return None
         else:
-            return Operation(**doc)
+            return doc_to_model(doc, Operation)
 
     @property
     def collection(self) -> pymongo.collection.Collection:
         return self.db["operations"]
 
     def create(self, operation: Operation):
-        result = self.collection.insert_one(undef_id(operation.dict(by_alias=True)))
+        result = self.collection.insert_one(model_to_doc(operation))
         operation.id = result.inserted_id
         return operation
 

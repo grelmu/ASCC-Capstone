@@ -57,7 +57,7 @@ def create_router(app):
             if not admin_username:
                 raise Exception(f"Cannot infer admin username, please specify MPPW_ADMIN_USERNAME env variable")
             
-            admin_user = user_repo.get_user_by_username(admin_username)
+            admin_user = user_repo.query(username=admin_username)
             if admin_user is not None: return admin_user
 
             admin_password = os.environ.get("MPPW_ADMIN_PASSWORD") or app_model_storage_layer(app).get_admin_password()
@@ -67,7 +67,7 @@ def create_router(app):
             admin_user = models.User(username=admin_username,
                                      hashed_password=password_context.hash(admin_password),)
 
-            user_repo.create_user(admin_user)
+            user_repo.create(admin_user)
 
     @router.on_event('startup')
     def init_jwt_secret_key():
@@ -86,7 +86,7 @@ def create_router(app):
     #
 
     def local_authenticate_user(username, password, user_repo):
-        user = user_repo.get_user_by_username(username)
+        user = user_repo.query(username=username)
         if not user: return False
         print(user, flush=True)
         if not password_context.verify(password, user.hashed_password): return False
@@ -138,7 +138,7 @@ def create_router(app):
         if safe_user is None:
             raise credentials_exception
 
-        if ADMIN_SCOPE_NAME in user_scopes:
+        if ADMIN_SCOPE in user_scopes:
             return safe_user
 
         for scope in security_scopes.scopes:
@@ -208,7 +208,7 @@ def create_router(app):
                       repo_layer: models.RepositoryLayer = Depends(request_repo_layer(app))):
         
         user_repo = repo_layer.get(models.UserRepository)
-        return list(map(lambda u: SafeUser(**u.dict()), user_repo.query_users()))
+        return list(map(lambda u: SafeUser(**u.dict()), user_repo.query()))
         
     return router
 
