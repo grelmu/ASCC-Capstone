@@ -1,4 +1,6 @@
 import os
+import fastapi
+from fastapi.applications import FastAPI
 import pymongo
 import pymongo.errors
 import furl
@@ -78,3 +80,8 @@ class ModelStorageLayer:
     def start_session(self):
         return self.mdb_client.start_session(causal_consistency=True)
 
+def init_app_model_storage_layer(app: fastapi.FastAPI, model_storage_layer: ModelStorageLayer):
+    app.state.storage_model_storage_layer = model_storage_layer
+
+def app_model_storage_layer(app: fastapi.FastAPI) -> ModelStorageLayer:
+    return app.state.storage_model_storage_layer

@@ -1,6 +1,8 @@
 import os
 import sys
+from threading import local
 import typing
+import fastapi
 from fastapi import APIRouter, Depends, Security, status, HTTPException
 from fastapi.security import SecurityScopes, OAuth2PasswordRequestForm, OAuth2PasswordBearer
 
@@ -15,21 +17,26 @@ import jose.jwt
 from datetime import datetime, timedelta
 
 from mppw import logger
+from . import storage
+from .storage import app_model_storage_layer
 from . import models
+from .models import request_repo_layer
 
 LOCAL_JWT_ALGORITHM = "HS256"
 LOCAL_ACCESS_TOKEN_EXPIRE_MINUTES = 300
 LOCAL_TOKEN_ENDPOINT = "token"
 
-ADMIN_SCOPE_NAME = "*"
+ADMIN_SCOPE, ADMIN_SCOPE_NAME = "*", "Admin Scope"
+PROVENANCE_SCOPE, PROVENANCE_SCOPE_NAME = "provenance", "Provenance Scope"
 
 SCOPES = {
-    ADMIN_SCOPE_NAME: "Admin Scope"
+    ADMIN_SCOPE: ADMIN_SCOPE_NAME,
+    PROVENANCE_SCOPE: PROVENANCE_SCOPE_NAME
 }
 
 def create_router(app):
 
-    router = APIRouter(prefix="/security")
+    router = APIRouter(prefix="/api/security")
 
     #
     # Initialize secrets
@@ -42,17 +49,18 @@ def create_router(app):
 
         logger.info("Ensuring admin user...")
 
-        with app.state.model_storage_layer.start_session() as session:
+        with app_model_storage_layer(app).start_session() as session:
             
             user_repo = models.UserRepository(session)
 
-            admin_username = os.environ.get("MPPW_ADMIN_USERNAME", app.state.model_storage_layer.get_admin_username())
+            admin_username = os.environ.get("MPPW_ADMIN_USERNAME") or app_model_storage_layer(app).get_admin_username()
             if not admin_username:
                 raise Exception(f"Cannot infer admin username, please specify MPPW_ADMIN_USERNAME env variable")
+            
             admin_user = user_repo.get_user_by_username(admin_username)
             if admin_user is not None: return admin_user
 
-            admin_password = os.environ.get("MPPW_ADMIN_PASSWORD", app.state.model_storage_layer.get_admin_password())
+            admin_password = os.environ.get("MPPW_ADMIN_PASSWORD") or app_model_storage_layer(app).get_admin_password()
             if not admin_password:
                 raise Exception(f"Cannot infer admin password, please specify MPPW_ADMIN_PASSWORD env variable")
 
@@ -66,12 +74,12 @@ def create_router(app):
 
         logger.info("Ensuring JWT secret key...")
 
-        with app.state.model_storage_layer.start_session() as session:
+        with app_model_storage_layer(app).start_session() as session:
             
             kv_repo = models.ConfigKvRepository(session)
 
             jwt_key_key = "%s.local_jwt_secret_key" % __name__
-            app.state.local_jwt_secret_key = kv_repo.setdefault(jwt_key_key, passlib.pwd.genword(length=32, charset="hex"))
+            init_app_local_jwt_secret_key(app, kv_repo.setdefault(jwt_key_key, passlib.pwd.genword(length=32, charset="hex")))
 
     #
     # Local authentication 
@@ -121,7 +129,7 @@ def create_router(app):
         safe_user: SafeUser = None
         user_scopes = []
         try:
-            payload = decode_local_access_token(token, app.state.local_jwt_secret_key)
+            payload = decode_local_access_token(token, app_local_jwt_secret_key(app))
             safe_user = payload.get("user")
             user_scopes = payload.get("scopes")
         except jose.JWTError as ex:
@@ -144,7 +152,7 @@ def create_router(app):
         #    raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Inactive user")
         return current_user
 
-    app.state.request_current_active_user = get_current_active_user
+    init_request_user(app, get_current_active_user)
 
     #
     # Security endpoints
@@ -165,7 +173,7 @@ def create_router(app):
         
     @router.post("/" + LOCAL_TOKEN_ENDPOINT, response_model=Token)
     def post_login_for_local_access_token(form_data: OAuth2PasswordRequestForm = Depends(OAuth2PasswordRequestForm),
-                                          repo_layer: models.RepositoryLayer = Depends(app.state.request_repo_layer)):
+                                          repo_layer: models.RepositoryLayer = Depends(request_repo_layer(app))):
 
         user_repo = repo_layer.get(models.UserRepository)
         user = local_authenticate_user(form_data.username, form_data.password, user_repo)
@@ -187,22 +195,34 @@ def create_router(app):
         access_token = encode_local_access_token({
             "sub": user.username,
             "user": json.loads(SafeUser(**user.dict()).json()),
-            "scopes": form_data.scopes}, app.state.local_jwt_secret_key)
+            "scopes": form_data.scopes}, app_local_jwt_secret_key(app))
 
         return {"access_token": access_token, "token_type": "bearer"}
 
     @router.get("/users/me/", response_model=SafeUser)
-    def get_users_me(current_user: models.User = Security(get_current_active_user)):
+    def get_users_me(current_user: models.User = Security(request_user(app))):
         return current_user
 
     @router.get("/users/", response_model=typing.List[SafeUser])
-    def get_all_users(current_user: models.User = Security(get_current_active_user, scopes=[ADMIN_SCOPE_NAME]),
-                      repo_layer: models.RepositoryLayer = Depends(app.state.request_repo_layer)):
+    def get_all_users(current_user: models.User = Security(request_user(app), scopes=[ADMIN_SCOPE_NAME]),
+                      repo_layer: models.RepositoryLayer = Depends(request_repo_layer(app))):
         
         user_repo = repo_layer.get(models.UserRepository)
-        return list(map(lambda u: SafeUser(**u.dict()), user_repo.get_all_users()))
+        return list(map(lambda u: SafeUser(**u.dict()), user_repo.query_users()))
         
-    app.include_router(router)
+    return router
+
+def init_request_user(app: fastapi.FastAPI, get_request_user):
+    app.state.security_request_user = get_request_user
+
+def request_user(app: fastapi.FastAPI):
+    return app.state.security_request_user
+
+def init_app_local_jwt_secret_key(app: fastapi.FastAPI, local_jwt_secret_key):
+    app.state.security_local_jwt_secret_key = local_jwt_secret_key
+
+def app_local_jwt_secret_key(app: fastapi.FastAPI):
+    return app.state.security_local_jwt_secret_key
 
 #
 # Utilities

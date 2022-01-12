@@ -4,12 +4,12 @@ services:
   mppw:
     image: ascc/mppw:${MPPW_VERSION:-dev}
     ports:
-      - "80:8000"
+      - "${MPPW_EXTERNAL_PORT:-80}:8000"
     environment:
       MPPW_ADMIN_USERNAME: ${MPPW_ADMIN_USERNAME:-}
       MPPW_ADMIN_PASSWORD: ${MPPW_ADMIN_PASSWORD:-}
-      WAIT_HOSTS: mongodb:27017
-      MONGODB_URL: mongodb://mongodb:27017/mppw?authSource=admin
+      WAIT_HOSTS: mongodb
+      MONGODB_URL: ${MONGODB_URL:-mongodb://mongodb/mppw?authSource=admin}
       MONGODB_ADMIN_USERNAME: ${MONGODB_ADMIN_USERNAME:-admin}
       MONGODB_ADMIN_PASSWORD: ${MONGODB_ADMIN_PASSWORD}
 
@@ -17,13 +17,13 @@ services:
     image: ascc/mppw-mongodb:${MPPW_VERSION:-dev}
     volumes:
       - data:/data
-    #ports:
-    #  - "27027:27017"
+    ports:
+      - "${MONGODB_EXTERNAL_PORT:-27017}:27017"
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=${MONGODB_ADMIN_USERNAME:-admin}
-      - MONGO_INITDB_ROOT_PASSWORD=${MONGODB_ADMIN_PASSWORD:?MONGODB_ADMIN_PASSWORD is required.}
-      - MONGO_INITDB_DATABASE=admin
-      - 'MONGO_INITRS_CONFIG={ "_id": "mppw0", "version": 1,  "members": [{ "_id": 0, "host": "mongodb:27017"}] }'
+      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_ADMIN_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_ADMIN_PASSWORD:?MONGODB_ADMIN_PASSWORD is required.}
+      MONGO_INITDB_DATABASE: admin
+      MONGO_INITRS_CONFIG: '{ "_id": "mppw0", "version": 1,  "members": [{ "_id": 0, "host": "mongodb:27017"}] }'
     command: ["mongod", "--replSet", "mppw0", "--keyFile", "/root_password_keyfile.key"]
 
 volumes:

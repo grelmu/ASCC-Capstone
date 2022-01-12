@@ -1,5 +1,12 @@
 version: "3.8"
 services:
+  mppw:
+    environment:
+      MONGODB_ADMIN_PASSWORD: password
+    volumes:
+      - "${MPPW_LOCAL_PACKAGE_DIR:-./mppw}:/local/mppw"
+    command: "bash -c 'cd local && uvicorn --host 0.0.0.0 mppw.main:app --debug'"
   mongodb:
-    ports:
-      - "27027:27017"
+    environment:
+      MONGODB_ADMIN_PASSWORD: password
+      MONGO_INITDB_ROOT_PASSWORD: password

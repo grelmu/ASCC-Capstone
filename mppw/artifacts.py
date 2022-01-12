@@ -1,0 +1,47 @@
+import fastapi
+from fastapi import Security, Depends
+import typing
+from typing import Union, List
+
+from mppw import logger
+from . import models
+from .models import request_repo_layer
+from . import security
+from .security import request_user, PROVENANCE_SCOPE
+
+def create_router(app):
+
+    router = fastapi.APIRouter(prefix="/api/artifacts")
+
+    @router.post("/", response_model=Union[models.MaterialArtifact, models.DigitalArtifact])
+    def create(artifact: Union[models.MaterialArtifact, models.DigitalArtifact],
+               current_user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+               repo_layer: models.RepositoryLayer = Depends(request_repo_layer(app))):
+        
+        art_repo = repo_layer.get(models.ArtifactRepository)
+        return art_repo.create(artifact)
+
+    @router.get("/{id}", response_model=Union[models.MaterialArtifact, models.DigitalArtifact])
+    def read(id: str,
+             current_user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+             repo_layer: models.RepositoryLayer = Depends(request_repo_layer(app))):
+        
+        art_repo = repo_layer.get(models.ArtifactRepository)
+        return art_repo.read(id)
+
+    @router.get("/", response_model=List[Union[models.DigitalArtifact, models.MaterialArtifact]])
+    def query(current_user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+              repo_layer: models.RepositoryLayer = Depends(request_repo_layer(app))):
+
+        art_repo = repo_layer.get(models.ArtifactRepository)
+        return list(art_repo.query())
+
+    @router.delete("/{id}", response_model=bool)
+    def delete(id: str,
+               current_user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+               repo_layer: models.RepositoryLayer = Depends(request_repo_layer(app))):
+        
+        art_repo = repo_layer.get(models.ArtifactRepository)
+        return art_repo.delete(id) > 0
+
+    return router
