@@ -1,12 +1,16 @@
 import fastapi
 from fastapi import Security, Depends
 import typing
-from typing import Union, List
+from typing import Union, List, Optional
+import pydantic
+import datetime
 
 from mppw import logger
 from . import models
 from . import repositories
 from .repositories import request_repo_layer
+from . import services
+from .services import request_service_layer
 from . import security
 from .security import request_user, PROVENANCE_SCOPE
 
@@ -44,5 +48,19 @@ def create_router(app):
         
         op_repo = repo_layer.operations
         return op_repo.delete(id) > 0
+
+    class CreateOperationRequest(pydantic.BaseModel):
+        name: Optional[str]
+        description: Optional[str]
+        tags: Optional[List[str]]
+        urn_suffix: Optional[str]
+        start_at: Optional[datetime.datetime]
+
+    @router.post("/fff", response_model=models.Operation)
+    def create(request: CreateOperationRequest,
+               current_user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+               service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
+        
+        return service_layer.fff.create_default_fff_operation(**request.dict())
 
     return router

@@ -1,8 +1,10 @@
+from email.policy import default
 import os
 import fastapi
 from fastapi.applications import FastAPI
 import pymongo
 import pymongo.errors
+import gridfs
 import furl
 import time
 
@@ -96,3 +98,7 @@ class MongoDBStorageLayer:
 
     def start_session(self):
         return self.mdb_client.start_session(causal_consistency=True)
+
+    def get_gridfs_db(self, name):
+        default_db_name = self.mdb_client.get_default_database().name
+        return self.mdb_client[f"{default_db_name}_files"]
