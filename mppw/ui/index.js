@@ -1,4 +1,5 @@
 
+
 const throwAlertResponseErr = function(response, msg) {
   err = new Error((msg ? msg + ": ": "") + response.status + " " + response.statusText)
   alert(err.message)
@@ -6,6 +7,9 @@ const throwAlertResponseErr = function(response, msg) {
 }
 
 const app = Vue.createApp({
+  components: {
+    'login-page': RemoteVue.component("vues/login-page.vue"),
+  },
   data() {
     return {
       ready: false,
@@ -48,4 +52,15 @@ const app = Vue.createApp({
   },
 })
 
+const routes = [
+  { path: '/', component: RemoteVue.routerComponent("vues/browse-page.vue"), props: () => ({ app: app._instance.data }) },
+  { path: '/about', component: RemoteVue.routerComponent("vues/about-page.vue"), props: () => ({ app: app._instance.data }) },
+]
+
+const router = VueRouter.createRouter({
+  history: VueRouter.createWebHashHistory(),
+  routes,
+})
+
+app.use(router)
 app.mount("#app")
