@@ -21,10 +21,14 @@ def build():
 
     subprocess.run(["poetry", "build"])
 
-    shutil.copy(os.path.join(containers_dir, f"{project_name}-stack.yml"), os.path.join(containers_dir, project_name))
-    shutil.copy(os.path.join(containers_dir, f"{project_name}-stack.dev.yml"), os.path.join(containers_dir, project_name))
     shutil.rmtree(os.path.join(containers_dir, project_name, "dist"))
     shutil.copytree(dist_dir, os.path.join(containers_dir, project_name, "dist"))
+    shutil.copy(os.path.join(containers_dir, f"{project_name}-stack.yml"), os.path.join(containers_dir, project_name, "dist"))
+
+    subprocess.run(["docker",  "build",
+                    os.path.join(containers_dir, f"{project_name}-nginx"),
+                    "--tag", f"ascc/{project_name}-nginx:dev",
+                    "--tag", f"ascc/{project_name}-nginx:{project_version}"])
 
     subprocess.run(["docker",  "build",
                     os.path.join(containers_dir, f"{project_name}-mongodb"),

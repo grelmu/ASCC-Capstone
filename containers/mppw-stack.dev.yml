@@ -1,6 +1,8 @@
 version: "3.8"
 services:
   mppw:
+    ports:
+      - "${MPPW_EXTERNAL_PORT:-8000}:8000"
     environment:
       MONGODB_ADMIN_PASSWORD: password
     volumes:

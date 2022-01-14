@@ -13,7 +13,7 @@ RUN echo $PACKAGE_NAME > PACKAGE_NAME
 RUN echo $PACKAGE_VERSION > PACKAGE_VERSION
 RUN pip install $PACKAGE_NAME-$PACKAGE_VERSION-py3-none-any.whl
 
-COPY $PACKAGE_NAME-stack.yml compose.yml
+COPY dist/$PACKAGE_NAME-stack.yml compose.yml
 RUN pip install docker-compose==1.29.2
 ENV COMPOSE_PROJECT_NAME=$PACKAGE_NAME-stack
 
