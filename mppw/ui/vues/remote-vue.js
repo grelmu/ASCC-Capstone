@@ -1,25 +1,25 @@
-const RemoteVue = (function(){
-    
+const RemoteVue = (function () {
+
     const loadVueOptions = {
         moduleCache: { vue: Vue, },
 
         async getFile(url) {
-        const res = await fetch(url);
-        if ( !res.ok ) throw Object.assign(new Error(url+' '+res.statusText), { res });
-        return await res.text();
+            const res = await fetch(url);
+            if (!res.ok) throw Object.assign(new Error(url + ' ' + res.statusText), { res });
+            return await res.text();
         },
-        
+
         addStyle(textContent) {
-        const style = Object.assign(document.createElement('style'), { textContent });
-        const ref = document.head.getElementsByTagName('style')[0] || null;
-        document.head.insertBefore(style, ref);
+            const style = Object.assign(document.createElement('style'), { textContent });
+            const ref = document.head.getElementsByTagName('style')[0] || null;
+            document.head.insertBefore(style, ref);
         },
-        
+
         log(type, ...args) {
-    
-        console[type](...args);
+
+            console[type](...args);
         },
-        
+
         /*
         compiledCache: {
         set(key, str) {
@@ -55,14 +55,14 @@ const RemoteVue = (function(){
     }
 
     return {
-        routerComponent(vue_url) {
+        component(vue_url) {
+            return window['vue3-sfc-loader'].loadModule(vue_url, loadVueOptions)
+        },
+        lazyComponent(vue_url) {
             return () => window['vue3-sfc-loader'].loadModule(vue_url, loadVueOptions)
         },
-        component(vue_url) {
-            return Vue.defineAsyncComponent( () => window['vue3-sfc-loader'].loadModule(vue_url, loadVueOptions) )
+        asyncComponent(vue_url) {
+            return Vue.defineAsyncComponent(() => window['vue3-sfc-loader'].loadModule(vue_url, loadVueOptions))
         },
-        load(vue_url) {
-            return window['vue3-sfc-loader'].loadModule(vue_url, loadVueOptions)
-        }
     }
 })();

@@ -1,6 +1,11 @@
 <template>
-  <span class="example">Browse {{ msg }} {{app}}</span>
-  <button @click="doLogout()">Logout</button>
+  <div>
+    <h1 class="example">Browse {{ msg }}</h1>
+
+    <p>
+      Lorem ipsum stuff.
+    </p>
+  </div>
 </template>
 
 <script>
@@ -10,13 +15,7 @@
         msg: 'component!'
       }
     },
-    props: {
-      app: Object
-    },
     methods: {
-      doLogout() {
-        this.app.api_user = null
-      }
     },
   }
 </script>
