@@ -40,12 +40,17 @@ class DocModel(pydantic.BaseModel):
 class User(DocModel):
     username: str
     hashed_password: str
-    disabled: bool = False
+    active: bool = True
 
 # class Scope(SQLModel, table=True):
 #     id: Optional[int] = Field(default=None, primary_key=True)
 #     name: str
 #     description: str
+
+class Project(DocModel):
+    name: str
+    description: Optional[str]
+    active: bool = True
 
 class GeometryLabel(pydantic.BaseModel):
     name: str
@@ -55,7 +60,10 @@ class Artifact(DocModel):
 
     URN_PREFIX: ClassVar = "urn:x-mfg:artifact"
 
+    # Keep these required for later use in sharding and vfs interfaces
     type_urn: str
+    project: Union[PyObjectId, str]
+
     name: Optional[str]
     description: Optional[str]
     tags: Optional[List[str]]
@@ -102,7 +110,10 @@ class Operation(DocModel):
 
     URN_PREFIX: ClassVar = "urn:x-mfg:operation"
 
+    # Keep these required for later use in sharding and vfs interfaces
     type_urn: str
+    project: Union[PyObjectId, str]
+
     name: Optional[str]
     description: Optional[str]
     tags: Optional[List[str]]

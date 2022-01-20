@@ -16,9 +16,11 @@ from .security import request_user, PROVENANCE_SCOPE
 
 def create_router(app):
 
+    combined_router = fastapi.APIRouter()
+
     router = fastapi.APIRouter(prefix="/api/operations")
 
-    @router.post("/", response_model=models.Operation)
+    @router.post("/", response_model=models.Operation, status_code = fastapi.status.HTTP_201_CREATED)
     def create(operation: models.Operation,
                current_user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
                repo_layer = Depends(request_repo_layer(app))):
@@ -35,11 +37,12 @@ def create_router(app):
         return op_repo.read(id)
 
     @router.get("/", response_model=List[models.Operation])
-    def query(current_user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+    def query(project_id: str = None,
+              current_user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
               repo_layer = Depends(request_repo_layer(app))):
 
         op_repo = repo_layer.operations
-        return list(op_repo.query())
+        return list(op_repo.query(project_id=project_id))
 
     @router.delete("/{id}", response_model=bool)
     def delete(id: str,
@@ -49,18 +52,24 @@ def create_router(app):
         op_repo = repo_layer.operations
         return op_repo.delete(id) > 0
 
-    class CreateOperationRequest(pydantic.BaseModel):
-        name: Optional[str]
-        description: Optional[str]
-        tags: Optional[List[str]]
-        urn_suffix: Optional[str]
-        start_at: Optional[datetime.datetime]
+    combined_router.include_router(router)
 
-    @router.post("/fff", response_model=models.Operation)
-    def create(request: CreateOperationRequest,
-               current_user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
-               service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
-        
-        return service_layer.fff.create_default_fff_operation(**request.dict())
+    router = fastapi.APIRouter(prefix="/api/serviced-operations")
 
-    return router
+    @router.post("/", response_model=models.Operation, status_code = fastapi.status.HTTP_201_CREATED)
+    def create_serviced(operation: models.Operation,
+                        current_user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+                        service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
+            
+        return service_layer.create_default(operation)
+
+
+    @router.get("/types/", response_model=List[services.ServicedOperationType])
+    def query_serviced_types(current_user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+                             service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
+
+        return list(service_layer.serviced_operation_types())
+
+    combined_router.include_router(router)
+
+    return combined_router

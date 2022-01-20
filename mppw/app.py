@@ -54,12 +54,16 @@ def create_app(storage_layer):
     # Must be initialized *first*, as it also initializes request_user lookups
     app.include_router(security.create_router(app))
 
-    from . import artifacts
+    from . import projects
 
-    app.include_router(artifacts.create_router(app))
+    app.include_router(projects.create_router(app))
 
     from . import operations
 
     app.include_router(operations.create_router(app))
+
+    from . import artifacts
+
+    app.include_router(artifacts.create_router(app))
 
     return app

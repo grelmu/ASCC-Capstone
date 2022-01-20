@@ -64,6 +64,7 @@ export default {
         body: new URLSearchParams({
           username: this.username,
           password: this.password,
+          scope: "* provenance"
         }),
       })
         .then((response) => {

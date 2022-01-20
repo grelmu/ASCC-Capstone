@@ -54,7 +54,9 @@
             <div class="position-sticky pt-3">
               <ul class="nav flex-column">
                 <li class="nav-item">
-                  <router-link to="/" class="nav-link"> Browse </router-link>
+                  <router-link to="/" class="nav-link">
+                    Browse Operations
+                  </router-link>
                 </li>
                 <li class="nav-item">
                   <router-link to="/about" class="nav-link">
@@ -100,20 +102,12 @@
 
 <script>
 const routes = [
-  { path: "/", component: RemoteVue.lazyComponent("vues/browse-page.vue") },
+  { path: "/", component: RemoteVue.lazyComponent("vues/browse-ops-page.vue") },
   { path: "/about", component: RemoteVue.lazyComponent("vues/about-page.vue") },
 ];
 
 const initRoutes = function (app) {
   router.getRoutes().forEach((route) => (route.props.app = app));
-};
-
-const throwAlertResponseErr = function (response, msg) {
-  err = new Error(
-    (msg ? msg + ": " : "") + response.status + " " + response.statusText
-  );
-  alert(err.message);
-  throw err;
 };
 
 export default {
@@ -169,12 +163,19 @@ export default {
         method: "GET",
       }).then((response) => {
         if (response.status == 200) return response.json();
-        if (response.status == 401) return null;
-        throwAlertResponseErr(
+        this.throwApiResponseError(
           response,
-          "Unknown response when checking user status"
+          "Unknown response when checking user status",
+          true
         );
       });
+    },
+    throwApiResponseError(response, msg, showAlert) {
+      const err = new Error(
+        (msg ? msg + ": " : "") + response.status + " " + response.statusText
+      );
+      if (showAlert) alert(err.message);
+      throw err;
     },
   },
   created() {

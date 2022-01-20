@@ -17,16 +17,33 @@ FILE_BUCKET_URN_PREFIX = f"{models.DigitalArtifact.URN_PREFIX}:file-bucket"
 
 class OperationServices:
 
+    STATUS_DRAFT = "draft"
+
     ARTIFACT_KIND_ATTACHMENTS = ":attachments"
     ARTIFACT_KIND_PROCESS_DATA = ":process-data"
 
     def __init__(self, repo_layer):
         self.repo_layer = repo_layer
 
-    def create_default_attachments(self, scheme=None):
+    def set_default_fields(self, operation: models.Operation, clazz):
+
+        if not operation.name:
+            operation.name = clazz.DEFAULT_NAME
+
+        if not operation.description:
+            operation.description = clazz.DEFAULT_DESCRIPTION
+
+        if operation.start_at is None:
+            start_at = datetime.datetime.now()
+
+        if not operation.status:
+            operation.status = OperationServices.STATUS_DRAFT
+
+    def create_default_attachments(self, project, scheme=None):
 
         attachments = models.DigitalArtifact(
             type_urn = FILE_BUCKET_URN_PREFIX,
+            project = project,
             name = "Attachments",
             description = "Default attachments",   
         )
@@ -40,10 +57,11 @@ class OperationServices:
             output_artifacts = [attachments.id]
         )
 
-    def create_default_process_data(self, scheme=None):
+    def create_default_process_data(self, project, scheme=None):
 
         process_data = models.DigitalArtifact(
             type_urn = DATABASE_BUCKET_URN_PREFIX,
+            project = project,
             name = "Process Data",
             description = "Default process data",   
         )
@@ -80,11 +98,11 @@ class OperationServices:
         artifact.url_data = self.repo_layer.buckets.create_file_bucket(bucket_id, scheme)
         return True
 
-FFF_URN_PREFIX = f"{models.Operation.URN_PREFIX}:fff"
-
 class FffServices(OperationServices):
 
-    STATUS_PENDING = "pending"
+    URN_PREFIX = f"{models.Operation.URN_PREFIX}:fff"
+    DEFAULT_NAME = "FFF Manufacture"
+    DEFAULT_DESCRIPTION = "FFF or FDM manufacturing operation"
 
     ARTIFACT_KIND_OPERATOR_NOTES = ":operator-notes"
     ARTIFACT_KIND_OUTPUT_PARTS = ":output-parts"
@@ -92,44 +110,57 @@ class FffServices(OperationServices):
     def __init__(self, repo_layer):
         self.repo_layer = repo_layer
     
-    def create_default_fff_operation(self, name=None, description=None, tags=None, urn_suffix=None,
-                                           start_at=None):
+    def create_default(self, operation: models.Operation):
 
-        urn_segments = [FFF_URN_PREFIX]
-        if urn_suffix is not None:
-            urn_segments.append(urn_suffix)
-
-        if start_at is None:
-            start_at = datetime.datetime.now()
-
-        fff = models.Operation(
-            type_urn = ":".join(urn_segments),
-            name = name or f"FFF Operation ({start_at.isoformat})",
-            description = description,
-            tags = tags,
-            start_at = start_at,
-            status = FffServices.STATUS_PENDING)
+        self.set_default_fields(operation, type(self))
         
-        fff.artifact_transform_graph = [
-            models.ArtifactTransform(
-                kind_urn=FffServices.ARTIFACT_KIND_OPERATOR_NOTES,
-            ),
-            models.ArtifactTransform(
-                kind_urn=FffServices.ARTIFACT_KIND_OUTPUT_PARTS,
-            ),
-            self.create_default_process_data(),
-            self.create_default_attachments(),
-        ]
+        if not operation.artifact_transform_graph:
+            operation.artifact_transform_graph = [
+                models.ArtifactTransform(
+                    kind_urn=FffServices.ARTIFACT_KIND_OPERATOR_NOTES,
+                ),
+                models.ArtifactTransform(
+                    kind_urn=FffServices.ARTIFACT_KIND_OUTPUT_PARTS,
+                ),
+                self.create_default_process_data(operation.project),
+                self.create_default_attachments(operation.project),
+            ]
 
-        return self.repo_layer.operations.create(fff)
+        return self.repo_layer.operations.create(operation)
+
+class ServicedOperationType(pydantic.BaseModel):
+    urn_prefix: str
+    name: str
+    description: Optional[str]
+
+class UnservicedOperationTypeException(Exception):
+    pass
 
 class ServiceLayer:
 
     def __init__(self, repo_layer):
 
         self.repo_layer = repo_layer
+        
+        self.operation_services = [
+            FffServices(self.repo_layer)
+        ]
 
-        self.fff = FffServices(self.repo_layer)
+    @property
+    def operation_service_types(self):
+        return [type(service) for service in self.operation_services]
+
+    def serviced_operation_types(self):
+        return [ServicedOperationType(urn_prefix=service_type.URN_PREFIX,
+                                     name=service_type.DEFAULT_NAME,
+                                     description=service_type.DEFAULT_DESCRIPTION) for service_type in self.operation_service_types]
+
+    def create_default(self, operation: models.Operation):
+        for service in self.operation_services:
+            if operation.type_urn.startswith(type(service).URN_PREFIX):
+                return service.create_default(operation)
+
+        raise UnservicedOperationTypeException(f"Operation of type {operation.type_urn} is not a serviced type.")
 
 def init_request_service_layer(app: fastapi.FastAPI):
 

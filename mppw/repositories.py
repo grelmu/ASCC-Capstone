@@ -63,8 +63,9 @@ class MongoDBRepositoryLayer:
 
         self.kv = ConfigKvRepository(self.session)
         self.users = UserRepository(self.session)
-        self.artifacts = ArtifactRepository(self.session)
+        self.projects = ProjectRepository(self.session)
         self.operations = OperationRepository(self.session)
+        self.artifacts = ArtifactRepository(self.session)
         self.buckets = BucketRepository(self.storage_layer)
 
 class MongoDBRepository:
@@ -214,8 +215,33 @@ class OperationRepository(MongoDBRepository):
     def read(self, id: str):
         return type(self).doc_to_artifact(self.collection.find_one({ "_id": coerce_doc_id(id) }))
 
+    def query(self, project_id: str = None):
+        query_doc = {}
+        if project_id is not None: query_doc["project"] = coerce_doc_id(project_id)
+        return map(lambda doc: doc_to_model(doc, models.Operation), list(self.collection.find(query_doc)))
+
+    def delete(self, id: str):
+        return self.collection.delete_one({ "_id": coerce_doc_id(id) }).deleted_count
+
+    def queryTags(self, prefix):
+        return [":project:foo", ":project:bar"]
+
+class ProjectRepository(MongoDBRepository):
+
+    @property
+    def collection(self) -> pymongo.collection.Collection:
+        return self.db["projects"]
+
+    def create(self, project: models.Project):
+        result = self.collection.insert_one(model_to_doc(project))
+        project.id = result.inserted_id
+        return project
+
+    def read(self, id: str):
+        return type(self).doc_to_artifact(self.collection.find_one({ "_id": coerce_doc_id(id) }))
+
     def query(self):
-        return map(lambda doc: doc_to_model(doc, models.Operation), list(self.collection.find()))
+        return map(lambda doc: doc_to_model(doc, models.Project), list(self.collection.find()))
 
     def delete(self, id: str):
         return self.collection.delete_one({ "_id": coerce_doc_id(id) }).deleted_count

@@ -1,0 +1,262 @@
+<template>
+  <div>
+    <h1>Browse Operations</h1>
+
+    <o-field label="Project">
+      <o-select placeholder="Select a project" v-model="projectId" @update:modelValue="onProjectSelected">
+        <option
+          v-for="project in (projects || [])"
+          :key="project.id"
+          :value="project.id"
+        >
+          {{ project.name }}
+        </option>
+      </o-select>
+
+      <o-button @click="onNewProject()">New Project</o-button>
+
+    </o-field>
+
+    <o-modal v-model:active="isCreatingNewProject">
+      
+      <h2>Create a new project</h2>
+
+      <o-field label="Project Name">
+        <o-input v-model="newProject.name"></o-input>
+      </o-field>
+      <o-field label="Description">
+        <o-input v-model="newProject.description"></o-input>
+      </o-field>
+
+      <o-button @click="onNewProjectSubmit()">Submit</o-button>
+
+    </o-modal>
+
+    <div v-if="projectId" class="mt-5">
+
+
+      <div class="mt-3 text-end">
+        <o-button @click="onNewOp()">New Operation</o-button>
+      </div>
+
+      <o-modal v-model:active="isCreatingNewOp">
+        
+        <h2>Create a new operation</h2>
+
+        <o-field label="Operation Type">
+          <o-select placeholder="Select an operation type" v-model="newOp.type_urn" @update:modelValue="onOpTypeSelected">
+            <option
+              v-for="opType in (opTypes || [])"
+              :key="opType.urn_prefix"
+              :value="opType.urn_prefix"
+            >
+              {{ opType.name }}
+            </option>
+          </o-select>
+        </o-field>
+
+        <o-field label="Operation Name">
+          <o-input v-model="newOp.name"></o-input>
+        </o-field>
+
+        <o-field label="Description">
+          <o-input v-model="newOp.description"></o-input>
+        </o-field>
+
+        <o-button @click="onNewOpSubmit()">Submit</o-button>
+
+      </o-modal>
+
+      <o-table :loading="opsLoading" :data="opsRows || []">
+
+        <o-table-column field="id" label="ID" v-slot="props">
+          {{ props.row.id }}
+        </o-table-column>
+
+        <o-table-column field="name" label="Name" v-slot="props">
+          {{ props.row.name }}
+        </o-table-column>
+
+        <o-table-column field="status" label="Status" v-slot="props">
+          {{ props.row.status }}
+        </o-table-column>
+
+        <o-table-column field="start_at" label="Start" position="centered" v-slot="props">
+          {{ new Date(props.row.start_at).toLocaleDateString() }}
+        </o-table-column>
+
+        <o-table-column field="end_at" label="End" position="centered" v-slot="props">
+          {{ new Date(props.row.end_at).toLocaleDateString() }}
+        </o-table-column>
+
+      </o-table>
+
+    </div>
+    
+  </div>
+</template>
+
+<script>
+export default {
+  data() {
+    return {
+      
+      projects: null,
+      opTypes: null,
+
+      projectId: null,
+
+      isCreatingNewProject: false,
+      newProject: {},
+
+      opsLoading: false,
+      opsRows: null,
+
+      isCreatingNewOp: false,
+      newOp: {},
+    }
+  },
+  methods: {
+    apiFetchProjects() {
+      return this.$root.apiFetch("projects/", {
+        method: "GET",
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.$root.throwApiResponseError(
+          response,
+          "Unknown response when querying for projects"
+        );
+      });
+    },
+    apiFetchOpTypes() {
+      return this.$root.apiFetch("serviced-operations/types", {
+        method: "GET",
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.$root.throwApiResponseError(
+          response,
+          "Unknown response when querying for serviced operation types"
+        );
+      });
+    },
+    apiCreateProject(project) {
+      return this.$root.apiFetch("projects/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(project),
+      }).then((response) => {
+        if (response.status == 201) return response.json();
+        this.$root.throwApiResponseError(
+          response,
+          "Unknown response when creating project"
+        );
+      });
+    },
+    apiFetchProjectOps(project_id) {
+      return this.$root.apiFetch("operations/?project_id=" + this.projectId, {
+        method: "GET",
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.$root.throwApiResponseError(
+          response,
+          "Unknown response when querying for project operations"
+        );
+      });
+    },
+    apiCreateOp(op) {
+      return this.$root.apiFetch("serviced-operations/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(op),
+      }).then((response) => {
+        if (response.status == 201) return response.json();
+        this.$root.throwApiResponseError(
+          response,
+          "Unknown response when creating operation"
+        );
+      });
+    },
+
+    refreshProjects() {
+      this.projects = null;
+      this.projectId = null;
+      return this.apiFetchProjects()
+        .then((projects) => {
+          this.projects = projects;
+        });
+    },
+    refreshOpTypes() {
+      this.opTypes = null;
+      this.newOpTypeUrn = null;
+      return this.apiFetchOpTypes()
+        .then((opTypes) => {
+          this.opTypes = opTypes;
+        });
+    },
+
+    onProjectSelected(projectId) {
+      this.projectId = projectId;
+      this.resetOpsTable();
+      if (this.projectId)
+        this.loadOpsTable();
+    },
+
+    loadOpsTable() {
+      this.opsLoading = true;
+      return this.apiFetchProjectOps(this.projectId)
+        .then((ops) => {
+          this.opsRows = ops;
+          this.opsLoading = false;
+        })
+    },
+    resetOpsTable() {
+      this.opsLoading = false;
+      this.opsRows = null;
+    },
+
+    onNewProject() {
+      this.isCreatingNewProject = true;
+      this.newProject = {}
+    },
+    onNewProjectSubmit() {
+      this.apiCreateProject(this.newProject)
+        .finally(() => {
+          this.isCreatingNewProject = false;
+          this.refreshProjects();
+        })
+    },
+
+    onNewOp() {
+      this.isCreatingNewOp = true;
+      this.newOp = {}
+    },
+    onOpTypeSelected(opTypeUrn) {
+      this.newOp.type_urn = opTypeUrn;
+    },
+    onNewOpSubmit() {
+      
+      this.newOp.project = this.projectId;
+
+      this.apiCreateOp(this.newOp)
+        .finally(() => {
+          this.isCreatingNewOp = false;
+          this.resetOpsTable();
+          this.loadOpsTable();
+        })
+    },
+  },
+
+  mounted() {
+    this.refreshProjects();
+    this.refreshOpTypes();
+  }
+};
+</script>
+
+<style scoped>
+/* empty */
+</style>
