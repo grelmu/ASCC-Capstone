@@ -143,7 +143,7 @@ export default {
       );
     },
     apiFetch(input, init) {
-      input = "../api/" + input;
+      input = location.origin + "/api/" + input;
       init.headers = init.headers || {};
       init.headers["Authorization"] = "Bearer " + this.credentials.api.token;
       return fetch(input, init).then((response) => {

@@ -129,7 +129,7 @@ export default {
       });
     },
     apiFetchOpTypes() {
-      return this.$root.apiFetch("serviced-operations/types", {
+      return this.$root.apiFetch("serviced-operations/types/", {
         method: "GET",
       }).then((response) => {
         if (response.status == 200) return response.json();

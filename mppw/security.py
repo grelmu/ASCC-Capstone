@@ -202,7 +202,7 @@ def create_router(app):
 
         return {"access_token": access_token, "token_type": "bearer"}
 
-    @router.get("/users/me/", response_model=SafeUser)
+    @router.get("/users/me", response_model=SafeUser)
     def get_users_me(current_user: models.User = Security(request_user(app))):
         return current_user
 

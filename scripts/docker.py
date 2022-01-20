@@ -5,12 +5,13 @@ import toml
 import glob
 import shutil
 import argh
+import furl
 
 root_dir = os.path.dirname(os.path.dirname(__file__))
 dist_dir = os.path.join(root_dir, "dist")
 containers_dir = os.path.join(root_dir, "containers")
 
-def build():
+def build(*args):
 
     project = None
     with open("pyproject.toml") as f:
@@ -19,28 +20,31 @@ def build():
     project_name = project['tool']['poetry']['name']
     project_version = project['tool']['poetry']['version']
 
-    subprocess.run(["poetry", "build"])
+    if not args or "mppw-nginx" in args:
+        subprocess.run(["docker",  "build",
+                        os.path.join(containers_dir, f"{project_name}-nginx"),
+                        "--tag", f"ascc/{project_name}-nginx:dev",
+                        "--tag", f"ascc/{project_name}-nginx:{project_version}"])
 
-    shutil.rmtree(os.path.join(containers_dir, project_name, "dist"))
-    shutil.copytree(dist_dir, os.path.join(containers_dir, project_name, "dist"))
-    shutil.copy(os.path.join(containers_dir, f"{project_name}-stack.yml"), os.path.join(containers_dir, project_name, "dist"))
+    if not args or "mppw-mongodb" in args:
+        subprocess.run(["docker",  "build",
+                        os.path.join(containers_dir, f"{project_name}-mongodb"),
+                        "--tag", f"ascc/{project_name}-mongodb:dev",
+                        "--tag", f"ascc/{project_name}-mongodb:{project_version}"])
 
-    subprocess.run(["docker",  "build",
-                    os.path.join(containers_dir, f"{project_name}-nginx"),
-                    "--tag", f"ascc/{project_name}-nginx:dev",
-                    "--tag", f"ascc/{project_name}-nginx:{project_version}"])
+    if not args or "mppw" in args:
+        subprocess.run(["poetry", "build"])
 
-    subprocess.run(["docker",  "build",
-                    os.path.join(containers_dir, f"{project_name}-mongodb"),
-                    "--tag", f"ascc/{project_name}-mongodb:dev",
-                    "--tag", f"ascc/{project_name}-mongodb:{project_version}"])
-    
-    subprocess.run(["docker",  "build",  
-                    "--build-arg", f"PACKAGE_NAME={project_name}", 
-                    "--build-arg", f"PACKAGE_VERSION={project_version}",
-                    os.path.join(containers_dir, project_name),
-                    "--tag", f"ascc/{project_name}:dev",
-                    "--tag", f"ascc/{project_name}:{project_version}"])
+        shutil.rmtree(os.path.join(containers_dir, project_name, "dist"))
+        shutil.copytree(dist_dir, os.path.join(containers_dir, project_name, "dist"))
+        shutil.copy(os.path.join(containers_dir, f"{project_name}-stack.yml"), os.path.join(containers_dir, project_name, "dist"))
+
+        subprocess.run(["docker",  "build",  
+                        "--build-arg", f"PACKAGE_NAME={project_name}", 
+                        "--build-arg", f"PACKAGE_VERSION={project_version}",
+                        os.path.join(containers_dir, project_name),
+                        "--tag", f"ascc/{project_name}:dev",
+                        "--tag", f"ascc/{project_name}:{project_version}"])
 
 def compose():
 
@@ -58,8 +62,27 @@ def compose_dev():
         "-f", os.path.join(containers_dir, "mppw-stack.yml"),
         "-f", os.path.join(containers_dir, "mppw-stack.dev.yml")] + sys.argv[2:])
 
+def tunnel():
+
+    tunnel_furl = furl.furl(os.environ.get("DOCKER_HOST", ""))
+    if not tunnel_furl.url:
+        print("Remote $DOCKER_HOST is not configured, no tunneling required.")
+    if not tunnel_furl.scheme == "ssh":
+        print("Remote $DOCKER_HOST is not available via ssh:// protocol.")
+
+    tunnel_forward_host = tunnel_furl.netloc.split("@")[-1]
+
+    tunnel_args = ["ssh", "-N", tunnel_furl.netloc]
+    for local_port, remote_port in [(8080, 80), (44443, 443), (21037, 21017)]:
+        tunnel_args.append("-L")
+        tunnel_args.append(f"{local_port}:{tunnel_forward_host}:{remote_port}")
+
+    print("Starting " + " ".join(tunnel_args) + " ...")
+
+    subprocess.run(tunnel_args)
+
 parser = argh.ArghParser()
-parser.add_commands([build]) #, compose])
+parser.add_commands([build, tunnel]) #, compose])
 
 def main():
     if sys.argv[1] == "compose":
