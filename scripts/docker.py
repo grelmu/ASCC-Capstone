@@ -70,7 +70,7 @@ def tunnel():
     if not tunnel_furl.scheme == "ssh":
         print("Remote $DOCKER_HOST is not available via ssh:// protocol.")
 
-    tunnel_forward_host = tunnel_furl.netloc.split("@")[-1]
+    tunnel_forward_host = "localhost" #tunnel_furl.netloc.split("@")[-1]
 
     tunnel_args = ["ssh", "-N", tunnel_furl.netloc]
     for local_port, remote_port in [(8080, 80), (44443, 443), (21037, 21017)]:

@@ -88,6 +88,15 @@ $ echo $DOCKER_HOST
 $ export DOCKER_HOST=
 ```
 
+To save typing, it may also be useful to copy the `.env-local` file to an `.env-prod-host` file and set the `DOCKER_HOST` and `MONGODB_ADMIN_PASSWORD` values in one place.  This allows you to `source` these values together into your environment and not remember them individually every time.
+
+```sh
+$ source .env-prod-host
+... do stuff on prod ...
+$ source .env-local
+... back to local docker
+```
+
 To upgrade a production deployment to use new code:
 
 ```sh

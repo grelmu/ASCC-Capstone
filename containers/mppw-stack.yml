@@ -3,6 +3,7 @@ services:
 
   mppw:
     image: ascc/mppw:${MPPW_VERSION:-dev}
+    restart: on-failure:3
     environment:
       MPPW_ADMIN_USERNAME: ${MPPW_ADMIN_USERNAME:-}
       MPPW_ADMIN_PASSWORD: ${MPPW_ADMIN_PASSWORD:-}
@@ -12,9 +13,11 @@ services:
 
   mongodb:
     image: ascc/mppw-mongodb:${MPPW_VERSION:-dev}
+    restart: on-failure:3
     volumes:
       - certificates:/etc/certificates
-      - data:/data
+      - data_db:/data/db
+      - data_configdb:/data/configdb
     ports:
       - "${MONGODB_EXTERNAL_PORT:-27017}:27017"
     environment:
@@ -23,10 +26,11 @@ services:
       MONGO_INITDB_DATABASE: admin
       MONGO_INITRS_CONFIG: '{ "_id": "mppw0", "version": 1,  "members": [{ "_id": 0, "host": "mongodb:27017"}] }'
       MONGO_INITRS_TLS: 1
-    command: ["mongod", "--tlsMode", "requireTLS", "--tlsCertificateKeyFile", "/etc/certificates/mongodb/key-cert.pem", "--replSet", "mppw0", "--keyFile", "/etc/certificates/mongodb/root-password-keyfile.key"]
+    command: ["mongod", "--tlsMode", "preferTLS", "--tlsCertificateKeyFile", "/etc/certificates/mongodb/key-cert.pem", "--replSet", "mppw0", "--keyFile", "/etc/certificates/mongodb/root-password-keyfile.key"]
 
   nginx:
     image: ascc/mppw-nginx:${MPPW_VERSION:-dev}
+    restart: on-failure:3
     volumes:
       - certificates:/etc/certificates
     ports:
@@ -36,5 +40,6 @@ services:
       PROXY_PASS: http://mppw:8000
 
 volumes:
-  data:
+  data_db:
+  data_configdb:
   certificates:
