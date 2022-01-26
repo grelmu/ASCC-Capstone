@@ -102,8 +102,9 @@
 
 <script>
 const routes = [
-  { path: "/", component: RemoteVue.lazyComponent("vues/browse-ops-page.vue") },
+  { path: "/", component: RemoteVue.lazyComponent("vues/browse-operations-page.vue") },
   { path: "/about", component: RemoteVue.lazyComponent("vues/about-page.vue") },
+  { path: "/operations/:id", component: RemoteVue.lazyComponent("vues/operations-page.vue") },
 ];
 
 const initRoutes = function (app) {

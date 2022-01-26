@@ -70,7 +70,9 @@
       <o-table :loading="opsLoading" :data="opsRows || []">
 
         <o-table-column field="id" label="ID" v-slot="props">
-          {{ props.row.id }}
+          <router-link :to="'/operations/' + props.row.id">
+            {{ props.row.id }}
+          </router-link>
         </o-table-column>
 
         <o-table-column field="name" label="Name" v-slot="props">
