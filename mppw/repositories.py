@@ -298,31 +298,45 @@ class BucketRepository:
     # Local MongoDB specific implementation below
     #
 
-    def create_local_mdb_user(self, username, db_name, coll_names=None):
+    def create_local_mdb_user(self, username, db_name, coll_names=None, read_only=False, password=None):
 
-        password = secrets.token_hex(32)
+        password = password if password is not None else secrets.token_hex(32)
         role_name = f"{username}-role"
 
         db = self.storage_layer.mdb_client[db_name]
 
         role_doc = None
         if coll_names is None:
+
+            roles = None
+            if not read_only:
+                roles = [{ "role": "dbAdmin", "db": db_name }, { "role": "readWrite", "db": db_name }]
+            else:
+                roles = [{ "role": "read", "db": db_name }]
+
             role_doc = {
                 "createRole": role_name,
                 "privileges": [],
-                "roles": [{ "role": "dbAdmin", "db": db_name }, { "role": "readWrite", "db": db_name }]
+                "roles": roles
             }
 
         else:
             
             priv_docs = []
             for coll_name in coll_names:
-                priv_docs.append({
-                    "resource": { "db": db_name, "collection": coll_name },
-                    "actions": ["find", "insert", "update", "remove", "changeStream",
-                                "listIndexes", "createIndex", "reIndex", "dropIndex",
-                                "collStats", "indexStats"]
-                })
+
+                if not read_only:
+                    priv_docs.append({
+                        "resource": { "db": db_name, "collection": coll_name },
+                        "actions": ["find", "insert", "update", "remove", "changeStream",
+                                    "listIndexes", "createIndex", "reIndex", "dropIndex",
+                                    "collStats", "indexStats"]
+                    })
+                else:
+                    priv_docs.append({
+                        "resource": { "db": db_name, "collection": coll_name },
+                        "actions": ["find", "changeStream", "listIndexes", "collStats", "indexStats"]
+                    })
 
             role_doc = {
                 "createRole": role_name,
@@ -374,6 +388,8 @@ class BucketRepository:
         suffixes = ["bucket", bucket_id]
         bucket_furl = self.create_local_mdb_furl(db_suffix="-".join(suffixes))
         bucket_furl.username, bucket_furl.password = self.create_local_mdb_user(f"bucket-{bucket_id}-user", bucket_furl.path.segments[0])
+        self.create_local_mdb_user(f"{bucket_furl.username}-ro", bucket_furl.path.segments[0], read_only=True, password=bucket_furl.password[0:(len(bucket_furl.password) / 2)])
+
         return bucket_furl.url
 
     def drop_local_mdb_bucket(self, bucket_url):
@@ -382,6 +398,11 @@ class BucketRepository:
         db_name = bucket_furl.path.segments[0]
 
         self.drop_local_mdb_user(bucket_furl.username, db_name)
+        try:
+            self.drop_local_mdb_user(f"{bucket_furl.username}-ro", db_name)
+        except Exception as ex:
+            logger.warn(f"Could not drop read-only user for {bucket_furl.username}:\n{ex}")
+
         self.storage_layer.mdb_client.drop_database(db_name)
 
     def create_local_gridfs_bucket(self, bucket_id):
@@ -398,6 +419,7 @@ class BucketRepository:
 
         bucket_furl.username, bucket_furl.password = \
             self.create_local_mdb_user(f"gridfs-{bucket_id}-user", bucket_furl.path.segments[0], coll_names=coll_names)
+        self.create_local_mdb_user(f"{bucket_furl.username}-ro", bucket_furl.path.segments[0], read_only=True, password=bucket_furl.password[0:(len(bucket_furl.password) / 2)])
 
         return bucket_furl.url
 
@@ -408,6 +430,10 @@ class BucketRepository:
         bucket_id = bucket_furl.path.segments[1]
 
         self.drop_local_mdb_user(bucket_furl.username, db_name)
+        try:
+            self.drop_local_mdb_user(f"{bucket_furl.username}-ro", db_name)
+        except Exception as ex:
+            logger.warn(f"Could not drop read-only user for {bucket_furl.username}:\n{ex}")
 
         db = self.storage_layer.mdb_client[db_name]
         bucket = gridfs.GridFSBucket(db, bucket_id)
