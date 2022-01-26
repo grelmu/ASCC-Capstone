@@ -213,7 +213,7 @@ class OperationRepository(MongoDBRepository):
         return operation
 
     def read(self, id: str):
-        return type(self).doc_to_artifact(self.collection.find_one({ "_id": coerce_doc_id(id) }))
+        return doc_to_model(self.collection.find_one({ "_id": coerce_doc_id(id) }), models.Operation)
 
     def query(self, project_id: str = None):
         query_doc = {}
@@ -388,7 +388,7 @@ class BucketRepository:
         suffixes = ["bucket", bucket_id]
         bucket_furl = self.create_local_mdb_furl(db_suffix="-".join(suffixes))
         bucket_furl.username, bucket_furl.password = self.create_local_mdb_user(f"bucket-{bucket_id}-user", bucket_furl.path.segments[0])
-        self.create_local_mdb_user(f"{bucket_furl.username}-ro", bucket_furl.path.segments[0], read_only=True, password=bucket_furl.password[0:(len(bucket_furl.password) / 2)])
+        self.create_local_mdb_user(f"{bucket_furl.username}-ro", bucket_furl.path.segments[0], read_only=True, password=bucket_furl.password[0:int(len(bucket_furl.password) / 2)])
 
         return bucket_furl.url
 
@@ -419,7 +419,7 @@ class BucketRepository:
 
         bucket_furl.username, bucket_furl.password = \
             self.create_local_mdb_user(f"gridfs-{bucket_id}-user", bucket_furl.path.segments[0], coll_names=coll_names)
-        self.create_local_mdb_user(f"{bucket_furl.username}-ro", bucket_furl.path.segments[0], read_only=True, password=bucket_furl.password[0:(len(bucket_furl.password) / 2)])
+        self.create_local_mdb_user(f"{bucket_furl.username}-ro", bucket_furl.path.segments[0], read_only=True, password=bucket_furl.password[0:int(len(bucket_furl.password) / 2)])
 
         return bucket_furl.url
 
