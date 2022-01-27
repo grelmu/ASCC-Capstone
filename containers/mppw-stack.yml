@@ -3,7 +3,7 @@ services:
 
   mppw:
     image: ascc/mppw:${MPPW_VERSION:-dev}
-    restart: on-failure:3
+    restart: unless-stopped
     environment:
       MPPW_ADMIN_USERNAME: ${MPPW_ADMIN_USERNAME:-}
       MPPW_ADMIN_PASSWORD: ${MPPW_ADMIN_PASSWORD:-}
@@ -13,7 +13,7 @@ services:
 
   mongodb:
     image: ascc/mppw-mongodb:${MPPW_VERSION:-dev}
-    restart: on-failure:3
+    restart: unless-stopped
     volumes:
       - certificates:/etc/certificates
       - data_db:/data/db
@@ -30,7 +30,7 @@ services:
 
   nginx:
     image: ascc/mppw-nginx:${MPPW_VERSION:-dev}
-    restart: on-failure:3
+    restart: unless-stopped
     volumes:
       - certificates:/etc/certificates
     ports:
