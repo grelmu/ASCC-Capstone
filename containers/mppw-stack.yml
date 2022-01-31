@@ -24,9 +24,9 @@ services:
       MONGO_INITDB_ROOT_USERNAME: ${MONGODB_ADMIN_USERNAME:-admin}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_ADMIN_PASSWORD:?MONGODB_ADMIN_PASSWORD is required.}
       MONGO_INITDB_DATABASE: admin
-      MONGO_INITRS_CONFIG: '{ "_id": "mppw0", "version": 1,  "members": [{ "_id": 0, "host": "mongodb:27017"}] }'
+      MONGO_INITRS_CONFIG: '{ "_id": "${MONGODB_INITRS_NAME:-mppw0}", "version": 1,  "members": [{ "_id": 0, "host": "mongodb:27017"}] }'
       MONGO_INITRS_TLS: 1
-    command: ["mongod", "--tlsMode", "preferTLS", "--tlsCertificateKeyFile", "/etc/certificates/mongodb/key-cert.pem", "--replSet", "mppw0", "--keyFile", "/etc/certificates/mongodb/root-password-keyfile.key"]
+    command: ["mongod", "--tlsMode", "preferTLS", "--tlsCertificateKeyFile", "/etc/certificates/mongodb/key-cert.pem", "--replSet", "${MONGODB_INITRS_NAME:-mppw0}", "--keyFile", "/etc/certificates/mongodb/root-password-keyfile.key"]
 
   nginx:
     image: ascc/mppw-nginx:${MPPW_VERSION:-dev}
