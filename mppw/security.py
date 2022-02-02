@@ -248,6 +248,7 @@ def create_router(app):
     @router.get("/users/me", response_model=ScopedUser)
     def me(current_user: ScopedUser = Security(request_user(app))):
 
+        logger.warn(current_user)
         return current_user
 
     @router.get("/users/{id}", response_model=models.SafeUser)

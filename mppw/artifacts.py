@@ -16,8 +16,8 @@ def create_router(app):
 
     router = fastapi.APIRouter(prefix="/api/artifacts")
 
-    @router.post("/", response_model=Union[models.MaterialArtifact, models.DigitalArtifact], status_code = fastapi.status.HTTP_201_CREATED)
-    def create(artifact: Union[models.MaterialArtifact, models.DigitalArtifact],
+    @router.post("/", response_model=models.AnyArtifact, status_code = fastapi.status.HTTP_201_CREATED)
+    def create(artifact: models.AnyArtifact,
                user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
                repo_layer = Depends(request_repo_layer(app))):
         
@@ -26,7 +26,7 @@ def create_router(app):
         art_repo = repo_layer.artifacts
         return art_repo.create(artifact)
 
-    @router.get("/{id}", response_model=Union[models.MaterialArtifact, models.DigitalArtifact])
+    @router.get("/{id}", response_model=models.AnyArtifact)
     def read(id: str,
              user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
              repo_layer = Depends(request_repo_layer(app))):
@@ -41,7 +41,7 @@ def create_router(app):
         
         return result
 
-    @router.get("/", response_model=List[Union[models.DigitalArtifact, models.MaterialArtifact]])
+    @router.get("/", response_model=List[models.AnyArtifact])
     def query(project_ids: List[str] = fastapi.Query(None),
               active: bool = fastapi.Query(True),
               user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),

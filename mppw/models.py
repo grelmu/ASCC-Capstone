@@ -7,21 +7,63 @@ import datetime
 
 from mppw import logger
 
-class PyObjectId(bson.ObjectId):
+class DbId:
 
     @classmethod
     def __get_validators__(cls):
         yield cls.validate
 
     @classmethod
-    def validate(cls, v):
-        if not bson.ObjectId.is_valid(v):
-            raise ValueError('Invalid objectid')
-        return bson.ObjectId(v)
+    def validate(cls, val):
+        if isinstance(val, DbId): return val
+        if isinstance(val, bson.ObjectId): return ObjectDbId(val)
+        if isinstance(val, str):
+            try:
+                return ObjectDbId(bson.ObjectId(val))
+            except:
+                return StrDbId(val)
+        else:
+            raise Exception(f"Unknown db id value of {val}")
 
     @classmethod
     def __modify_schema__(cls, field_schema):
         field_schema.update(type='string')
+
+    @classmethod
+    def bson_encoder(cls):
+        class BsonEncoder(bson.codec_options.TypeEncoder):
+            python_type = cls
+            def transform_python(self, value):
+                return value.id
+        return BsonEncoder()
+
+class ObjectDbId(DbId):
+
+    def __init__(self, id: bson.ObjectId):
+        self.id = id
+
+    def __str__(self):
+        return str(self.id)
+
+    def __repr__(self):
+        return f"DbId(ObjectId({self.id}))"
+
+    def __json__(self):
+        return str(self.id)
+
+class StrDbId(DbId):
+
+    def __init__(self, id: str):
+        self.id = id
+
+    def __str__(self):
+        return self.id
+
+    def __repr__(self):
+        return f"DbId({self.id})"
+
+    def __json__(self):
+        return self.id
   
 class ConfigKv(pydantic.BaseModel):
     key: str
@@ -29,11 +71,13 @@ class ConfigKv(pydantic.BaseModel):
 
 class DocModel(pydantic.BaseModel):
 
-    id: Optional[Union[PyObjectId, str]]
+    id: Optional[DbId]
 
     class Config(pydantic.BaseConfig):
         json_encoders = {
             datetime.datetime: lambda dt: dt.isoformat(),
+            ObjectDbId: lambda dbid: dbid.__json__(),
+            StrDbId: lambda dbid: dbid.__json__(),
             bson.ObjectId: lambda oid: str(oid),
         }
 
@@ -66,7 +110,7 @@ class Artifact(DocModel):
 
     # Keep these required for later use in sharding and vfs interfaces
     type_urn: str
-    project: Union[PyObjectId, str]
+    project: DbId
 
     name: Optional[str]
     description: Optional[str]
@@ -102,13 +146,15 @@ class DigitalArtifact(Artifact):
             raise ValueError(f"digital artifact URNs must start with {DigitalArtifact.URN_PREFIX}: {v}")
         return v
 
+AnyArtifact = Union[MaterialArtifact, DigitalArtifact]
+
 class ArtifactTransform(pydantic.BaseModel):
 
     URN_PREFIX: ClassVar = "urn:x-mfg:transform"
 
     kind_urn: str
-    input_artifacts: Optional[List[Union[PyObjectId, str]]]
-    output_artifacts: Optional[List[Union[PyObjectId, str]]]
+    input_artifacts: Optional[List[DbId]]
+    output_artifacts: Optional[List[DbId]]
     parameters: Any
     
 class Operation(DocModel):
@@ -117,7 +163,7 @@ class Operation(DocModel):
 
     # Keep these required for later use in sharding and vfs interfaces
     type_urn: str
-    project: Union[PyObjectId, str]
+    project: DbId
 
     name: Optional[str]
     description: Optional[str]
@@ -125,9 +171,9 @@ class Operation(DocModel):
     active: bool = True
 
     system_name: Optional[str]
-    system_id: Optional[Union[PyObjectId, str]]
+    system_id: Optional[DbId]
     human_operator_names: Optional[List[str]]
-    human_operator_ids: Optional[List[Union[PyObjectId, str]]]
+    human_operator_ids: Optional[List[DbId]]
 
     start_at: Optional[datetime.datetime]
     end_at: Optional[datetime.datetime]
@@ -140,4 +186,3 @@ class Operation(DocModel):
         if not v.startswith(Operation.URN_PREFIX):
             raise ValueError(f"operation URNs must start with {Operation.URN_PREFIX}: {v}")
         return v
-

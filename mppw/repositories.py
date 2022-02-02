@@ -1,4 +1,5 @@
 from gc import collect
+import typing
 from typing import Optional, List, ClassVar, Any, Union
 import fastapi
 import fastapi.encoders
@@ -54,6 +55,8 @@ def using_app_repo_layer(app: fastapi.FastAPI, cb):
 # MongoDB repository layer implementation
 #
 
+mdb_codec_options = bson.codec_options.CodecOptions(type_registry=bson.codec_options.TypeRegistry([models.ObjectDbId.bson_encoder(), models.StrDbId.bson_encoder()]))
+
 class MongoDBRepositoryLayer:
 
     def __init__(self, storage_layer: storage.MongoDBStorageLayer, session: pymongo.client_session.ClientSession):
@@ -107,10 +110,7 @@ class ConfigKvRepository(MongoDBRepository):
 
 def coerce_doc_id(id):
     if id is None: return None
-    try:
-        return bson.ObjectId(id)
-    except:
-        return id
+    return models.DbId.validate(id)
 
 def coerce_model_id(model):
     if model is None: return None
@@ -122,12 +122,8 @@ def model_to_doc(model):
     if "id" in doc:
         doc["_id"] = doc["id"]
         del doc["id"]
-    
-    if doc["_id"] is None:
+    if "_id" in doc and doc["_id"] is None:
         del doc["_id"]
-    else:
-        doc["_id"] = coerce_doc_id(doc["_id"])
-
     return doc
 
 def doc_to_model(doc, clazz):
@@ -142,7 +138,7 @@ class UserRepository(MongoDBRepository):
 
     @property
     def collection(self) -> pymongo.collection.Collection:
-        return self.db["users"]
+        return self.db.get_collection("users", codec_options=mdb_codec_options)
 
     def _query_doc_for(self, id: str = None, username: str = None, active: bool = None):
         query_doc = {}
@@ -157,6 +153,7 @@ class UserRepository(MongoDBRepository):
         return user
 
     def query(self, id=None, username=None, active=None):
+        logger.warn(self._query_doc_for(id=id, username=username, active=active))
         return map(lambda doc: doc_to_model(doc, models.User), list(self.collection.find(
             self._query_doc_for(id=id, username=username, active=active))))
 
@@ -182,7 +179,7 @@ class ProjectRepository(MongoDBRepository):
 
     @property
     def collection(self) -> pymongo.collection.Collection:
-        return self.db["projects"]
+        return self.db.get_collection("projects", codec_options=mdb_codec_options)
 
     def _query_doc_for(self, ids: List[str] = None, active: Optional[bool] = None):
         query_doc = {}
@@ -224,7 +221,7 @@ class ArtifactRepository(MongoDBRepository):
 
     @property
     def collection(self) -> pymongo.collection.Collection:
-        return self.db["artifacts"]
+        return self.db.get_collection("artifacts", codec_options=mdb_codec_options)
 
     def _query_doc_for(self, id: str = None, project_ids: List[str] = None, active: Optional[bool] = None):
         query_doc = {}
@@ -258,7 +255,7 @@ class OperationRepository(MongoDBRepository):
 
     @property
     def collection(self) -> pymongo.collection.Collection:
-        return self.db["operations"]
+        return self.db.get_collection("operations", codec_options=mdb_codec_options)
 
     def _query_doc_for(self, id: str = None, project_ids: List[str] = None, active: Optional[bool] = None):
         query_doc = {}
@@ -275,6 +272,14 @@ class OperationRepository(MongoDBRepository):
     def query(self, id: str = None, project_ids: List[str] = None, active: Optional[bool] = None):
         return map(lambda doc: doc_to_model(doc, models.Operation), list(self.collection.find(
             self._query_doc_for(id=id, project_ids=project_ids, active=active))))
+
+    def attach(self, id: str, transform: models.ArtifactTransform, project_ids: List[str] = None):
+        return self.collection.update_one(
+            self._query_doc_for(id=id, project_ids=project_ids), { "$push" : { "artifact_transform_graph": model_to_doc(transform) }}).modified_count == 1
+
+    def detach(self, id: str, kind_urn: str, project_ids: List[str] = None):
+        return self.collection.update_one(
+            self._query_doc_for(id=id, project_ids=project_ids), { "$pull" : { "artifact_transform_graph": { "kind_urn": kind_urn }}}).modified_count == 1
 
     def deactivate(self, id: str, project_ids: List[str] = None):
         return self.collection.update_one(

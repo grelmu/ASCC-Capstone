@@ -61,6 +61,47 @@ def create_router(app):
             active=active,
         ))
 
+    class NewArtifactTransform(models.ArtifactTransform):
+        new_input_artifacts: Optional[List[models.AnyArtifact]]
+        new_output_artifacts: Optional[List[models.AnyArtifact]]
+
+    @router.post("/{id}/artifacts/", response_model=NewArtifactTransform, status_code = fastapi.status.HTTP_201_CREATED)
+    def attach(id: str,
+               new_transform: NewArtifactTransform,
+               user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+               repo_layer = Depends(request_repo_layer(app))):
+    
+        if new_transform.input_artifacts is None: new_transform.input_artifacts = []
+        if new_transform.output_artifacts is None: new_transform.output_artifacts = []
+
+        for new_artifacts, artifact_ids in [(new_transform.new_input_artifacts, new_transform.input_artifacts),
+                                            (new_transform.new_output_artifacts, new_transform.output_artifacts)]:
+            if new_artifacts is None: continue
+            for new_artifact in new_artifacts:
+                projects.check_project_claims_for_user(user, [str(new_artifact.project)])
+                artifact_ids.append(repo_layer.artifacts.create(new_artifact))
+
+        transform = models.ArtifactTransform(**(new_transform.dict()))
+        modified = repo_layer.operations.attach(id, transform, project_ids=projects.project_claims_for_user(user))
+        if not modified:
+            raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
+
+        return new_transform
+
+    @router.delete("/{id}/artifacts/{kind_urn}", response_model=bool)
+    def detach(id: str,
+               kind_urn: str,
+               user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+               repo_layer = Depends(request_repo_layer(app))):
+    
+        modified = repo_layer.operations.detach(id, kind_urn, project_ids=projects.project_claims_for_user(user))
+
+        if not modified:
+            raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
+
+        return True
+
+
     @router.delete("/{id}", response_model=bool)
     def delete(id: str,
                preserve_data: bool = True,
