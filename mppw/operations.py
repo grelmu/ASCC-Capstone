@@ -13,6 +13,7 @@ from . import services
 from .services import request_service_layer
 from . import security
 from .security import request_user, PROVENANCE_SCOPE
+from . import projects
 
 def create_router(app):
 
@@ -22,35 +23,59 @@ def create_router(app):
 
     @router.post("/", response_model=models.Operation, status_code = fastapi.status.HTTP_201_CREATED)
     def create(operation: models.Operation,
-               current_user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+               user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
                repo_layer = Depends(request_repo_layer(app))):
         
-        op_repo = repo_layer.operations
-        return op_repo.create(operation)
+        projects.check_project_claims_for_user(user, [str(operation.project)])
+
+        return repo_layer.operations.create(operation)
 
     @router.get("/{id}", response_model=models.Operation)
     def read(id: str,
-             current_user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+             user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
              repo_layer = Depends(request_repo_layer(app))):
         
-        op_repo = repo_layer.operations
-        return op_repo.read(id)
+        result = repo_layer.operations.query_one(
+            id=id,
+            project_ids=projects.project_claims_for_user(user)
+        )
+
+        if result is None:
+            raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
+        
+        return result
 
     @router.get("/", response_model=List[models.Operation])
-    def query(project_id: str = None,
-              current_user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+    def query(project_ids: List[str] = fastapi.Query(None),
+              active: bool = fastapi.Query(True),
+              user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
               repo_layer = Depends(request_repo_layer(app))):
 
-        op_repo = repo_layer.operations
-        return list(op_repo.query(project_id=project_id))
+        if project_ids is None:
+            project_ids = projects.project_claims_for_user(user)
+
+        projects.check_project_claims_for_user(user, project_ids)
+        
+        return list(repo_layer.operations.query(
+            project_ids=project_ids,
+            active=active,
+        ))
 
     @router.delete("/{id}", response_model=bool)
     def delete(id: str,
+               preserve_data: bool = True,
                current_user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
                repo_layer = Depends(request_repo_layer(app))):
         
-        op_repo = repo_layer.operations
-        return op_repo.delete(id) > 0
+        modified = (repo_layer.operations.deactivate if preserve_data else repo_layer.operations.delete)(
+            id,
+            project_ids=projects.project_claims_for_user(current_user)
+        )
+        
+        if not modified:
+            raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
+
+        return True
 
     combined_router.include_router(router)
 
@@ -58,14 +83,16 @@ def create_router(app):
 
     @router.post("/", response_model=models.Operation, status_code = fastapi.status.HTTP_201_CREATED)
     def create_serviced(operation: models.Operation,
-                        current_user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+                        user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
                         service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
             
+        projects.check_project_claims_for_user(user, [str(operation.project)])
+
         return service_layer.create_default(operation)
 
 
     @router.get("/types/", response_model=List[services.ServicedOperationType])
-    def query_serviced_types(current_user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+    def query_serviced_types(user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
                              service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
 
         return list(service_layer.serviced_operation_types())

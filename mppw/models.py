@@ -1,4 +1,4 @@
-from typing import Optional, List, ClassVar, Any, Union
+from typing import Optional, List, ClassVar, Any, Union, Dict
 import fastapi
 import fastapi.encoders
 import pydantic
@@ -37,10 +37,14 @@ class DocModel(pydantic.BaseModel):
             bson.ObjectId: lambda oid: str(oid),
         }
 
-class User(DocModel):
+class SafeUser(DocModel):
     username: str
-    hashed_password: str
+    allowed_scopes: Optional[List[str]]
+    local_claims: Optional[Dict[str, Any]]
     active: bool = True
+
+class User(SafeUser):
+    hashed_password: str
 
 # class Scope(SQLModel, table=True):
 #     id: Optional[int] = Field(default=None, primary_key=True)
@@ -67,6 +71,7 @@ class Artifact(DocModel):
     name: Optional[str]
     description: Optional[str]
     tags: Optional[List[str]]
+    active: bool = True
 
 class MaterialArtifact(Artifact):
 
@@ -117,6 +122,7 @@ class Operation(DocModel):
     name: Optional[str]
     description: Optional[str]
     tags: Optional[List[str]]
+    active: bool = True
 
     system_name: Optional[str]
     system_id: Optional[Union[PyObjectId, str]]

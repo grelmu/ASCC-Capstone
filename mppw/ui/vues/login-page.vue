@@ -57,14 +57,12 @@ export default {
   },
   methods: {
     doLogin() {
-      console.log({ username: this.username, password: this.password });
-
+      
       this.fetchOauth2PasswordBearer({
         method: "POST",
         body: new URLSearchParams({
           username: this.username,
           password: this.password,
-          scope: "* provenance"
         }),
       })
         .then((response) => {

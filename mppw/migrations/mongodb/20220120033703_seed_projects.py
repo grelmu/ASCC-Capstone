@@ -13,10 +13,9 @@ dependencies = ['20220120032759_projects']
 
 def upgrade(db: pymongo.database.Database):
     if include_seed_data():
-        print("INCLUDING SEED DATA")
         db["projects"].insert_one({ "name": "ExampleProject", "description": "A dev-only example project" })
     else:
-        print("NOT INCLUDING SEED DATA")
+        pass
 
 def downgrade(db: pymongo.database.Database):
     if include_seed_data():

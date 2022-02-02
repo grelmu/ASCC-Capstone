@@ -157,7 +157,7 @@ export default {
       });
     },
     apiFetchProjectOps(project_id) {
-      return this.$root.apiFetch("operations/?project_id=" + this.projectId, {
+      return this.$root.apiFetch("operations/?project_ids=" + this.projectId, {
         method: "GET",
       }).then((response) => {
         if (response.status == 200) return response.json();

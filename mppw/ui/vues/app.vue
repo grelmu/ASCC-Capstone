@@ -38,6 +38,11 @@
         />
         <div class="navbar-nav">
           <div class="nav-item text-nowrap">
+            <span class="nav-link px-3">{{ currentUser.username }}</span>
+          </div>
+        </div>
+        <div class="navbar-nav">
+          <div class="nav-item text-nowrap">
             <a class="nav-link px-3" href="#" @click="resetApiCredentials()"
               >Sign out</a
             >
@@ -123,6 +128,7 @@ export default {
   data() {
     return {
       ready: false,
+      currentUser: null,
       credentials: {
         api: {},
       },
@@ -133,20 +139,30 @@ export default {
       return Object.keys(this.credentials.api).length != 0;
     },
     resetApiCredentials() {
+      this.currentUser = null;
       this.credentials.api = {};
       localStorage.removeItem((this.appName || "mppw") + "CredentialsApi");
     },
     newApiCredentials(credentials) {
-      this.credentials.api = credentials;
-      localStorage.setItem(
-        (this.appName || "mppw") + "CredentialsApi",
-        JSON.stringify(credentials)
-      );
+
+      return this.apiFetchCurrentUser(credentials.token)
+        .then((currentUser) => {
+          this.currentUser = currentUser;
+          this.credentials.api = credentials;
+          localStorage.setItem(
+            (this.appName || "mppw") + "CredentialsApi",
+            JSON.stringify(credentials)
+          );
+        })
+        .catch((err) => {
+          console.error(err);
+          this.resetApiCredentials();
+        })
     },
-    apiFetch(input, init) {
+    apiFetch(input, init, token) {
       input = location.origin + "/api/" + input;
       init.headers = init.headers || {};
-      init.headers["Authorization"] = "Bearer " + this.credentials.api.token;
+      init.headers["Authorization"] = "Bearer " + (token != null ? token : this.credentials.api.token);
       return fetch(input, init).then((response) => {
         if (response.status == 401) {
           console.warn("User is no longer logged into API.");
@@ -159,10 +175,10 @@ export default {
     apiFetchLocalOauth2PasswordBearer(init) {
       return this.apiFetch("security/token", init);
     },
-    apiFetchCurrentUser() {
+    apiFetchCurrentUser(token) {
       return this.apiFetch("security/users/me", {
         method: "GET",
-      }).then((response) => {
+      }, token).then((response) => {
         if (response.status == 200) return response.json();
         this.throwApiResponseError(
           response,
@@ -181,18 +197,20 @@ export default {
   },
   created() {
 
+    let savedCredentials = null
     try {
-      this.credentials.api = 
-      JSON.parse(localStorage.getItem((this.appName || "mppw") + "CredentialsApi")) || {};
+      savedCredentials = JSON.parse(localStorage.getItem((this.appName || "mppw") + "CredentialsApi")) || null;
     } catch (ex) {
       // Unknown credentials
     }
 
-    this.apiFetchCurrentUser()
-      .catch((err) => {
-        console.error(err);
-        this.resetApiCredentials();
-      })
+    if (savedCredentials == null) {
+      this.resetApiCredentials();
+      this.ready = true;
+      return;
+    }
+
+    return this.newApiCredentials(savedCredentials)
       .finally(() => {
         this.ready = true;
       });

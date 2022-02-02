@@ -76,6 +76,9 @@ class MongoDBRepository:
         self.client: pymongo.MongoClient = session.client
         self.db: pymongo.database.Database = self.client.get_default_database()
 
+    def query_one(self, *args, **kwargs):
+        return (list(self.query(*args, **kwargs)) or [None])[0]
+
 class ConfigKvRepository(MongoDBRepository):
 
     """
@@ -141,16 +144,28 @@ class UserRepository(MongoDBRepository):
     def collection(self) -> pymongo.collection.Collection:
         return self.db["users"]
 
+    def _query_doc_for(self, id: str = None, username: str = None, active: bool = None):
+        query_doc = {}
+        if id is not None: query_doc["_id"] = coerce_doc_id(id)
+        if username is not None: query_doc["username"] = username
+        if active is not None: query_doc["active"] = { "$ne": False } if active else False
+        return query_doc
+
     def create(self, user: models.User):
         result = self.collection.insert_one(model_to_doc(user))
         user.id = result.inserted_id
         return user
 
-    def query(self, username=None):
-        if username is None:
-            return map(lambda doc: doc_to_model(doc, models.User), list(self.collection.find()))
-        else:
-            return doc_to_model(self.collection.find_one({ "username": username }), models.User)
+    def query(self, id=None, username=None, active=None):
+        return map(lambda doc: doc_to_model(doc, models.User), list(self.collection.find(
+            self._query_doc_for(id=id, username=username, active=active))))
+
+    def deactivate(self, id: str):
+        return self.collection.update_one(
+            self._query_doc_for(id=id), { "$set": { "active": False }}).modified_count == 1
+
+    def delete(self, id: str):
+        return self.collection.delete_one(self._query_doc_for(id=id)).deleted_count == 1
 
     # def create_scope(self, scope: Scope):
     #     self.session.add(scope)
@@ -162,6 +177,35 @@ class UserRepository(MongoDBRepository):
     # def get_all_scopes(self):
     #     return self.session.execute(select(Scope)).fetchall()
 
+
+class ProjectRepository(MongoDBRepository):
+
+    @property
+    def collection(self) -> pymongo.collection.Collection:
+        return self.db["projects"]
+
+    def _query_doc_for(self, ids: List[str] = None, active: Optional[bool] = None):
+        query_doc = {}
+        if ids is not None: query_doc["_id"] = { "$in": list(map(coerce_doc_id, ids)) }
+        if active is not None: query_doc["active"] = { "$ne": False } if active else False
+        return query_doc
+
+    def create(self, project: models.Project):
+        result = self.collection.insert_one(model_to_doc(project))
+        project.id = result.inserted_id
+        return project
+
+    def query(self, ids=None, active=None):
+        logger.warn(f"Query: {self._query_doc_for(ids=ids, active=active)}")
+        return map(lambda doc: doc_to_model(doc, models.Project), list(self.collection.find(
+            self._query_doc_for(ids=ids, active=active))))
+
+    def deactivate(self, id: str):
+        return self.collection.update_one(
+            self._query_doc_for(ids=[id]), { "$set": { "active": False }}).modified_count == 1
+
+    def delete(self, id: str):
+        return self.collection.delete_one(self._query_doc_for(ids=[id])).deleted_count == 1
 
 class UnknownArtifactTypeException(Exception):
     pass
@@ -182,23 +226,32 @@ class ArtifactRepository(MongoDBRepository):
     def collection(self) -> pymongo.collection.Collection:
         return self.db["artifacts"]
 
+    def _query_doc_for(self, id: str = None, project_ids: List[str] = None, active: Optional[bool] = None):
+        query_doc = {}
+        if id is not None: query_doc["_id"] = coerce_doc_id(id)
+        if project_ids is not None: query_doc["project"] = { "$in": list(map(coerce_doc_id, project_ids)) }
+        if active is not None: query_doc["active"] = { "$ne": False } if active else False
+        return query_doc
+
     def create(self, artifact: models.Artifact):
         result = self.collection.insert_one(model_to_doc(artifact))
         artifact.id = result.inserted_id
         return artifact
 
-    def read(self, id: str):
-        return type(self).doc_to_artifact(self.collection.find_one({ "_id": coerce_doc_id(id) }))
-
-    def query(self):
-        return map(lambda doc: type(self).doc_to_artifact(doc), list(self.collection.find()))
-
+    def query(self, id: str = None, project_ids: List[str] = None, active: Optional[bool] = None):
+        return map(lambda doc: type(self).doc_to_artifact(doc), list(self.collection.find(
+            self._query_doc_for(id=id, project_ids=project_ids, active=active))))
+        
     def update(self, artifact: models.Artifact):
-        logger.warn(model_to_doc(artifact))
         return self.collection.replace_one({ "_id": coerce_model_id(artifact) }, model_to_doc(artifact)).modified_count
 
-    def delete(self, id:str ):
-        return self.collection.delete_one({ "_id": coerce_doc_id(id) }).deleted_count
+    def deactivate(self, id: str, project_ids: List[str] = None):
+        return self.collection.update_one(
+            self._query_doc_for(id=id, project_ids=project_ids), { "$set": { "active": False }}).modified_count == 1
+
+    def delete(self, id: str, project_ids: List[str] = None):
+        return self.collection.delete_one(
+            self._query_doc_for(id=id, project_ids=project_ids)).deleted_count == 1
     
 
 class OperationRepository(MongoDBRepository):
@@ -207,44 +260,29 @@ class OperationRepository(MongoDBRepository):
     def collection(self) -> pymongo.collection.Collection:
         return self.db["operations"]
 
+    def _query_doc_for(self, id: str = None, project_ids: List[str] = None, active: Optional[bool] = None):
+        query_doc = {}
+        if id is not None: query_doc["_id"] = coerce_doc_id(id)
+        if project_ids is not None: query_doc["project"] = { "$in": list(map(coerce_doc_id, project_ids)) }
+        if active is not None: query_doc["active"] = { "$ne": False } if active else False
+        return query_doc
+
     def create(self, operation: models.Operation):
         result = self.collection.insert_one(model_to_doc(operation))
         operation.id = result.inserted_id
         return operation
 
-    def read(self, id: str):
-        return doc_to_model(self.collection.find_one({ "_id": coerce_doc_id(id) }), models.Operation)
+    def query(self, id: str = None, project_ids: List[str] = None, active: Optional[bool] = None):
+        return map(lambda doc: doc_to_model(doc, models.Operation), list(self.collection.find(
+            self._query_doc_for(id=id, project_ids=project_ids, active=active))))
 
-    def query(self, project_id: str = None):
-        query_doc = {}
-        if project_id is not None: query_doc["project"] = coerce_doc_id(project_id)
-        return map(lambda doc: doc_to_model(doc, models.Operation), list(self.collection.find(query_doc)))
+    def deactivate(self, id: str, project_ids: List[str] = None):
+        return self.collection.update_one(
+            self._query_doc_for(id=id, project_ids=project_ids), { "$set": { "active": False }}).modified_count == 1
 
-    def delete(self, id: str):
-        return self.collection.delete_one({ "_id": coerce_doc_id(id) }).deleted_count
-
-    def queryTags(self, prefix):
-        return [":project:foo", ":project:bar"]
-
-class ProjectRepository(MongoDBRepository):
-
-    @property
-    def collection(self) -> pymongo.collection.Collection:
-        return self.db["projects"]
-
-    def create(self, project: models.Project):
-        result = self.collection.insert_one(model_to_doc(project))
-        project.id = result.inserted_id
-        return project
-
-    def read(self, id: str):
-        return type(self).doc_to_artifact(self.collection.find_one({ "_id": coerce_doc_id(id) }))
-
-    def query(self):
-        return map(lambda doc: doc_to_model(doc, models.Project), list(self.collection.find()))
-
-    def delete(self, id: str):
-        return self.collection.delete_one({ "_id": coerce_doc_id(id) }).deleted_count
+    def delete(self, id: str, project_ids: List[str] = None):
+        return self.collection.delete_one(
+            self._query_doc_for(id=id, project_ids=project_ids)).deleted_count == 1
 
 class UnsupportedSchemeException(Exception):
     pass
