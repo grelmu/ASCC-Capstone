@@ -68,14 +68,14 @@ def create_router(app):
 
             user_repo = repo_layer.users
 
-            admin_username = os.environ.get("MPPW_ADMIN_USERNAME") or app_storage_layer(app).get_admin_username()
+            admin_username = os.environ.get("MPPW_ADMIN_USERNAME") or app_storage_layer(app).get_credentials()[0]
             if not admin_username:
                 raise Exception(f"Cannot infer admin username, please specify MPPW_ADMIN_USERNAME env variable")
             
             admin_user = user_repo.query_one(username=admin_username)
             if admin_user is not None: return admin_user
 
-            admin_password = os.environ.get("MPPW_ADMIN_PASSWORD") or app_storage_layer(app).get_admin_password()
+            admin_password = os.environ.get("MPPW_ADMIN_PASSWORD") or app_storage_layer(app).get_credentials()[1]
             if not admin_password:
                 raise Exception(f"Cannot infer admin password, please specify MPPW_ADMIN_PASSWORD env variable")
 

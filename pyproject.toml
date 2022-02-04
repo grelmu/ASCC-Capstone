@@ -18,6 +18,11 @@ toml = "^0.10.2"
 docker-compose = "^1.29.2"
 pymongo-migrate = "^0.11.0"
 aiofiles = "^0.8.0"
+arrow = "^1.2.2"
+# For dbvox
+pymorton = "^1.0.5"
+# For pcl
+numpy = "1.21"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"

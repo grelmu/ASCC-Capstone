@@ -69,9 +69,7 @@ class ConfigKv(pydantic.BaseModel):
     key: str
     value: Optional[str]
 
-class DocModel(pydantic.BaseModel):
-
-    id: Optional[DbId]
+class BaseJsonModel(pydantic.BaseModel):
 
     class Config(pydantic.BaseConfig):
         json_encoders = {
@@ -80,6 +78,18 @@ class DocModel(pydantic.BaseModel):
             StrDbId: lambda dbid: dbid.__json__(),
             bson.ObjectId: lambda oid: str(oid),
         }
+
+    @staticmethod
+    def to_json(value):
+
+        class SerializeModel(BaseJsonModel):
+            v: Any
+        
+        ser_model = SerializeModel(v=value)
+        return ser_model.json()[len("{\"v\":"):-1]
+
+class DocModel(BaseJsonModel):
+    id: Optional[DbId]
 
 class SafeUser(DocModel):
     username: str

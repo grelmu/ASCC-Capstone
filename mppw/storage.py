@@ -43,13 +43,13 @@ class MongoDBStorageLayer:
     def from_env(upgrade_storage_on_startup=None):
         
         mdb_url = os.environ.get("MONGODB_URL")
-        admin_username = os.environ.get("MONGODB_ADMIN_USERNAME")
-        admin_password = os.environ.get("MONGODB_ADMIN_PASSWORD")
-        
-        layer = MongoDBStorageLayer(
-            mdb_url,
-            admin_username,
-            admin_password)
+
+        # Don't store the sensitive credentials anywhere but the environment, which we can clear
+        # if/when required
+        def get_credentials():
+            return (os.environ.get("MONGODB_ADMIN_USERNAME"), os.environ.get("MONGODB_ADMIN_PASSWORD"))
+            
+        layer = MongoDBStorageLayer(mdb_url, get_credentials)
 
         upgrade_storage_on_startup = bool(os.environ.get('UPGRADE_STORAGE_ON_STARTUP', True)) \
             if upgrade_storage_on_startup is None else upgrade_storage_on_startup
@@ -57,20 +57,18 @@ class MongoDBStorageLayer:
         if upgrade_storage_on_startup:
             layer.upgrade_schema()
         
-        # Don't store the sensitive credentials anywhere but the environment, which we can clear
-        # if/when required
-        layer.get_admin_username = lambda: os.environ.get("MONGODB_ADMIN_USERNAME")
-        layer.get_admin_password = lambda: os.environ.get("MONGODB_ADMIN_PASSWORD")
-
         return layer
 
-    def __init__(self, mdb_url, admin_username, admin_password):
+    def __init__(self, mdb_url, get_credentials):
 
         self.mdb_url = mdb_url
+        self.get_credentials = get_credentials
+        admin_username, admin_password = self.get_credentials()
+
         self.mdb_client = pymongo.MongoClient(
             self.mdb_url,
             username=admin_username,
-            password=admin_password)    
+            password=admin_password)
 
         # Ensure our auth has worked
         self.mdb_client.get_default_database()
@@ -102,3 +100,17 @@ class MongoDBStorageLayer:
     def get_gridfs_db(self, name):
         default_db_name = self.mdb_client.get_default_database().name
         return self.mdb_client[f"{default_db_name}_files"]
+        
+    def local_storage_url_host(self):
+        return "mongodb.mppw.local"
+
+    def resolve_local_storage_url_host(self, local_url: str):
+        
+        local_furl = furl.furl(local_url)
+        if self.local_storage_url_host() != local_furl.host: return local_url
+        mdb_furl = furl.furl(self.mdb_url)
+        local_furl.host = mdb_furl.host
+        local_furl.port = mdb_furl.port
+        if local_furl.username is None:
+            local_furl.username, local_furl.password = self.get_credentials()
+        return local_furl.url

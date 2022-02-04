@@ -300,8 +300,6 @@ class BucketRepository:
     MONGODB_SCHEME = "mongodb"
     GRIDFS_SCHEME = "mongodb+gridfs"
 
-    LOCAL_MONGODB_HOST = "mongodb.mppw.local"
-
     def __init__(self, storage_layer: storage.MongoDBStorageLayer):
         self.storage_layer = storage_layer
 
@@ -423,7 +421,7 @@ class BucketRepository:
         if db_suffix: db_names.append(db_suffix)
         db_name = "-".join(db_names)
         
-        db_furl = furl.furl(f"{mdb_furl.scheme}://{BucketRepository.LOCAL_MONGODB_HOST}/{db_name}")
+        db_furl = furl.furl(f"{mdb_furl.scheme}://{self.storage_layer.local_storage_url_host()}/{db_name}")
         return db_furl
 
     def create_local_mdb_bucket(self, bucket_id):
@@ -486,14 +484,14 @@ class BucketRepository:
 
     def delete_mdb_bucket(self, bucket_furl):
 
-        if bucket_furl.host == BucketRepository.LOCAL_MONGODB_HOST:
+        if bucket_furl.host == self.storage_layer.local_storage_url_host():
             return self.drop_local_mdb_bucket(bucket_furl.url)
         else:
             raise UnmanagedBucketException(bucket_furl.url)
 
     def delete_gridfs_bucket(self, bucket_furl):
 
-        if bucket_furl.host == BucketRepository.LOCAL_MONGODB_HOST:
+        if bucket_furl.host == self.storage_layer.local_storage_url_host():
             return self.drop_local_gridfs_bucket(bucket_furl.url)
         else:
             raise UnmanagedBucketException(bucket_furl.url)

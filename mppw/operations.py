@@ -129,7 +129,7 @@ def create_router(app):
             
         projects.check_project_claims_for_user(user, [str(operation.project)])
 
-        return service_layer.create_default(operation)
+        return service_layer.create_default_operation(operation)
 
 
     @router.get("/types/", response_model=List[services.ServicedOperationType])

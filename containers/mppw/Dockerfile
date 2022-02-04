@@ -1,7 +1,16 @@
-FROM python:3.8.11-slim
+FROM ubuntu:20.04
+# NOTE: There's a very annoying mismatch between PCL libs in debian / ubuntu:
+# Debian buster - v1.9
+# Ubuntu 20.04 - v1.10
+# Debian bullseye - v1.11
+# We can probably use the debian container again when we adopt 22.04
+#FROM python:3.8.11-slim
 
 RUN apt-get update
 RUN apt-get install -y build-essential libpq-dev python3.8-dev curl vim
+RUN DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get -y install tzdata
+RUN apt-get install -y python3-pip
+RUN apt-get install -y libpcl-apps1.10 libpcl-common1.10 libpcl-features1.10 libpcl-filters1.10 libpcl-io1.10 libpcl-kdtree1.10 libpcl-keypoints1.10 libpcl-ml1.10 libpcl-octree1.10 libpcl-outofcore1.10 libpcl-people1.10 libpcl-recognition1.10 libpcl-registration1.10 libpcl-sample-consensus1.10 libpcl-search1.10 libpcl-segmentation1.10 libpcl-stereo1.10 libpcl-surface1.10 libpcl-tracking1.10 libpcl-visualization1.10
 RUN apt-get clean
 
 ARG PACKAGE_NAME
