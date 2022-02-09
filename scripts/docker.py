@@ -32,6 +32,12 @@ def build(*args):
                         "--tag", f"ascc/{project_name}-mongodb:dev",
                         "--tag", f"ascc/{project_name}-mongodb:{project_version}"])
 
+    if not args or "mppw-jupyterhub" in args:
+        subprocess.run(["docker",  "build",
+                        os.path.join(containers_dir, f"{project_name}-jupyterhub"),
+                        "--tag", f"ascc/{project_name}-jupyterhub:dev",
+                        "--tag", f"ascc/{project_name}-jupyterhub:{project_version}"])
+
     if not args or "mppw" in args:
         subprocess.run(["poetry", "build"])
 

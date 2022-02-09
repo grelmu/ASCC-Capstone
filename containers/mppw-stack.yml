@@ -28,6 +28,15 @@ services:
       MONGO_INITRS_TLS: 1
     command: ["mongod", "--tlsMode", "preferTLS", "--tlsCertificateKeyFile", "/etc/certificates/mongodb/key-cert.pem", "--replSet", "${MONGODB_INITRS_NAME:-mppw0}", "--keyFile", "/etc/certificates/mongodb/root-password-keyfile.key"]
 
+  jupyterhub:
+    image: ascc/mppw-jupyterhub:${MPPW_VERSION:-dev}
+    restart: unless-stopped
+    volumes:
+      - data_notebooks:/home
+    environment:
+      ADMIN_USERNAME: ${JUPYTERHUB_ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${MONGODB_ADMIN_PASSWORD}
+
   nginx:
     image: ascc/mppw-nginx:${MPPW_VERSION:-dev}
     restart: unless-stopped
@@ -38,8 +47,10 @@ services:
       - 443:443
     environment:
       PROXY_PASS: http://mppw:8000
+      PROXY_PASS_JUPYTERHUB: http://jupyterhub:8000
 
 volumes:
   data_db:
   data_configdb:
+  data_notebooks:
   certificates:
