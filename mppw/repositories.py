@@ -149,7 +149,7 @@ class UserRepository(MongoDBRepository):
 
     def create(self, user: models.User):
         result = self.collection.insert_one(model_to_doc(user))
-        user.id = result.inserted_id
+        user.id = models.ObjectDbId(result.inserted_id)
         return user
 
     def query(self, id=None, username=None, active=None):
@@ -189,7 +189,7 @@ class ProjectRepository(MongoDBRepository):
 
     def create(self, project: models.Project):
         result = self.collection.insert_one(model_to_doc(project))
-        project.id = result.inserted_id
+        project.id = models.ObjectDbId(result.inserted_id)
         return project
 
     def query(self, ids=None, active=None):
@@ -232,7 +232,7 @@ class ArtifactRepository(MongoDBRepository):
 
     def create(self, artifact: models.Artifact):
         result = self.collection.insert_one(model_to_doc(artifact))
-        artifact.id = result.inserted_id
+        artifact.id = models.ObjectDbId(result.inserted_id)
         return artifact
 
     def query(self, id: str = None, project_ids: List[str] = None, active: Optional[bool] = None):
@@ -266,7 +266,7 @@ class OperationRepository(MongoDBRepository):
 
     def create(self, operation: models.Operation):
         result = self.collection.insert_one(model_to_doc(operation))
-        operation.id = result.inserted_id
+        operation.id = models.ObjectDbId(result.inserted_id)
         return operation
 
     def query(self, id: str = None, project_ids: List[str] = None, active: Optional[bool] = None):

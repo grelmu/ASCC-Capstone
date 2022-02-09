@@ -79,7 +79,7 @@ def create_router(app):
             if new_artifacts is None: continue
             for new_artifact in new_artifacts:
                 projects.check_project_claims_for_user(user, [str(new_artifact.project)])
-                artifact_ids.append(repo_layer.artifacts.create(new_artifact))
+                artifact_ids.append(repo_layer.artifacts.create(new_artifact).id)
 
         transform = models.ArtifactTransform(**(new_transform.dict()))
         modified = repo_layer.operations.attach(id, transform, project_ids=projects.project_claims_for_user(user))

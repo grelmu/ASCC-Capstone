@@ -158,7 +158,7 @@ class DigitalArtifact(Artifact):
 
 AnyArtifact = Union[MaterialArtifact, DigitalArtifact]
 
-class ArtifactTransform(pydantic.BaseModel):
+class ArtifactTransform(BaseJsonModel):
 
     URN_PREFIX: ClassVar = "urn:x-mfg:transform"
 
@@ -196,3 +196,6 @@ class Operation(DocModel):
         if not v.startswith(Operation.URN_PREFIX):
             raise ValueError(f"operation URNs must start with {Operation.URN_PREFIX}: {v}")
         return v
+
+    def get_artifacts_of_kind(self, kind_urn: str):
+        return list(filter(lambda t: t.kind_urn.startswith(kind_urn), self.artifact_transform_graph))
