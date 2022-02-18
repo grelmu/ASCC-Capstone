@@ -208,7 +208,7 @@ class PointCloudServices(ArtifactServices):
     def sample_mongodb_dbvox(self, dbvox_url, space_bounds, time_bounds):
 
         import pymongo
-        from mppw import dbvox
+        import dbvox
 
         dbvox_furl = furl.furl(dbvox_url)
         base_furl = furl.furl(dbvox_furl)

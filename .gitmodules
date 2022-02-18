@@ -1,3 +1,3 @@
-[submodule "mppw/dbvox"]
-	path = mppw/dbvox
-	url = git@gitlab.composites.umaine.edu:DataProcessing/dbvox.git
+[submodule "tests/fff_analysis"]
+	path = tests/fff_analysis
+	url = git@gitlab.composites.umaine.edu:DataProcessing/Thermal.git

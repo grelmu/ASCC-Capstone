@@ -7,8 +7,7 @@ import bson
 import arrow
 import os
 import tempfile
-
-from mppw import dbvox
+import dbvox
 
 def json_response(response: requests.Response):
     if response.status_code != 200 and response.status_code != 201:

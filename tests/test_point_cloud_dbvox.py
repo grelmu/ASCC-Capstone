@@ -7,8 +7,7 @@ import bson
 import arrow
 import os
 import tempfile
-
-from mppw import dbvox
+import dbvox
 
 from .fixtures_api import resolve_bucket_url, build_cloud_url, json_response
 

@@ -20,20 +20,25 @@ def build(*args):
     project_name = project['tool']['poetry']['name']
     project_version = project['tool']['poetry']['version']
 
-    if not args or "mppw-nginx" in args:
+    os.environ["DOCKER_BUILDKIT"] = "1"
+
+    if not args or "nginx" in args or "mppw-nginx" in args:
         subprocess.run(["docker",  "build",
+                        "--ssh", "default",
                         os.path.join(containers_dir, f"{project_name}-nginx"),
                         "--tag", f"ascc/{project_name}-nginx:dev",
                         "--tag", f"ascc/{project_name}-nginx:{project_version}"])
 
-    if not args or "mppw-mongodb" in args:
+    if not args or "mongodb" in args or "mppw-mongodb" in args:
         subprocess.run(["docker",  "build",
+                        "--ssh", "default",
                         os.path.join(containers_dir, f"{project_name}-mongodb"),
                         "--tag", f"ascc/{project_name}-mongodb:dev",
                         "--tag", f"ascc/{project_name}-mongodb:{project_version}"])
 
-    if not args or "mppw-jupyterhub" in args:
+    if not args or "jupyterhub" in args or "mppw-jupyterhub" in args:
         subprocess.run(["docker",  "build",
+                        "--ssh", "default",
                         os.path.join(containers_dir, f"{project_name}-jupyterhub"),
                         "--tag", f"ascc/{project_name}-jupyterhub:dev",
                         "--tag", f"ascc/{project_name}-jupyterhub:{project_version}"])
@@ -48,6 +53,7 @@ def build(*args):
         subprocess.run(["docker",  "build",  
                         "--build-arg", f"PACKAGE_NAME={project_name}", 
                         "--build-arg", f"PACKAGE_VERSION={project_version}",
+                        "--ssh", "default",
                         os.path.join(containers_dir, project_name),
                         "--tag", f"ascc/{project_name}:dev",
                         "--tag", f"ascc/{project_name}:{project_version}"])

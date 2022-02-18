@@ -65,6 +65,18 @@ def create_router(app):
             active=active,
         ))
 
+    @router.put("/", response_model=bool)
+    def update(artifact: models.AnyArtifact,
+               current_user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+               repo_layer = Depends(request_repo_layer(app))):
+        
+        modified = repo_layer.artifacts.update(artifact, project_ids=projects.project_claims_for_user(current_user))
+        
+        if not modified:
+            raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
+
+        return True
+
     @router.post("/{id}/services/database-bucket/init", response_model=models.DigitalArtifact)
     def database_bucket_init(id: str,
                              scheme: str = None,

@@ -42,15 +42,13 @@ def create_router(app):
         return result
 
     @router.get("/", response_model=List[models.Project])
-    def query(active: bool = fastapi.Query(True),
+    def query(name: str = fastapi.Query(None),
+              active: bool = fastapi.Query(True),
               user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
               repo_layer = Depends(request_repo_layer(app))):
 
         ids = project_claims_for_user(user)
-        
-        logger.info(f"Project Claims: {ids}")
-
-        return list(repo_layer.projects.query(ids=ids, active=active))
+        return list(repo_layer.projects.query(ids=ids, name=name, active=active))
 
     @router.delete("/{id}", response_model=bool)
     def delete(id: str,

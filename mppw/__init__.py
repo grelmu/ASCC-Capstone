@@ -59,8 +59,6 @@ logger_reconfig()
 
 logger = logging.getLogger(__name__)
 
-from .dbvox import dbvox as dbvox
-
 try:
     from . import pcl
 except ImportError as ex:

@@ -181,9 +181,10 @@ class ProjectRepository(MongoDBRepository):
     def collection(self) -> pymongo.collection.Collection:
         return self.db.get_collection("projects", codec_options=mdb_codec_options)
 
-    def _query_doc_for(self, ids: List[str] = None, active: Optional[bool] = None):
+    def _query_doc_for(self, ids: List[str] = None, name: Optional[str] = None, active: Optional[bool] = None):
         query_doc = {}
         if ids is not None: query_doc["_id"] = { "$in": list(map(coerce_doc_id, ids)) }
+        if name is not None: query_doc["name"] = name
         if active is not None: query_doc["active"] = { "$ne": False } if active else False
         return query_doc
 
@@ -192,10 +193,9 @@ class ProjectRepository(MongoDBRepository):
         project.id = models.ObjectDbId(result.inserted_id)
         return project
 
-    def query(self, ids=None, active=None):
-        logger.warn(f"Query: {self._query_doc_for(ids=ids, active=active)}")
+    def query(self, ids=None, name=None, active=None):
         return map(lambda doc: doc_to_model(doc, models.Project), list(self.collection.find(
-            self._query_doc_for(ids=ids, active=active))))
+            self._query_doc_for(ids=ids, name=name, active=active))))
 
     def deactivate(self, id: str):
         return self.collection.update_one(
@@ -239,8 +239,9 @@ class ArtifactRepository(MongoDBRepository):
         return map(lambda doc: type(self).doc_to_artifact(doc), list(self.collection.find(
             self._query_doc_for(id=id, project_ids=project_ids, active=active))))
         
-    def update(self, artifact: models.Artifact):
-        return self.collection.replace_one({ "_id": coerce_model_id(artifact) }, model_to_doc(artifact)).modified_count
+    def update(self, artifact: models.Artifact, project_ids: List[str] = None):
+        return self.collection.replace_one(
+            self._query_doc_for(id=artifact.id, project_ids=project_ids), model_to_doc(artifact)).modified_count == 1
 
     def deactivate(self, id: str, project_ids: List[str] = None):
         return self.collection.update_one(
@@ -257,10 +258,11 @@ class OperationRepository(MongoDBRepository):
     def collection(self) -> pymongo.collection.Collection:
         return self.db.get_collection("operations", codec_options=mdb_codec_options)
 
-    def _query_doc_for(self, id: str = None, project_ids: List[str] = None, active: Optional[bool] = None):
+    def _query_doc_for(self, id: str = None, project_ids: List[str] = None, name: Optional[str] = None, active: Optional[bool] = None):
         query_doc = {}
         if id is not None: query_doc["_id"] = coerce_doc_id(id)
         if project_ids is not None: query_doc["project"] = { "$in": list(map(coerce_doc_id, project_ids)) }
+        if name is not None: query_doc["name"] = name
         if active is not None: query_doc["active"] = { "$ne": False } if active else False
         return query_doc
 
@@ -269,9 +271,9 @@ class OperationRepository(MongoDBRepository):
         operation.id = models.ObjectDbId(result.inserted_id)
         return operation
 
-    def query(self, id: str = None, project_ids: List[str] = None, active: Optional[bool] = None):
+    def query(self, id: str = None, project_ids: List[str] = None, name: Optional[str] = None, active: Optional[bool] = None):
         return map(lambda doc: doc_to_model(doc, models.Operation), list(self.collection.find(
-            self._query_doc_for(id=id, project_ids=project_ids, active=active))))
+            self._query_doc_for(id=id, project_ids=project_ids, name=name, active=active))))
 
     def attach(self, id: str, transform: models.ArtifactTransform, project_ids: List[str] = None):
         return self.collection.update_one(

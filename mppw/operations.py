@@ -15,6 +15,10 @@ from . import security
 from .security import request_user, PROVENANCE_SCOPE
 from . import projects
 
+class NewArtifactTransform(models.ArtifactTransform):
+    new_input_artifacts: Optional[List[models.AnyArtifact]]
+    new_output_artifacts: Optional[List[models.AnyArtifact]]
+
 def create_router(app):
 
     combined_router = fastapi.APIRouter()
@@ -47,6 +51,7 @@ def create_router(app):
 
     @router.get("/", response_model=List[models.Operation])
     def query(project_ids: List[str] = fastapi.Query(None),
+              name: str = fastapi.Query(None),
               active: bool = fastapi.Query(True),
               user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
               repo_layer = Depends(request_repo_layer(app))):
@@ -58,12 +63,9 @@ def create_router(app):
         
         return list(repo_layer.operations.query(
             project_ids=project_ids,
+            name=name,
             active=active,
         ))
-
-    class NewArtifactTransform(models.ArtifactTransform):
-        new_input_artifacts: Optional[List[models.AnyArtifact]]
-        new_output_artifacts: Optional[List[models.AnyArtifact]]
 
     @router.post("/{id}/artifacts/", response_model=NewArtifactTransform, status_code = fastapi.status.HTTP_201_CREATED)
     def attach(id: str,
