@@ -16,9 +16,26 @@ from . import repositories
 DATABASE_BUCKET_URN_PREFIX = f"{models.DigitalArtifact.URN_PREFIX}:database-bucket"
 FILE_BUCKET_URN_PREFIX = f"{models.DigitalArtifact.URN_PREFIX}:file-bucket"
 
+class AttachmentKind(pydantic.BaseModel):
+    kind_urn: str
+    artifact_type_urns: List[str]
+
+    @staticmethod
+    def make(kind_urn, artifact_type_urns):
+        return AttachmentKind(kind_urn=kind_urn, artifact_type_urns=artifact_type_urns)
+
+    @staticmethod
+    def make_all(lst):
+        return [AttachmentKind.make(*item) for item in lst]
+
 class OperationServices:
 
     STATUS_DRAFT = "draft"
+
+    ATTACHMENT_KINDS = AttachmentKind.make_all([
+        (":process-data", [":digital:database-bucket", ":digital:file-bucket"]),
+        (":attachments", [":digital:file-bucket"]),
+    ])
 
     ARTIFACT_KIND_ATTACHMENTS = ":attachments"
     ARTIFACT_KIND_PROCESS_DATA = ":process-data"
@@ -105,6 +122,13 @@ class FffServices(OperationServices):
     DEFAULT_NAME = "FFF Manufacture"
     DEFAULT_DESCRIPTION = "FFF or FDM manufacturing operation"
 
+    ATTACHMENT_KINDS = AttachmentKind.make_all([
+        (":input:toolpath", [":digital:toolpath"]),
+        (":input:batch", [":material:batch"]),
+        (":output:part", [":material:part"]),
+        (":operator-notes", [":digital:markdown", ":digital:file"]),
+    ])
+
     ARTIFACT_KIND_OPERATOR_NOTES = ":operator-notes"
     ARTIFACT_KIND_OUTPUT_PARTS = ":output-parts"
 
@@ -128,6 +152,10 @@ class FffServices(OperationServices):
             ]
 
         return self.repo_layer.operations.create(operation)
+
+    @property
+    def attachment_kinds(self):
+        return FffServices.ATTACHMENT_KINDS + OperationServices.ATTACHMENT_KINDS
 
 class ArtifactServices:
 
@@ -270,6 +298,22 @@ class ServiceLayer:
         return [ServicedOperationType(urn_prefix=service_type.URN_PREFIX,
                                       name=service_type.DEFAULT_NAME,
                                       description=service_type.DEFAULT_DESCRIPTION) for service_type in self.operation_service_types]
+
+    @staticmethod
+    def normal_artifact_type_urn_for(type_urn: str):
+        if type_urn.startswith(":"):
+            return models.Artifact.URN_PREFIX + type_urn
+
+    @staticmethod
+    def normal_operation_type_urn_for(type_urn: str):
+        if type_urn.startswith(":"):
+            return models.Operation.URN_PREFIX + type_urn
+
+    def operation_service(self, type_urn):
+        type_urn = ServiceLayer.normal_operation_type_urn_for(type_urn)
+        for service_type in self.operation_service_types:
+            if type_urn.startswith(service_type.URN_PREFIX):
+                return service_type(self.repo_layer)
 
     def create_default_operation(self, operation: models.Operation):
         for service_type in self.operation_service_types:

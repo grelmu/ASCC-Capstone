@@ -131,7 +131,7 @@ export default {
       });
     },
     apiFetchOpTypes() {
-      return this.$root.apiFetch("serviced-operations/types/", {
+      return this.$root.apiFetch("operation-services/types/", {
         method: "GET",
       }).then((response) => {
         if (response.status == 200) return response.json();
@@ -168,7 +168,7 @@ export default {
       });
     },
     apiCreateOp(op) {
-      return this.$root.apiFetch("serviced-operations/", {
+      return this.$root.apiFetch("operation-services/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

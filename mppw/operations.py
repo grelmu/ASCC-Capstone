@@ -122,7 +122,7 @@ def create_router(app):
 
     combined_router.include_router(router)
 
-    router = fastapi.APIRouter(prefix="/api/serviced-operations")
+    router = fastapi.APIRouter(prefix="/api/operation-services")
 
     @router.post("/", response_model=models.Operation, status_code = fastapi.status.HTTP_201_CREATED)
     def create_serviced(operation: models.Operation,
@@ -133,12 +133,19 @@ def create_router(app):
 
         return service_layer.create_default_operation(operation)
 
-
     @router.get("/types/", response_model=List[services.ServicedOperationType])
     def query_serviced_types(user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
                              service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
 
         return list(service_layer.serviced_operation_types())
+
+    @router.get("/{rel_type_urn}/attachment-kinds/", response_model=List[services.AttachmentKind])
+    def query_attachment_kinds(rel_type_urn: str,
+                               user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+                               service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
+
+        rel_type_urn = ":" + rel_type_urn
+        return list(service_layer.operation_service(rel_type_urn).attachment_kinds)
 
     combined_router.include_router(router)
 

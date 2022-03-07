@@ -133,8 +133,8 @@ class MaterialArtifact(Artifact):
 
     material_system_urn: Optional[str]
 
-    label: str
-    geometry_labels: List[GeometryLabel]
+    label: Optional[str]
+    geometry_labels: Optional[List[GeometryLabel]]
     location_label: Optional[str]
 
     @pydantic.validator("type_urn")
