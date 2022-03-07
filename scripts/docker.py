@@ -44,7 +44,14 @@ def build(*args):
                         "--tag", f"ascc/{project_name}-jupyterhub:{project_version}"])
 
     if not args or "mppw" in args:
+
         subprocess.run(["poetry", "build"])
+
+        fff_post_dir = os.path.join(root_dir, "fff_post")
+        subprocess.run(["poetry", "build"], cwd=fff_post_dir)
+
+        shutil.rmtree(os.path.join(dist_dir, "fff_post"))
+        shutil.copytree(os.path.join(fff_post_dir, "dist"), os.path.join(dist_dir, "fff_post"))
 
         shutil.rmtree(os.path.join(containers_dir, project_name, "dist"))
         shutil.copytree(dist_dir, os.path.join(containers_dir, project_name, "dist"))
