@@ -43,7 +43,7 @@
         </div>
         <div class="navbar-nav">
           <div class="nav-item text-nowrap">
-            <a class="nav-link px-3" href="#" @click="resetApiCredentials()"
+            <a class="nav-link px-3" href="#" @click="resetApiCredentials"
               >Sign out</a
             >
           </div>
@@ -142,10 +142,16 @@ export default {
       this.currentUser = null;
       this.credentials.api = {};
       localStorage.removeItem((this.appName || "mppw") + "CredentialsApi");
+      return this.apiLogout();
     },
     newApiCredentials(credentials) {
 
-      return this.apiFetchCurrentUser(credentials.token)
+      return (credentials.token ? this.apiFetchTokenCookie(credentials.token) : Promise.resolve(null))
+        .then(() => {
+          credentials.token = null;
+          credentials.cookie = true;
+          return this.apiFetchCurrentUser();
+        })
         .then((currentUser) => {
           this.currentUser = currentUser;
           this.credentials.api = credentials;
@@ -156,19 +162,22 @@ export default {
         })
         .catch((err) => {
           console.error(err);
-          this.resetApiCredentials();
+          return this.resetApiCredentials();
         })
     },
+    apiUrl(input) {
+      return location.origin + "/api/" + input;
+    },
     apiFetch(input, init, token) {
-      input = location.origin + "/api/" + input;
+      input = this.apiUrl(input);
       init.headers = init.headers || {};
-      init.headers["Authorization"] = "Bearer " + (token != null ? token : this.credentials.api.token);
+      if (token || this.credentials.api.token)
+        init.headers["Authorization"] = "Bearer " + (token != null ? token : this.credentials.api.token);
       return fetch(input, init).then((response) => {
         if (response.status == 401) {
           console.warn("User is no longer logged into API.");
           this.credentials.api = {};
         }
-
         return response;
       });
     },
@@ -187,6 +196,30 @@ export default {
         );
       });
     },
+    apiFetchTokenCookie(token) {
+      return this.apiFetch("security/token-to-cookie", {
+        method: "POST"
+      }, token).then((response) => {
+        if (response.status == 200) return;
+        this.throwApiResponseError(
+          response,
+          "Unknown response when converting token to cookie",
+          true
+        );
+      });
+    },
+    apiLogout() {
+      return this.apiFetch("security/logout", {
+        method: "POST"
+      }).then((response) => {
+        if (response.status == 200) return;
+        this.throwApiResponseError(
+          response,
+          "Unknown response when logging out",
+          true
+        );
+      });
+    },
     throwApiResponseError(response, msg, showAlert) {
       const err = new Error(
         (msg ? msg + ": " : "") + response.status + " " + response.statusText
@@ -197,20 +230,14 @@ export default {
   },
   created() {
 
-    let savedCredentials = null
+    let savedCredentials = null;
     try {
       savedCredentials = JSON.parse(localStorage.getItem((this.appName || "mppw") + "CredentialsApi")) || null;
     } catch (ex) {
       // Unknown credentials
     }
 
-    if (savedCredentials == null) {
-      this.resetApiCredentials();
-      this.ready = true;
-      return;
-    }
-
-    return this.newApiCredentials(savedCredentials)
+    return (savedCredentials == null ? this.resetApiCredentials() : this.newApiCredentials(savedCredentials))
       .finally(() => {
         this.ready = true;
       });

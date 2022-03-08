@@ -1,3 +1,4 @@
+import tempfile
 from typing import Optional, List, ClassVar, Any
 import fastapi
 from fastapi import Depends
@@ -63,7 +64,7 @@ class OperationServices:
             type_urn = FILE_BUCKET_URN_PREFIX,
             project = project,
             name = "Attachments",
-            description = "Default attachments",   
+            description = "Default attachments",
         )
 
         self.repo_layer.artifacts.create(attachments)
@@ -116,6 +117,26 @@ class OperationServices:
         artifact.url_data = self.repo_layer.buckets.create_file_bucket(bucket_id, scheme)
         return True
 
+    def get_artifact_ids_of_kind(self, operation: models.Operation, kind_urn: str):
+
+        artifact_ids = []
+        for transform in (operation.artifact_transform_graph or []):
+            if transform.kind_urn.startswith(kind_urn):
+                artifact_ids.append(transform.output_artifacts[0])
+
+        return artifact_ids
+
+    def get_artifact_id_of_kind(self, operation: models.Operation, kind_urn: str):
+        return (self.get_artifact_ids_of_kind(operation, kind_urn) or [None])[0]
+
+    def get_artifact_of_kind(self, operation: models.Operation, kind_urn: str):
+        artifact_id = self.get_artifact_id_of_kind(operation, kind_urn)
+        if artifact_id is None: return None
+        return self.repo_layer.artifacts.query_one(id=artifact_id)
+
+    def get_default_attachments_artifact(self, operation: models.Operation):
+        return self.get_artifact_of_kind(operation, OperationServices.ARTIFACT_KIND_ATTACHMENTS)
+
 class FffServices(OperationServices):
 
     URN_PREFIX = f"{models.Operation.URN_PREFIX}:fff"
@@ -163,6 +184,18 @@ class ArtifactServices:
         self.repo_layer = repo_layer
 
 
+class FileServices(ArtifactServices):
+
+    URN_PREFIX = f"{models.DigitalArtifact.URN_PREFIX}:file"
+
+    def can_download(self, artifact: models.DigitalArtifact):
+        file_furl = furl.furl(artifact.url_data)
+        return file_furl.scheme in self.repo_layer.buckets.allowed_file_bucket_schemes
+
+    def download(self, artifact: models.DigitalArtifact):
+        return self.repo_layer.buckets.get_file_by_url(artifact.url_data)
+
+
 class DatabaseBucketServices(ArtifactServices):
 
     URN_PREFIX = DATABASE_BUCKET_URN_PREFIX
@@ -174,6 +207,26 @@ class DatabaseBucketServices(ArtifactServices):
         artifact.url_data = self.repo_layer.buckets.create_db_bucket(bucket_id, scheme)
 
         return self.repo_layer.artifacts.update(artifact)
+
+class FileBucketServices(ArtifactServices):
+
+    URN_PREFIX = FILE_BUCKET_URN_PREFIX
+
+    def init(self, artifact: models.DigitalArtifact, scheme=None):
+
+        bucket_id = f"artfiles-{str(artifact.id)}"
+        scheme = scheme or self.repo_layer.buckets.default_file_bucket_scheme
+        artifact.url_data = self.repo_layer.buckets.create_file_bucket(bucket_id, scheme)
+
+        return self.repo_layer.artifacts.update(artifact)
+
+    def upload(self, artifact: models.DigitalArtifact, path: str, file: tempfile.TemporaryFile):
+
+        return self.repo_layer.buckets.add_file_to_bucket(artifact.url_data, path, file)
+
+    def ls(self, artifact: models.DigitalArtifact, path: str):
+
+        return self.repo_layer.buckets.ls_bucket(artifact.url_data, path)
 
 class UnknownPointCloudTypeException(Exception):
     pass
@@ -280,8 +333,8 @@ class UnservicedArtifactTypeException(Exception):
 
 class ServiceLayer:
 
+    ARTIFACT_SERVICE_TYPES = [FileServices, DatabaseBucketServices, FileBucketServices, PointCloudServices]
     OPERATION_SERVICE_TYPES = [FffServices]
-    ARTIFACT_SERVICE_TYPES = [DatabaseBucketServices, PointCloudServices]
 
     def __init__(self, repo_layer):
         self.repo_layer = repo_layer
@@ -303,16 +356,24 @@ class ServiceLayer:
     def normal_artifact_type_urn_for(type_urn: str):
         if type_urn.startswith(":"):
             return models.Artifact.URN_PREFIX + type_urn
+        return type_urn
 
     @staticmethod
     def normal_operation_type_urn_for(type_urn: str):
         if type_urn.startswith(":"):
             return models.Operation.URN_PREFIX + type_urn
+        return type_urn
+
+    def artifact_service(self, type_urn):
+        type_urn = ServiceLayer.normal_artifact_type_urn_for(type_urn)
+        for service_type in self.artifact_service_types:
+            if type_urn == service_type.URN_PREFIX or type_urn.startswith(service_type.URN_PREFIX + ":"):
+                return service_type(self.repo_layer)
 
     def operation_service(self, type_urn):
         type_urn = ServiceLayer.normal_operation_type_urn_for(type_urn)
         for service_type in self.operation_service_types:
-            if type_urn.startswith(service_type.URN_PREFIX):
+            if type_urn == service_type.URN_PREFIX or type_urn.startswith(service_type.URN_PREFIX + ":"):
                 return service_type(self.repo_layer)
 
     def create_default_operation(self, operation: models.Operation):

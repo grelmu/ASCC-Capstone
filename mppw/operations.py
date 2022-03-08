@@ -103,6 +103,17 @@ def create_router(app):
 
         return True
 
+    @router.get("/{id}/artifacts/attachments/default", response_model=models.DigitalArtifact)
+    def get_default_attachments(id: str,
+                                user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+                                service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
+                
+
+        op: models.Operation = read(id, user, service_layer.repo_layer)
+        service: services.OperationServices  = service_layer.operation_service(op.type_urn)
+        attachments: models.Artifact = service.get_default_attachments_artifact(op)
+
+        return attachments
 
     @router.delete("/{id}", response_model=bool)
     def delete(id: str,

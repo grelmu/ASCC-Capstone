@@ -106,7 +106,24 @@ def create_router(app):
     #
 
     token_endpoint = "%s/%s" % (router.prefix, LOCAL_TOKEN_ENDPOINT)
-    local_oauth2_scheme = OAuth2PasswordBearer(tokenUrl=token_endpoint, scopes=SCOPES)
+
+    class CookifiedOAuth2PasswordBearer(OAuth2PasswordBearer):
+        
+        DEFAULT_TOKEN_COOKIE_NAME = "oauth2_token"
+
+        def __init__(self, *args, cookie_name=None, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.cookie_name = (cookie_name or CookifiedOAuth2PasswordBearer.DEFAULT_TOKEN_COOKIE_NAME)
+
+        async def __call__(self, request: fastapi.Request) -> typing.Optional[str]:
+            try:
+                return await super().__call__(request)
+            except fastapi.HTTPException as ex:
+                token = request.cookies.get(self.cookie_name)
+                if not token: raise ex
+                return token
+
+    local_oauth2_scheme = CookifiedOAuth2PasswordBearer(tokenUrl=token_endpoint, scopes=SCOPES)
 
     def local_authenticate_request_user(username, password, user_repo) -> models.User:
         
@@ -233,6 +250,16 @@ def create_router(app):
 
         return {"access_token": access_token, "token_type": "bearer"}
 
+    @router.post("/token-to-cookie", response_model=bool)
+    def token_to_cookie(token: str = Depends(local_oauth2_scheme),
+                        response: fastapi.Response = fastapi.Response(None)):
+        response.set_cookie(key=local_oauth2_scheme.cookie_name, value=token)
+        return True
+
+    @router.post("/logout", response_model=bool)
+    def logout(response: fastapi.Response = fastapi.Response(None)):
+        response.delete_cookie(key=local_oauth2_scheme.cookie_name)
+        return True
 
     @router.post("/users/", response_model=models.SafeUser, status_code = fastapi.status.HTTP_201_CREATED)
     def create(new_user: NewUser,

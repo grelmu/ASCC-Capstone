@@ -45,16 +45,43 @@
     <h2>Artifacts</h2>
 
     <div v-for="artifactKind in Object.keys(artifactGraph || {})" :key="artifactKind">
+
       <h3>{{ artifactKind }}</h3>
-      <div v-for="artifact in artifactGraph[artifactKind]" :key="artifact.id">
-        {{ artifact }}
-      </div>
+    
+      <o-collapse class="card" animation="slide" v-for="(artifact, index) of artifactGraph[artifactKind]" :key="index" :open="artifactOpenIndexes[artifactKind] == index" @open="artifactOpenIndexes[artifactKind] = index">
+        <template v-slot:trigger="trigger">
+          <div class="card-header" role="button">
+            <div class="card-header-title">
+              <div class="fs-4" style="flex-basis: 100%">{{ (artifact["type_urn"] || "invalid").replace("urn:x-mfg:artifact", "") }}</div>
+              <div class="fw-light" >{{ artifact["id"] }}</div>
+            </div>
+            <a class="card-header-icon">
+              <o-icon :icon="trigger.open ? 'arrow-up-drop-circle' : 'arrow-down-drop-circle'"> </o-icon>
+            </a>
+          </div>
+        </template>
+        <div class="card-content">
+          <component :is="artifactComponentFor(artifact['type_urn'])" :opId="opId" :artifactKind="artifactKind" :artifactId="artifact['id']"></component>
+        </div>
+      </o-collapse>
+
     </div>
   </div>
 </template>
 
 <script>
+
+const componentMap = {
+  "urn:x-mfg:artifact:digital:file": "digital-file-component",
+  "default": "default-component",
+}
+
 export default {
+
+  components: {
+    "digital-file-component": RemoteVue.asyncComponent("vues/artifacts/digital-file-component.vue"),
+    "default-component": RemoteVue.asyncComponent("vues/artifacts/default-component.vue"),
+  },
 
   data() {
     return {
@@ -62,6 +89,7 @@ export default {
       opId: null,
       op: null,
       artifactGraph: null,
+      artifactOpenIndexes: null,
       
       attachmentKinds: null,
 
@@ -70,6 +98,7 @@ export default {
       newAttachmentArtifactTypes: null,
     };
   },
+
   methods: {
     apiFetchOperation(id) {
       return this.$root
@@ -155,9 +184,11 @@ export default {
     },
     refreshArtifactGraph() {
       this.artifactGraph = null;
+      this.artifactOpenIndexes = null;
       return this.apiFetchArtifactGraph(this.op)
         .then((artifactGraph) => {
           this.artifactGraph = artifactGraph;
+          this.artifactOpenIndexes = {};
         })
     },
     refreshAttachmentKinds() {
@@ -197,6 +228,16 @@ export default {
           this.isAttachingArtifact = false;
         });
     },
+    artifactComponentFor(type_urn) {
+      if (type_urn) {
+        for (let component_type_urn in componentMap) {
+          if (type_urn == component_type_urn || type_urn.startsWith(component_type_urn + ":")) {
+            return componentMap[component_type_urn];
+          }
+        }
+      }
+      return componentMap["default"]
+    },
   },
   created() {
     this.opId = this.$route.params.id;
@@ -208,4 +249,33 @@ export default {
 };
 </script>
 
-<style scoped></style>
+<style scoped>
+
+  .card {
+    max-width: 100%;
+    position: relative;
+  }
+  .card-header {
+    align-items: stretch;
+    display: flex;
+  }
+  .card-header-title {
+    align-items: center;
+    display: flex;
+    flex-grow: 1;
+    padding: 0.75rem;
+    margin: 0;
+  }
+  .card-header-icon {
+    align-items: center;
+    cursor: pointer;
+    display: flex;
+    padding: 0.75rem;
+    justify-content: center;
+  }
+  .card-content {
+    padding: 1.5rem;
+    width: 100%;
+  }
+
+</style>
