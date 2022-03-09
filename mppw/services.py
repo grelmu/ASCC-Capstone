@@ -1,4 +1,3 @@
-import tempfile
 from typing import Optional, List, ClassVar, Any
 import fastapi
 from fastapi import Depends
@@ -34,8 +33,8 @@ class OperationServices:
     STATUS_DRAFT = "draft"
 
     ATTACHMENT_KINDS = AttachmentKind.make_all([
-        (":process-data", [":digital:database-bucket", ":digital:file-bucket"]),
-        (":attachments", [":digital:file-bucket"]),
+        (":process-data", [":digital:database-bucket", ":digital:file-bucket", ":digital:file"]),
+        (":attachments", [":digital:file-bucket", ":digital:file"]),
     ])
 
     ARTIFACT_KIND_ATTACHMENTS = ":attachments"
@@ -117,12 +116,23 @@ class OperationServices:
         artifact.url_data = self.repo_layer.buckets.create_file_bucket(bucket_id, scheme)
         return True
 
+    def get_transforms_of_kind(self, operation: models.Operation, kind_urn: str):
+
+        transforms = []
+        for transform in (operation.artifact_transform_graph or []):
+            if transform.kind_urn == kind_urn or transform.kind_urn.startswith(kind_urn + ":"):
+                transforms.append(transform)
+        
+        return transforms
+
+    def get_transform_of_kind(self, operation: models.Operation, kind_urn: str):
+        return (self.get_transforms_of_kind(operation, kind_urn) or [None])[0]
+
     def get_artifact_ids_of_kind(self, operation: models.Operation, kind_urn: str):
 
         artifact_ids = []
-        for transform in (operation.artifact_transform_graph or []):
-            if transform.kind_urn.startswith(kind_urn):
-                artifact_ids.append(transform.output_artifacts[0])
+        for transform in self.get_transforms_of_kind(operation, kind_urn):
+            artifact_ids.append(transform.output_artifacts[0])
 
         return artifact_ids
 
@@ -136,6 +146,11 @@ class OperationServices:
 
     def get_default_attachments_artifact(self, operation: models.Operation):
         return self.get_artifact_of_kind(operation, OperationServices.ARTIFACT_KIND_ATTACHMENTS)
+
+    def detach_artifacts(self, operation: models.Operation, kind_urn: str, artifact_ids):
+        for transform in self.get_transforms_of_kind(operation, kind_urn):
+            transform.input_artifacts = filter(lambda id: id not in artifact_ids, transform.input_artifacts)
+            transform.output_artifacts = filter(lambda id: id not in artifact_ids, transform.output_artifacts)
 
 class FffServices(OperationServices):
 
@@ -220,13 +235,21 @@ class FileBucketServices(ArtifactServices):
 
         return self.repo_layer.artifacts.update(artifact)
 
-    def upload(self, artifact: models.DigitalArtifact, path: str, file: tempfile.TemporaryFile):
-
+    def upload(self, artifact: models.DigitalArtifact, path: str, file):
         return self.repo_layer.buckets.add_file_to_bucket(artifact.url_data, path, file)
 
-    def ls(self, artifact: models.DigitalArtifact, path: str):
+    def download(self, artifact: models.DigitalArtifact, path: str):
+        return self.repo_layer.buckets.get_file_by_path(artifact.url_data, path)
 
+    def ls(self, artifact: models.DigitalArtifact, path: str):
         return self.repo_layer.buckets.ls_bucket(artifact.url_data, path)
+
+    def rename(self, artifact: models.DigitalArtifact, path: str, new_path: str):
+        return self.repo_layer.buckets.rename_file(artifact.url_data, path, new_path)
+    
+    def delete(self, artifact: models.DigitalArtifact, path: str):
+        return self.repo_layer.buckets.delete_file_by_path(artifact.url_data, path)
+
 
 class UnknownPointCloudTypeException(Exception):
     pass

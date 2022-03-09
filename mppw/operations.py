@@ -93,9 +93,27 @@ def create_router(app):
     @router.delete("/{id}/artifacts/{kind_urn}", response_model=bool)
     def detach(id: str,
                kind_urn: str,
+               partial_transform: models.ArtifactTransform = fastapi.Body(None),
                user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
-               repo_layer = Depends(request_repo_layer(app))):
+               service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
     
+        if partial_transform is None:
+            
+            modified = service_layer.repo_layer.operations.detach(id, kind_urn, project_ids=projects.project_claims_for_user(user))
+            if not modified:
+                raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
+
+            return True
+
+        else:
+
+            operation = read(id, user, service_layer.repo_layer)
+
+            
+
+
+        kind_urn = transform.kind_urn
+
         modified = repo_layer.operations.detach(id, kind_urn, project_ids=projects.project_claims_for_user(user))
 
         if not modified:

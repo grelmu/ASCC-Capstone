@@ -57,6 +57,7 @@
             </div>
             <a class="card-header-icon">
               <o-icon :icon="trigger.open ? 'arrow-up-drop-circle' : 'arrow-down-drop-circle'"> </o-icon>
+              <o-icon :icon="'trash-can'" @click="onDetachArtifact(artifactKind, artifact['_id'])" style="color: red;"></o-icon>
             </a>
           </div>
         </template>
@@ -73,6 +74,7 @@
 
 const componentMap = {
   "urn:x-mfg:artifact:digital:file": "digital-file-component",
+  "urn:x-mfg:artifact:digital:file-bucket": "digital-file-bucket-component",
   "default": "default-component",
 }
 
@@ -80,6 +82,7 @@ export default {
 
   components: {
     "digital-file-component": RemoteVue.asyncComponent("vues/artifacts/digital-file-component.vue"),
+    "digital-file-bucket-component": RemoteVue.asyncComponent("vues/artifacts/digital-file-bucket-component.vue"),
     "default-component": RemoteVue.asyncComponent("vues/artifacts/default-component.vue"),
   },
 
@@ -174,6 +177,22 @@ export default {
         );
       });
     },
+    apiDetachArtifact(attachment) {
+
+      return this.$root.apiFetch("operations/" + this.op.id + "/artifacts/, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(attachment),
+      }).then((response) => {
+        if (response.status == 201) return response.json();
+        this.$root.throwApiResponseError(
+          response,
+          "Unknown response when creating attachment"
+        );
+      });
+    },
     refreshOperation() {
       this.op = null;
       return this.apiFetchOperation(this.opId)
@@ -227,6 +246,10 @@ export default {
         .finally(() => {
           this.isAttachingArtifact = false;
         });
+    },
+    onDetachArtifact(kindUrn, artifactId) {
+      if (!confirm("Are you sure you want to detach a " + kindUrn + " artifact?")) return;
+      return this.detach
     },
     artifactComponentFor(type_urn) {
       if (type_urn) {

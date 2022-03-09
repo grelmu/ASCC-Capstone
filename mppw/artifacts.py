@@ -119,17 +119,30 @@ def create_router(app):
         service: services.FileServices = service_layer.artifact_service(artifact.type_urn)
 
         if not service.can_download(artifact):
-            return "REDIRECT"
-            #return fastapi.responses.RedirectResponse(artifact.url_data)
+            return fastapi.responses.RedirectResponse(artifact.url_data)
 
         meta, data = service.download(artifact)
 
         if data is None:
             raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
 
-        #return str(meta)
         return fastapi.responses.StreamingResponse(data, media_type=meta.content_type)
 
+    @router.get("/{id}/services/file-bucket/download", )
+    def file_bucket_download(id: str,
+                      path: str,
+                      user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+                      service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
+        
+        artifact: models.DigitalArtifact = read(id, user, service_layer.repo_layer)
+        service: services.FileBucketServices = service_layer.artifact_service(artifact.type_urn)
+
+        meta, data = service.download(artifact, path)
+
+        if data is None:
+            raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
+
+        return fastapi.responses.StreamingResponse(data, media_type=meta.content_type)
 
     @router.post("/{id}/services/file-bucket/upload", response_model=str, status_code = fastapi.status.HTTP_201_CREATED)
     def file_bucket_upload(id: str,
@@ -153,7 +166,40 @@ def create_router(app):
         artifact: models.Artifact = read(id, user, service_layer.repo_layer)
 
         service: services.FileBucketService = service_layer.artifact_service(artifact.type_urn)
-        return service.ls(path)
+        return list(service.ls(artifact, path))
+
+    class RenamePaths(pydantic.BaseModel):
+        path: str
+        new_path: str
+
+    @router.post("/{id}/services/file-bucket/rename", response_model=bool)
+    def file_bucket_rename(id: str,
+                           rename_paths: RenamePaths,
+                           user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+                           service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
+        
+        artifact: models.Artifact = read(id, user, service_layer.repo_layer)
+
+        service: services.FileBucketService = service_layer.artifact_service(artifact.type_urn)
+        if not service.rename(artifact, rename_paths.path, rename_paths.new_path):
+            raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
+
+        return True
+
+    @router.post("/{id}/services/file-bucket/delete", response_model=bool)
+    def file_bucket_delete(id: str,
+                           path: str = fastapi.Body(None),
+                           user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+                           service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
+        
+        if path is None: raise fastapi.HTTPException(status_code=fastapi.status.HTTP_422_UNPROCESSABLE_ENTITY)
+        artifact: models.Artifact = read(id, user, service_layer.repo_layer)
+
+        service: services.FileBucketService = service_layer.artifact_service(artifact.type_urn)
+        if not service.delete(artifact, path):
+            raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
+        
+        return True
 
     @router.get("/{id}/services/point-cloud/points", response_model=List[XyztPoint])
     def point_cloud_points(id: str,

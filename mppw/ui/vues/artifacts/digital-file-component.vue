@@ -8,7 +8,7 @@
       <div class="col-md-auto">
         <o-field label="Local File Attachment">
           <o-input v-if="storageType == 'attachment'" v-model="attachmentPath"></o-input>
-          <o-button v-if="storageType == 'attachment' && (!uploadFile)" variant="primary" @click="onDownloadFile"><o-icon icon="download" size="small"></o-icon>&nbsp;Download</o-button>
+          <o-button v-if="storageType == 'attachment' && computeStorageType(artifact) == 'attachment' && (!uploadFile)" variant="primary" @click="onDownloadFile"><o-icon icon="download" size="small"></o-icon>&nbsp;Download</o-button>
           <o-upload v-if="storageType == 'attachment'" @update:modelValue="onUploadFileSelected">
             <o-button tag="a" variant="info"><o-icon icon="upload" size="small"></o-icon>&nbsp;Upload</o-button>
           </o-upload>
@@ -26,6 +26,7 @@
       <div class="col-md-auto">
         <o-field label="Remote File URL">
           <o-input v-if="storageType == 'remote'" v-model="remoteUrl"></o-input>
+          <o-button v-if="storageType == 'remote' && computeStorageType(artifact) == 'remote' && (!uploadFile)" variant="primary" @click="onFollowUrl"><o-icon icon="arrow-right" size="small"></o-icon>&nbsp;Go</o-button>
         </o-field>
       </div>
     </div>
@@ -85,7 +86,6 @@ export default {
       return this.$root
         .apiFetch("artifacts/" + attachments_id + "/services/file-bucket/upload", {
           method: "POST",
-          
           body: formData,
         })
         .then((response) => {
@@ -130,8 +130,6 @@ export default {
         .then((opAttachments) => {
           this.opAttachments = opAttachments;
 
-          console.log(this.opAttachments);
-
           this.storageType = this.computeStorageType(this.artifact);
           if (this.storageType == "attachment") {
             this.attachmentPath = this.toOpAttachmentPath(this.artifact["url_data"]);
@@ -150,10 +148,14 @@ export default {
       return url.replace(this.opAttachments["url_data"], "");
     },
     toOpAttachmentsUrl(path) {
+      while (path.startsWith("/")) path = path.substr(1, path.length);
       return this.opAttachments["url_data"] + "/" + path;
     },
     computeStorageType(artifact) {
       return this.artifact["url_data"] ? (this.isOpAttachmentsUrl(this.artifact["url_data"]) ? "attachment" : "remote") : null;
+    },
+    onFollowUrl() {
+      window.open(this.$root.apiUrl("artifacts/" + this.artifact["id"] + "/services/file/download"), "_blank");
     },
     onDownloadFile() {
       const link = document.createElement("a");

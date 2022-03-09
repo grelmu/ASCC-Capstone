@@ -376,6 +376,22 @@ class BucketRepository:
         else:
             raise UnsupportedSchemeException(bucket_furl.url)
 
+    def rename_file(self, bucket_url, path, new_path):
+
+        bucket_furl = furl.furl(bucket_url)
+        if bucket_furl.scheme == BucketRepository.GRIDFS_SCHEME:
+            return self.rename_gridfs_file(bucket_url, path, new_path)
+        else:
+            raise UnsupportedSchemeException(bucket_url)
+
+    def delete_file_by_path(self, bucket_url, path):
+
+        bucket_furl = furl.furl(bucket_url)
+        if bucket_furl.scheme == BucketRepository.GRIDFS_SCHEME:
+            return self.delete_gridfs_file_by_path(bucket_url, path)
+        else:
+            raise UnsupportedSchemeException(bucket_url)
+
     def delete_bucket(self, bucket_url):
 
         bucket_furl = furl.furl(bucket_url)
@@ -604,3 +620,42 @@ class BucketRepository:
         query = { "filename" : { "$regex": f"{path}[^/]+" } }
         
         return map(lambda gd: BucketRepository.grid_doc_to_bucket_file(gd), bucket.find(query))
+
+    def rename_gridfs_file(self, bucket_url, path, new_path):
+
+        if not path.startswith("/"): path = "/" + path
+        if not new_path.startswith("/"): new_path = "/" + new_path
+
+        bucket_url = self.storage_layer.resolve_local_storage_url_host(bucket_url)
+        bucket: gridfs.GridFSBucket = self.get_gridfs_bucket(bucket_url)
+
+        query = { "filename" : path }
+
+        result: gridfs.GridOut = (list(bucket.find(query)) or [None])[0]
+        if result is None: return False
+
+        try:
+            bucket.rename(result._id, new_path)
+        except gridfs.NoFile:
+            return False
+        
+        return True
+
+    def delete_gridfs_file_by_path(self, bucket_url, path):
+
+        if not path.startswith("/"): path = "/" + path
+
+        bucket_url = self.storage_layer.resolve_local_storage_url_host(bucket_url)
+        bucket: gridfs.GridFSBucket = self.get_gridfs_bucket(bucket_url)
+        
+        query = { "filename" : path }
+
+        result: gridfs.GridOut = (list(bucket.find(query)) or [None])[0]
+        if result is None: return False
+
+        try:
+            bucket.delete(result._id)
+        except gridfs.NoFile:
+            return False
+
+        return True
