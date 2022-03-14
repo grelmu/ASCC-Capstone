@@ -143,12 +143,19 @@ class MaterialArtifact(Artifact):
             raise ValueError(f"material artifact URNs must start with {MaterialArtifact.URN_PREFIX}: {v}")
         return v
 
+class SpatialFrame(pydantic.BaseModel):
+
+    parent_frame: Optional[DbId]
+    transform: Any
+
 class DigitalArtifact(Artifact):
 
     URN_PREFIX: ClassVar = f"{Artifact.URN_PREFIX}:digital"
 
     local_data: Any
     url_data: Optional[str]
+
+    spatial_frame: Optional[SpatialFrame]
 
     @pydantic.validator("type_urn")
     def valid_type_urn_prefix(cls, v):
@@ -166,7 +173,7 @@ class ArtifactTransform(BaseJsonModel):
     input_artifacts: Optional[List[DbId]]
     output_artifacts: Optional[List[DbId]]
     parameters: Any
-    
+
 class Operation(DocModel):
 
     URN_PREFIX: ClassVar = "urn:x-mfg:operation"

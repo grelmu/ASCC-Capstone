@@ -1,12 +1,12 @@
 <template>
   <div v-if="artifact && root">
 
+    <digital-file-bucket-node-component :artifactId="artifact['id']" :node="root" :selectable="true" 
+      @upload-file="onUploadFileSelect" @rename-file="onRenameFile"></digital-file-bucket-node-component>
+
     <div class="mt-3 text-end">
       <o-button @click="onDeleteFiles()" variant="danger" class="text-end" :disabled="isDeleting">Delete Selected</o-button>
     </div>
-
-    <digital-file-bucket-node-component :artifactId="artifact['id']" :node="root" :selectable="true" 
-      @upload-file="onUploadFileSelect" @rename-file="onRenameFile"></digital-file-bucket-node-component>
 
   </div>
 </template>

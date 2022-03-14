@@ -251,7 +251,6 @@ class ArtifactRepository(MongoDBRepository):
     def delete(self, id: str, project_ids: List[str] = None):
         return self.collection.delete_one(
             self._query_doc_for(id=id, project_ids=project_ids)).deleted_count == 1
-    
 
 class OperationRepository(MongoDBRepository):
 
@@ -275,6 +274,10 @@ class OperationRepository(MongoDBRepository):
     def query(self, id: str = None, project_ids: List[str] = None, name: Optional[str] = None, active: Optional[bool] = None):
         return map(lambda doc: doc_to_model(doc, models.Operation), list(self.collection.find(
             self._query_doc_for(id=id, project_ids=project_ids, name=name, active=active))))
+
+    def update(self, operation: models.Operation, project_ids: List[str] = None):
+        return self.collection.replace_one(
+            self._query_doc_for(id=operation.id, project_ids=project_ids), model_to_doc(operation)).modified_count == 1
 
     def attach(self, id: str, transform: models.ArtifactTransform, project_ids: List[str] = None):
         return self.collection.update_one(

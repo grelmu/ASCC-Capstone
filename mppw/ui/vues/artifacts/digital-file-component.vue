@@ -17,6 +17,9 @@
         <div v-if="uploadFile">
           <o-icon icon="upload"></o-icon><span class="font-monospace"><span class="fw-bold">.../{{ uploadFile.name }}</span> ({{ uploadFile.size }} bytes)</span>
         </div>
+        <div v-if="isProbablyImageFile()">
+          <img :src="this.buildDownloadUrl()" style="width: 30%;">
+        </div>
       </div>
     </div>
     <div class="mt-3 row">
@@ -157,9 +160,20 @@ export default {
     onFollowUrl() {
       window.open(this.$root.apiUrl("artifacts/" + this.artifact["id"] + "/services/file/download"), "_blank");
     },
+    isProbablyImageFile() {
+      if (!this.artifact || !this.artifact["url_data"]) return false;
+      let extSplit = this.artifact["url_data"].split(".");
+      if (extSplit.length < 2) return false;
+      let ext = extSplit[extSplit.length - 1].toLowerCase();
+      return ["gif", "png", "jpg", "jpeg"].indexOf(ext) >= 0;
+    },
+    buildDownloadUrl() {
+      if (!this.artifact) return null;
+      return this.$root.apiUrl("artifacts/" + this.artifact["id"] + "/services/file/download");
+    },
     onDownloadFile() {
       const link = document.createElement("a");
-      link.href = this.$root.apiUrl("artifacts/" + this.artifact["id"] + "/services/file/download");
+      link.href = this.buildDownloadUrl();
       let filename = this.artifact["url_data"].split("/");
       filename = filename[filename.length - 1];
       link.download = filename;
