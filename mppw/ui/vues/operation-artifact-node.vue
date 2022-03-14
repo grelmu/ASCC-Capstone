@@ -96,7 +96,23 @@
         <h3>Spatial Frame</h3>
 
         <o-field label="Parent Frame">
-          <o-input v-model="newSpatialFrame['parent_frame']"></o-input>
+          <o-select
+            placeholder="Select a spatial parent artifact"
+            v-model="newSpatialFrame.parent_frame"
+          >
+            <option
+              v-for="candidate in parentFrameCandidates || []"
+              :key="candidate.id"
+              :value="candidate.id"
+            >
+              <span v-if="candidate.kind_urn">
+                {{ candidate.name ? candidate.name + " @ " : "" }}{{ candidate.kind_urn }}.{{ candidate.id }}
+              </span>
+              <span v-if="!candidate.kind_urn">
+                {{ candidate.name || id }} (current) ({{ candidate.id }})
+              </span>
+            </option>
+          </o-select>
         </o-field>
 
         <o-field label="Translation XYZ">
@@ -130,7 +146,12 @@
         </o-field>
       </div>
 
-      <o-button @click="onSubmitMeta()" class="mt-4">Save Changes</o-button>
+      <o-button
+        @click="onSubmitMeta()"
+        class="mt-4"
+        :disabled="isDigitalArtifact() && parentFrameCandidates == null"
+        >Save Changes</o-button
+      >
     </o-modal>
   </div>
 </template>
@@ -140,7 +161,8 @@ const componentMap = {
   "urn:x-mfg:artifact:digital:text": "digital-text-component",
   "urn:x-mfg:artifact:digital:file": "digital-file-component",
   "urn:x-mfg:artifact:digital:file-bucket": "digital-file-bucket-component",
-  "urn:x-mfg:artifact:digital:fiducial-points": "digital-fiducial-points-component",
+  "urn:x-mfg:artifact:digital:fiducial-points":
+    "digital-fiducial-points-component",
   default: "default-component",
 };
 
@@ -178,6 +200,7 @@ export default {
       newName: null,
       newDescription: null,
       newSpatialFrame: null,
+      parentFrameCandidates: null,
     };
   },
 
@@ -215,6 +238,25 @@ export default {
           );
         });
     },
+    apiFetchArtifactFrameCandidates(opId, artifactPath) {
+      return this.$root
+        .apiFetch(
+          "operations/" +
+            opId +
+            "/artifacts/frame_candidates?strategy=operation_local&artifact_path=" +
+            encodeURIComponent(artifactPath.join(".")),
+          {
+            method: "GET",
+          }
+        )
+        .then((response) => {
+          if (response.status == 200) return response.json();
+          this.$root.throwApiResponseError(
+            response,
+            "Unknown response when querying frame candidates"
+          );
+        });
+    },
     refreshArtifact() {
       this.artifact = null;
       if (this.artifactId == null) {
@@ -227,6 +269,42 @@ export default {
         this.artifactType = this.findSimilarArtifactType(
           this.artifact["type_urn"].replace("urn:x-mfg:artifact", "")
         );
+      });
+    },
+    refreshParentFrameCandidates() {
+      let currentFramePromise = (
+        this.newSpatialFrame.parent_frame
+          ? this.apiFetchArtifact(this.newSpatialFrame.parent_frame)
+          : Promise.resolve(null)
+      ).then((artifact) => {
+        return artifact != null
+          ? [{ id: artifact.id, name: artifact.name, kind_urn: null }]
+          : [];
+      });
+
+      let candidatesPromise = this.apiFetchArtifactFrameCandidates(
+        this.opId,
+        this.artifactPath
+      );
+
+      return Promise.all([currentFramePromise, candidatesPromise]).then(
+        (allCandidates) => {
+          this.parentFrameCandidates = allCandidates[0].concat(allCandidates[1]);
+          this.sortParentFrameCandidates();
+        }
+      );
+    },
+    sortParentFrameCandidates() {
+      
+      this.parentFrameCandidates.sort((a, b) => {
+        
+        if (a.kind_urn == null) return -1;
+        if (b.kind_urn == null) return 1;
+
+        if (a.name != null && b.name == null) return -1;
+        if (a.name == null && b.name != null) return 1;
+
+        return a.kind_urn.localeCompare(b.kind_urn);
       });
     },
     isDigitalArtifact() {
@@ -262,37 +340,43 @@ export default {
     onStartEditMeta() {
       this.newName = this.artifact["name"];
       this.newDescription = this.artifact["description"];
-      if (this.isDigitalArtifact()) {
-        this.newSpatialFrame = Object.assign(
-          {
-            parent_frame: null,
-          },
-          this.artifact["spatial_frame"] || {}
-        );
-        this.newSpatialFrame.transform = Object.assign(
-          {
-            translation_xyz: {},
-            rotation_euler_abg: {},
-          },
-          (this.artifact["spatial_frame"] || {}).transform
-        );
-      }
       this.isEditingMeta = true;
       event.stopPropagation();
-      return false;
+
+      if (!this.isDigitalArtifact()) return;
+
+      this.newSpatialFrame = Object.assign(
+        {
+          parent_frame: null,
+        },
+        this.artifact["spatial_frame"] || {}
+      );
+
+      this.newSpatialFrame.transform = Object.assign(
+        {
+          translation_xyz: {},
+          rotation_euler_abg: {},
+        },
+        (this.artifact["spatial_frame"] || {}).transform
+      );
+
+      this.parentFrameCandidates = null;
+      return this.refreshParentFrameCandidates();
     },
     onSubmitMeta() {
       this.artifact.name = this.newName;
       this.artifact.description = this.newDescription;
       if (this.isDigitalArtifact()) {
-
         for (let k in this.newSpatialFrame.transform.translation_xyz)
-          this.newSpatialFrame.transform.translation_xyz[k] =
-            Number.parseFloat(this.newSpatialFrame.transform.translation_xyz[k]);
+          this.newSpatialFrame.transform.translation_xyz[k] = Number.parseFloat(
+            this.newSpatialFrame.transform.translation_xyz[k]
+          );
         for (let k in this.newSpatialFrame.transform.rotation_euler_abg)
           this.newSpatialFrame.transform.rotation_euler_abg[k] =
-            Number.parseFloat(this.newSpatialFrame.transform.rotation_euler_abg[k]);
-        
+            Number.parseFloat(
+              this.newSpatialFrame.transform.rotation_euler_abg[k]
+            );
+
         this.artifact.spatial_frame = this.newSpatialFrame;
       }
 

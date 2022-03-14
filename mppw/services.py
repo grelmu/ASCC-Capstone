@@ -91,6 +91,14 @@ class NewAttachment(pydantic.BaseModel):
     artifact_id: str
     is_input: bool
 
+class FrameCandidate(models.BaseJsonModel):
+    id: models.DbId
+    name: Optional[str]
+    kind_urn: str
+
+class NoStrategyFoundException(Exception):
+    pass
+
 class OperationServices:
 
     STATUS_DRAFT = "draft"
@@ -265,6 +273,24 @@ class OperationServices:
         operation.artifact_transform_graph = list(filter(lambda t: not t.kind_urn.startswith(child_transform_kind + "."), operation.artifact_transform_graph))
 
         return self.repo_layer.operations.update(operation)
+
+    def frame_candidates(self, operation: models.Operation, artifact_path: List[str], strategy: str = None):
+        
+        if strategy is None: strategy = "operation_local"
+        
+        if strategy == "operation_local":
+            return self.frame_candidates_operation_local(operation, artifact_path)
+        else:
+            raise NoStrategyFoundException(f"Could not understand strategy {strategy}")
+    
+    def frame_candidates_operation_local(self, operation: models.Operation, artifact_path: List[str]):
+        
+        for transform in operation.artifact_transform_graph:
+            for artifact_id in ((transform.input_artifacts or []) + (transform.output_artifacts or [])):
+                artifact = self.repo_layer.artifacts.query_one(id=artifact_id)
+                if artifact is None: continue
+                if not isinstance(artifact, models.DigitalArtifact): continue
+                yield FrameCandidate(id=artifact.id, name=artifact.name, kind_urn=transform.kind_urn)
 
 class FffServices(OperationServices):
 

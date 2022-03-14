@@ -131,12 +131,24 @@ def create_router(app):
         services = service_layer.operation_services_for(operation)
         return services.find_artifact_at(operation, artifact_path)
 
+    @router.get("/{id}/artifacts/frame_candidates", response_model=List[services.FrameCandidate])
+    def frame_candidates(id: str,
+                         artifact_path: str,
+                         strategy: str,
+                         user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+                         service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
+    
+        artifact_path = (artifact_path.split(".")) if artifact_path else []
+        operation: models.Operation = read(id, user, service_layer.repo_layer)
+        services = service_layer.operation_services_for(operation)
+        return list(services.frame_candidates(operation, artifact_path, strategy=strategy))
+
     class ArtifactAttachment(pydantic.BaseModel):
         kind_urn: str
         is_input: bool = False
         artifact_id: str
         artifact_path: Optional[List[str]]
-
+        
     @router.post("/{id}/artifacts/", response_model=bool)
     def attach(id: str,
                attachment: ArtifactAttachment,
