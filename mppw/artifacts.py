@@ -106,7 +106,7 @@ def create_router(app):
     # Services
     #
 
-    @router.post("/{id}/services/artifact/init", response_model=models.Artifact)
+    @router.post("/{id}/services/artifact/init", response_model=models.AnyArtifact)
     def init(id: str,
              args: dict,
              user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),

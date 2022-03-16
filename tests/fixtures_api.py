@@ -9,53 +9,29 @@ import os
 import tempfile
 import dbvox
 
-def json_response(response: requests.Response):
-    if response.status_code != 200 and response.status_code != 201:
-        raise Exception(f"Failed to get json response:\n{response}")
-    return response.json()
-
-class ApiRequests:
-
-    def __init__(self, api_url):
-        self.api_url = api_url
-        self.headers = {}
-        for method in ["get", "post", "put", "delete"]:
-            setattr(self, method, self._wrap(method))
-
-    def login(self):
-        token = json_response(requests.post(self.api_url + "/security/token", data={"username": "admin", "password": "password"}))["access_token"]
-        self.headers = { "Authorization": f"Bearer {token}" }
-
-    def _wrap(self, method):
-
-        def wrapped(url, *args, headers=None, **kwargs):
-            headers = dict(headers) if headers is not None else {}
-            headers.update(self.headers)
-            return getattr(requests, method)(self.api_url + url, *args, headers=headers, **kwargs)
-
-        return wrapped
+from fff_post import mppw_api
 
 @pytest.fixture
-def api_requests():
-    _api_requests = ApiRequests("http://localhost:8000/api")
-    _api_requests.login()
-    return _api_requests
+def api_client():
+    client = mppw_api.MppwClient("http://localhost:8000/api")
+    client.login("admin", "password")
+    return client
 
 @pytest.fixture
-def api_project(api_requests):
-    return json_response(api_requests.post("/projects/", json={
+def api_project(api_client):
+    return api_client.post_json("/projects/", json={
         "name": "Test Project"
-    }))
+    })
 
 @pytest.fixture
-def api_bucket(api_requests, api_project):
+def api_bucket(api_client, api_project):
 
-    bucket_artifact = json_response(api_requests.post("/artifacts/", json={
+    bucket_artifact = api_client.post_json("/artifacts/", json={
         "project": api_project["id"],
         "type_urn": "urn:x-mfg:artifact:digital:database-bucket",
-    }))
+    })
 
-    return json_response(api_requests.post("/artifacts/" + bucket_artifact["id"] + "/services/database-bucket/init"))
+    return api_client.post_json("/artifacts/" + bucket_artifact["id"] + "/services/artifact/init", json={})
 
 def resolve_bucket_url(bucket_url, api_url):
     bucket_furl = furl.furl(bucket_url)
