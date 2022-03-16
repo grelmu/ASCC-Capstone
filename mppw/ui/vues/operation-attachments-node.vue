@@ -58,6 +58,8 @@
             {{ kind.kind_urn }}
           </option>
         </o-select>
+        &nbsp;<b>:</b>&nbsp;
+        <o-input v-model="newKindKey" placeholder="(optional key)"></o-input>
       </o-field>
 
       <div v-if="newKind">
@@ -229,6 +231,13 @@ export default {
       );
     },
 
+    splitKind(kindUrn) {
+      let splitAt = kindUrn.lastIndexOf(":");
+      if (splitAt == 0) splitAt = -1;
+      if (splitAt < 0) return [kindUrn, null];
+      return [kindUrn.substring(0, splitAt), kindUrn.substring(splitAt + 1, kindUrn.length)];
+    },
+
     sortAttachments() {
       
       let kindIndices = {};
@@ -237,14 +246,29 @@ export default {
       }
 
       this.attachmentNodes.sort((a, b) => {
-        let aIndex = kindIndices[a.kind_urn];
-        let bIndex = kindIndices[b.kind_urn];
 
+        let splitA = this.splitKind(a.kind_urn);
+        let kindA = splitA[0];
+        let keyA = splitA[1];
+
+        let splitB = this.splitKind(b.kind_urn);
+        let kindB = splitB[0];
+        let keyB = splitB[1];
+
+        let aIndex = kindIndices[kindA];
+        let bIndex = kindIndices[kindB];
+
+        // Unknown types, just compare full kind urns
         if (aIndex == null && bIndex == null) return a.kind_urn.localeCompare(b.kind_urn);
         if (aIndex == null) return 1;
         if (bIndex == null) return -1;
 
-        return aIndex - bIndex;
+        // Return order based on registered kind urns
+        let cmp = aIndex - bIndex;
+        if (cmp != 0) return cmp;
+
+        // Return order based on kind key
+        return (keyA || "").localeCompare(keyB || "");
       });
     },
 
@@ -276,6 +300,7 @@ export default {
     onAttachArtifactBegin() {
       this.newKindUrn = null;
       this.newKind = null;
+      this.newKindKey = null;
       this.newTypeUrn = null;
       this.newName = null;
       this.newDescription = null;
@@ -284,7 +309,6 @@ export default {
     onAttachmentKindSelected(kindUrn) {
       this.newKindUrn = kindUrn;
       this.newKind = this.findSimilarAttachmentKind(this.newKindUrn);
-      console.log(this.newKind);
     },
     onAttachArtifactSubmit() {
 
@@ -300,9 +324,11 @@ export default {
       return this.apiCreateArtifact(artifact)
         .then((artifact) => {
 
+          let fullKindUrn = this.newKindUrn + (this.newKindKey ? ":" + this.newKindKey : "");
+
           return this.apiInitArtifact(artifact['id'], {})
             .then(() => {
-              return this.apiAttachArtifact(this.opId, this.artifactPath, this.newKindUrn, artifact['id']);
+              return this.apiAttachArtifact(this.opId, this.artifactPath, fullKindUrn, artifact['id']);
             })
             .then(() => {
               return this.refreshAttachments();

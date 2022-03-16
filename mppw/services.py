@@ -312,7 +312,12 @@ class FffServices(OperationServices):
                 ":notes" : [":digital:file", ":digital:text"],
             }),
         ],
-        ":operator-notes": [":digital:file", ":digital-text"],
+        ":operator-notes": [":digital:file", ":digital:text"],
+        ":thermal-cloud": [
+            (":digital:point-cloud", {
+                ":generation-notes" : [":digital:text"],
+            }),
+        ]
     })
 
     def __init__(self, repo_layer):
