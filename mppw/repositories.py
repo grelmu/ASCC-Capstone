@@ -1,4 +1,5 @@
 from gc import collect
+import tempfile
 import typing
 from typing import Optional, List, ClassVar, Any, Union
 import fastapi
@@ -250,7 +251,6 @@ class ArtifactRepository(MongoDBRepository):
     def delete(self, id: str, project_ids: List[str] = None):
         return self.collection.delete_one(
             self._query_doc_for(id=id, project_ids=project_ids)).deleted_count == 1
-    
 
 class OperationRepository(MongoDBRepository):
 
@@ -275,6 +275,10 @@ class OperationRepository(MongoDBRepository):
         return map(lambda doc: doc_to_model(doc, models.Operation), list(self.collection.find(
             self._query_doc_for(id=id, project_ids=project_ids, name=name, active=active))))
 
+    def update(self, operation: models.Operation, project_ids: List[str] = None):
+        return self.collection.replace_one(
+            self._query_doc_for(id=operation.id, project_ids=project_ids), model_to_doc(operation)).modified_count == 1
+
     def attach(self, id: str, transform: models.ArtifactTransform, project_ids: List[str] = None):
         return self.collection.update_one(
             self._query_doc_for(id=id, project_ids=project_ids), { "$push" : { "artifact_transform_graph": model_to_doc(transform) }}).modified_count == 1
@@ -297,6 +301,12 @@ class UnsupportedSchemeException(Exception):
 class UnmanagedBucketException(Exception):
     pass
 
+class BucketFile(models.DocModel):
+    name: str
+    content_type: Optional[str]
+    size_bytes: int
+    md5: Optional[Any]
+
 class BucketRepository:
 
     MONGODB_SCHEME = "mongodb"
@@ -310,8 +320,16 @@ class BucketRepository:
         return BucketRepository.MONGODB_SCHEME
 
     @property
+    def allowed_db_bucket_schemes(self):
+        return [BucketRepository.MONGODB_SCHEME]
+
+    @property
     def default_file_bucket_scheme(self):
         return BucketRepository.GRIDFS_SCHEME
+
+    @property
+    def allowed_file_bucket_schemes(self):
+        return [BucketRepository.GRIDFS_SCHEME]
 
     def create_db_bucket(self, bucket_id, bucket_scheme):
 
@@ -326,6 +344,56 @@ class BucketRepository:
             return self.create_local_gridfs_bucket(bucket_id)
         else:
             raise UnsupportedSchemeException(bucket_scheme)
+
+    def add_file_to_bucket(self, bucket_url, path, file):
+
+        bucket_furl = furl.furl(bucket_url)
+
+        if bucket_furl.scheme == BucketRepository.GRIDFS_SCHEME:
+            return self.add_file_to_gridfs_bucket(bucket_url, path, file)
+        else:
+            raise UnsupportedSchemeException(bucket_furl.url)
+
+    def get_file_by_url(self, file_url):
+
+        file_furl = furl.furl(file_url)
+        if file_furl.scheme == BucketRepository.GRIDFS_SCHEME:
+            return self.get_gridfs_file_by_url(file_url)
+        else:
+            raise UnsupportedSchemeException(file_url)
+
+    def get_file_by_path(self, bucket_url, path):
+
+        bucket_furl = furl.furl(bucket_url)
+        if bucket_furl.scheme == BucketRepository.GRIDFS_SCHEME:
+            return self.get_gridfs_file_by_path(bucket_url, path)
+        else:
+            raise UnsupportedSchemeException(bucket_url)
+
+    def ls_bucket(self, bucket_url, path):
+
+        bucket_furl = furl.furl(bucket_url)
+
+        if bucket_furl.scheme == BucketRepository.GRIDFS_SCHEME:
+            return self.ls_gridfs_bucket(bucket_url, path)
+        else:
+            raise UnsupportedSchemeException(bucket_furl.url)
+
+    def rename_file(self, bucket_url, path, new_path):
+
+        bucket_furl = furl.furl(bucket_url)
+        if bucket_furl.scheme == BucketRepository.GRIDFS_SCHEME:
+            return self.rename_gridfs_file(bucket_url, path, new_path)
+        else:
+            raise UnsupportedSchemeException(bucket_url)
+
+    def delete_file_by_path(self, bucket_url, path):
+
+        bucket_furl = furl.furl(bucket_url)
+        if bucket_furl.scheme == BucketRepository.GRIDFS_SCHEME:
+            return self.delete_gridfs_file_by_path(bucket_url, path)
+        else:
+            raise UnsupportedSchemeException(bucket_url)
 
     def delete_bucket(self, bucket_url):
 
@@ -498,8 +566,99 @@ class BucketRepository:
         else:
             raise UnmanagedBucketException(bucket_furl.url)
 
+    def get_gridfs_bucket(self, gridfs_url):
+        
+        gridfs_furl = furl.furl(gridfs_url)
+        gridfs_furl.scheme = "mongodb"
+        bucket_id = gridfs_furl.path.segments[1]
+        gridfs_furl.path.segments = gridfs_furl.path.segments[0:1]
+        
+        client = pymongo.MongoClient(gridfs_furl.url)
+        db = client.get_default_database()
+        return gridfs.GridFSBucket(db, bucket_id)
 
+    def add_file_to_gridfs_bucket(self, bucket_url, path, file: tempfile.TemporaryFile):
 
+        resolved_bucket_url = self.storage_layer.resolve_local_storage_url_host(bucket_url)
+        bucket: gridfs.GridFSBucket = self.get_gridfs_bucket(resolved_bucket_url)
+        bucket.upload_from_stream(path, file)
 
+        file_furl = furl.furl(bucket_url)
+        file_furl.path.add(furl.Path(path))
+        return file_furl.url
 
+    def get_gridfs_file_by_url(self, file_url):
 
+        bucket_furl = furl.furl(file_url)
+        path = "/".join(bucket_furl.path.segments[2:])
+        return self.get_gridfs_file_by_path(bucket_furl.url, path)
+
+    def get_gridfs_file_by_path(self, bucket_url, path):
+
+        if not path.startswith("/"): path = "/" + path
+
+        bucket_url = self.storage_layer.resolve_local_storage_url_host(bucket_url)
+        bucket: gridfs.GridFSBucket = self.get_gridfs_bucket(bucket_url)
+        
+        query = { "filename" : path }
+
+        result: gridfs.GridOut = (list(bucket.find(query)) or [None])[0]
+        if result is None: return (None, None)
+
+        return (BucketRepository.grid_doc_to_bucket_file(result), result)
+
+    @staticmethod
+    def grid_doc_to_bucket_file(grid_doc: gridfs.GridOut):
+        return BucketFile(id=grid_doc._id, name=grid_doc.name, content_type=grid_doc.content_type, size_bytes=grid_doc.length, md5=grid_doc.md5)
+
+    def ls_gridfs_bucket(self, bucket_url, path):
+
+        bucket_url = self.storage_layer.resolve_local_storage_url_host(bucket_url)
+        bucket: gridfs.GridFSBucket = self.get_gridfs_bucket(bucket_url)
+        
+        if path is None: path = ""
+        while path.startswith("/"): path = path[1:]
+        if path != "" and (not path.endswith("/")): path = path + "/"
+
+        query = { "filename" : { "$regex": f"{path}[^/]+" } }
+        
+        return map(lambda gd: BucketRepository.grid_doc_to_bucket_file(gd), bucket.find(query))
+
+    def rename_gridfs_file(self, bucket_url, path, new_path):
+
+        if not path.startswith("/"): path = "/" + path
+        if not new_path.startswith("/"): new_path = "/" + new_path
+
+        bucket_url = self.storage_layer.resolve_local_storage_url_host(bucket_url)
+        bucket: gridfs.GridFSBucket = self.get_gridfs_bucket(bucket_url)
+
+        query = { "filename" : path }
+
+        result: gridfs.GridOut = (list(bucket.find(query)) or [None])[0]
+        if result is None: return False
+
+        try:
+            bucket.rename(result._id, new_path)
+        except gridfs.NoFile:
+            return False
+        
+        return True
+
+    def delete_gridfs_file_by_path(self, bucket_url, path):
+
+        if not path.startswith("/"): path = "/" + path
+
+        bucket_url = self.storage_layer.resolve_local_storage_url_host(bucket_url)
+        bucket: gridfs.GridFSBucket = self.get_gridfs_bucket(bucket_url)
+        
+        query = { "filename" : path }
+
+        result: gridfs.GridOut = (list(bucket.find(query)) or [None])[0]
+        if result is None: return False
+
+        try:
+            bucket.delete(result._id)
+        except gridfs.NoFile:
+            return False
+
+        return True

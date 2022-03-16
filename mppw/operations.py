@@ -1,7 +1,7 @@
 import fastapi
 from fastapi import Security, Depends
 import typing
-from typing import Union, List, Optional
+from typing import Union, List, Dict, Optional, Any
 import pydantic
 import datetime
 
@@ -24,6 +24,10 @@ def create_router(app):
     combined_router = fastapi.APIRouter()
 
     router = fastapi.APIRouter(prefix="/api/operations")
+
+    #
+    # CRUD
+    #
 
     @router.post("/", response_model=models.Operation, status_code = fastapi.status.HTTP_201_CREATED)
     def create(operation: models.Operation,
@@ -67,42 +71,21 @@ def create_router(app):
             active=active,
         ))
 
-    @router.post("/{id}/artifacts/", response_model=NewArtifactTransform, status_code = fastapi.status.HTTP_201_CREATED)
-    def attach(id: str,
-               new_transform: NewArtifactTransform,
-               user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+    @router.put("/{id}", response_model=bool)
+    def update(id: str,
+               operation: models.Operation,
+               current_user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
                repo_layer = Depends(request_repo_layer(app))):
-    
-        if new_transform.input_artifacts is None: new_transform.input_artifacts = []
-        if new_transform.output_artifacts is None: new_transform.output_artifacts = []
+        
+        if id != str(operation.id):
+            raise fastapi.HTTPException(status_code=fastapi.status.HTTP_400_BAD_REQUEST)
 
-        for new_artifacts, artifact_ids in [(new_transform.new_input_artifacts, new_transform.input_artifacts),
-                                            (new_transform.new_output_artifacts, new_transform.output_artifacts)]:
-            if new_artifacts is None: continue
-            for new_artifact in new_artifacts:
-                projects.check_project_claims_for_user(user, [str(new_artifact.project)])
-                artifact_ids.append(repo_layer.artifacts.create(new_artifact).id)
-
-        transform = models.ArtifactTransform(**(new_transform.dict()))
-        modified = repo_layer.operations.attach(id, transform, project_ids=projects.project_claims_for_user(user))
-        if not modified:
-            raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
-
-        return new_transform
-
-    @router.delete("/{id}/artifacts/{kind_urn}", response_model=bool)
-    def detach(id: str,
-               kind_urn: str,
-               user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
-               repo_layer = Depends(request_repo_layer(app))):
-    
-        modified = repo_layer.operations.detach(id, kind_urn, project_ids=projects.project_claims_for_user(user))
-
+        modified = repo_layer.operations.update(operation, project_ids=projects.project_claims_for_user(current_user))
+        
         if not modified:
             raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
 
         return True
-
 
     @router.delete("/{id}", response_model=bool)
     def delete(id: str,
@@ -120,25 +103,113 @@ def create_router(app):
 
         return True
 
+    #
+    # Services
+    #
+
+    @router.post("/{id}/services/operation/init", response_model=models.Operation)
+    def init(id: str,
+             args: dict = {},
+             user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+             service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
+        
+        operation: models.Operation = read(id, user, service_layer.repo_layer)
+        services = service_layer.operation_services_for(operation)
+        return services.init(operation, **args)
+
+    class ArtifactPath(pydantic.BaseModel):
+        artifact_path: Optional[List[str]]
+
+    @router.get("/{id}/artifacts", response_model=services.ArtifactNode)
+    def attached_artifact(id: str,
+                          artifact_path: str = None,
+                          user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+                          service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
+    
+        artifact_path = (artifact_path.split(".")) if artifact_path else []
+        operation: models.Operation = read(id, user, service_layer.repo_layer)
+        services = service_layer.operation_services_for(operation)
+        return services.find_artifact_at(operation, artifact_path)
+
+    @router.get("/{id}/artifacts/frame_candidates", response_model=List[services.FrameCandidate])
+    def frame_candidates(id: str,
+                         artifact_path: str,
+                         strategy: str,
+                         user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+                         service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
+    
+        artifact_path = (artifact_path.split(".")) if artifact_path else []
+        operation: models.Operation = read(id, user, service_layer.repo_layer)
+        services = service_layer.operation_services_for(operation)
+        return list(services.frame_candidates(operation, artifact_path, strategy=strategy))
+
+    class ArtifactAttachment(pydantic.BaseModel):
+        kind_urn: str
+        is_input: bool = False
+        artifact_id: str
+        artifact_path: Optional[List[str]]
+        
+    @router.post("/{id}/artifacts/", response_model=bool)
+    def attach(id: str,
+               attachment: ArtifactAttachment,
+               user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+               service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
+    
+        operation: models.Operation = read(id, user, service_layer.repo_layer)
+        services = service_layer.operation_services_for(operation)
+        modified = services.attach(operation, attachment.kind_urn, attachment.artifact_id, attachment.is_input, attachment.artifact_path)
+
+        if not modified:
+            raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
+
+        return True
+
+    @router.delete("/{id}/artifacts/", response_model=bool)
+    def detach(id: str,
+               attachment: ArtifactAttachment,
+               user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+               service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
+    
+        print(attachment)
+
+        operation: models.Operation = read(id, user, service_layer.repo_layer)
+        services = service_layer.operation_services_for(operation)
+        modified = services.detach(operation, attachment.kind_urn, attachment.artifact_id, attachment.is_input, attachment.artifact_path)
+
+        if not modified:
+            raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
+
+        return True
+
+    @router.get("/{id}/artifacts/attachments/default", response_model=models.DigitalArtifact)
+    def get_default_attachments(id: str,
+                                user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+                                service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
+                
+
+        op: models.Operation = read(id, user, service_layer.repo_layer)
+        service: services.OperationServices  = service_layer.operation_service(op.type_urn)
+        attachments: models.Artifact = service.get_default_attachments_artifact(op)
+
+        return attachments
+
     combined_router.include_router(router)
 
-    router = fastapi.APIRouter(prefix="/api/serviced-operations")
-
-    @router.post("/", response_model=models.Operation, status_code = fastapi.status.HTTP_201_CREATED)
-    def create_serviced(operation: models.Operation,
-                        user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
-                        service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
-            
-        projects.check_project_claims_for_user(user, [str(operation.project)])
-
-        return service_layer.create_default_operation(operation)
-
+    router = fastapi.APIRouter(prefix="/api/operation-services")
 
     @router.get("/types/", response_model=List[services.ServicedOperationType])
     def query_serviced_types(user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
                              service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
 
         return list(service_layer.serviced_operation_types())
+
+    @router.get("/{rel_type_urn}/attachment-kinds/", response_model=List[services.AttachmentKind])
+    def query_attachment_kinds(rel_type_urn: str,
+                               user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+                               service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
+
+        rel_type_urn = ":" + rel_type_urn
+        return list(service_layer.operation_service(rel_type_urn).attachment_kinds)
 
     combined_router.include_router(router)
 

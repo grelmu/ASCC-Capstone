@@ -9,6 +9,7 @@ import arrow
 import os
 import shutil
 import tempfile
+import asyncio
 
 from mppw import logger
 from . import models
@@ -18,11 +19,15 @@ from . import security
 from .security import request_user, PROVENANCE_SCOPE
 from . import projects
 from . import services
-from .services import DatabaseBucketServices, XyztPoint, request_service_layer
+from .services import request_service_layer
 
 def create_router(app):
 
     router = fastapi.APIRouter(prefix="/api/artifacts")
+
+    #
+    # CRUD
+    #
 
     @router.post("/", response_model=models.AnyArtifact, status_code = fastapi.status.HTTP_201_CREATED)
     def create(artifact: models.AnyArtifact,
@@ -65,11 +70,15 @@ def create_router(app):
             active=active,
         ))
 
-    @router.put("/", response_model=bool)
-    def update(artifact: models.AnyArtifact,
+    @router.put("/{id}", response_model=bool)
+    def update(id: str,
+               artifact: models.AnyArtifact,
                current_user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
                repo_layer = Depends(request_repo_layer(app))):
         
+        if id != str(artifact.id):
+            raise fastapi.HTTPException(status_code=fastapi.status.HTTP_400_BAD_REQUEST)
+
         modified = repo_layer.artifacts.update(artifact, project_ids=projects.project_claims_for_user(current_user))
         
         if not modified:
@@ -77,18 +86,145 @@ def create_router(app):
 
         return True
 
-    @router.post("/{id}/services/database-bucket/init", response_model=models.DigitalArtifact)
-    def database_bucket_init(id: str,
-                             scheme: str = None,
-                             user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
-                             service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
+    @router.delete("/{id}", response_model=bool)
+    def delete(id: str,
+               preserve_data: bool = True,
+               current_user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+               repo_layer = Depends(request_repo_layer(app))):
+        
+        modified = (repo_layer.artifacts.deactivate if preserve_data else repo_layer.artifacts.delete)(
+            id,
+            project_ids=projects.project_claims_for_user(current_user)
+        )
+        
+        if not modified:
+            raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
+
+        return True
+
+    #
+    # Services
+    #
+
+    @router.post("/{id}/services/artifact/init", response_model=models.Artifact)
+    def init(id: str,
+             args: dict,
+             user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+             service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
+        
+        artifact: models.Artifact = read(id, user, service_layer.repo_layer)
+        services = service_layer.artifact_services_for(artifact)
+        return services.init(artifact, **args)
+
+    class SyncUploadFile:
+
+        def __init__(self, uf: fastapi.UploadFile):
+            self.uf = uf
+        
+        def write(self, data: typing.Union[bytes, str]) -> None:
+            return asyncio.run(self.uf.write(data))
+
+        def read(self, size: int = -1) -> typing.Union[bytes, str]:
+            return asyncio.run(self.uf.read(size))
+
+        async def seek(self, offset: int) -> None:
+            return asyncio.run(self.uf.seek(offset))
+
+        async def close(self) -> None:
+            return asyncio.run(self.uf.close())
+
+    @router.get("/{id}/services/file/download", )
+    def file_download(id: str,
+                      user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+                      service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
+        
+        artifact: models.DigitalArtifact = read(id, user, service_layer.repo_layer)
+        service: services.FileServices = service_layer.artifact_service(artifact.type_urn)
+
+        if not service.can_download(artifact):
+            return fastapi.responses.RedirectResponse(artifact.url_data)
+
+        meta, data = service.download(artifact)
+
+        if data is None:
+            raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
+
+        return fastapi.responses.StreamingResponse(data, media_type=meta.content_type)
+
+    @router.get("/{id}/services/file-bucket/download", )
+    def file_bucket_download(id: str,
+                      path: str,
+                      user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+                      service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
+        
+        artifact: models.DigitalArtifact = read(id, user, service_layer.repo_layer)
+        service: services.FileBucketServices = service_layer.artifact_service(artifact.type_urn)
+
+        meta, data = service.download(artifact, path)
+
+        if data is None:
+            raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
+
+        return fastapi.responses.StreamingResponse(data, media_type=meta.content_type)
+
+    @router.post("/{id}/services/file-bucket/upload", response_model=str, status_code = fastapi.status.HTTP_201_CREATED)
+    def file_bucket_upload(id: str,
+                           path: str = fastapi.Body(None),
+                           file: fastapi.UploadFile = fastapi.File(None),
+                           user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+                           service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
+        
+        if path is None: raise fastapi.HTTPException(status_code=fastapi.status.HTTP_422_UNPROCESSABLE_ENTITY)
+        artifact: models.Artifact = read(id, user, service_layer.repo_layer)
+
+        service: services.FileBucketService = service_layer.artifact_service(artifact.type_urn)
+        return service.upload(artifact, path, SyncUploadFile(file))
+    
+    @router.post("/{id}/services/file-bucket/ls", response_model=List[repositories.BucketFile])
+    def file_bucket_ls(id: str,
+                       path: str = None,
+                       user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+                       service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
                     
         artifact: models.Artifact = read(id, user, service_layer.repo_layer)
 
-        service_layer.get_artifact_service(DatabaseBucketServices, artifact).init(artifact, scheme=scheme)
-        return artifact
+        service: services.FileBucketService = service_layer.artifact_service(artifact.type_urn)
+        return list(service.ls(artifact, path))
 
-    @router.get("/{id}/services/point-cloud/points", response_model=List[XyztPoint])
+    class RenamePaths(pydantic.BaseModel):
+        path: str
+        new_path: str
+
+    @router.post("/{id}/services/file-bucket/rename", response_model=bool)
+    def file_bucket_rename(id: str,
+                           rename_paths: RenamePaths,
+                           user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+                           service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
+        
+        artifact: models.Artifact = read(id, user, service_layer.repo_layer)
+
+        service: services.FileBucketService = service_layer.artifact_service(artifact.type_urn)
+        if not service.rename(artifact, rename_paths.path, rename_paths.new_path):
+            raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
+
+        return True
+
+    @router.post("/{id}/services/file-bucket/delete", response_model=bool)
+    def file_bucket_delete(id: str,
+                           path: str = fastapi.Body(None),
+                           user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+                           service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
+        
+        if path is None: raise fastapi.HTTPException(status_code=fastapi.status.HTTP_422_UNPROCESSABLE_ENTITY)
+        artifact: models.Artifact = read(id, user, service_layer.repo_layer)
+
+        service: services.FileBucketService = service_layer.artifact_service(artifact.type_urn)
+        if not service.delete(artifact, path):
+            raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
+        
+        return True
+
+    @router.get("/{id}/services/point-cloud/points", response_model=List[services.XyztPoint])
     def point_cloud_points(id: str,
                            space_bounds: str,
                            time_bounds: str = None,
@@ -116,7 +252,7 @@ def create_router(app):
                               user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
                               service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
         
-        points: List[XyztPoint] = point_cloud_points(id, space_bounds, time_bounds, coerce_dt_bounds, user, service_layer)
+        points: List[services.XyztPoint] = point_cloud_points(id, space_bounds, time_bounds, coerce_dt_bounds, user, service_layer)
         
         if format == "pcd":
 
@@ -145,22 +281,5 @@ def create_router(app):
 
         else:
             raise fastapi.exceptions.HTTPException(fastapi.status.HTTP_400_BAD_REQUEST)
-
-
-    @router.delete("/{id}", response_model=bool)
-    def delete(id: str,
-               preserve_data: bool = True,
-               current_user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
-               repo_layer = Depends(request_repo_layer(app))):
-        
-        modified = (repo_layer.artifacts.deactivate if preserve_data else repo_layer.artifacts.delete)(
-            id,
-            project_ids=projects.project_claims_for_user(current_user)
-        )
-        
-        if not modified:
-            raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
-
-        return True
 
     return router

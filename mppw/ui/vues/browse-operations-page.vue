@@ -131,7 +131,7 @@ export default {
       });
     },
     apiFetchOpTypes() {
-      return this.$root.apiFetch("serviced-operations/types/", {
+      return this.$root.apiFetch("operation-services/types/", {
         method: "GET",
       }).then((response) => {
         if (response.status == 200) return response.json();
@@ -168,7 +168,7 @@ export default {
       });
     },
     apiCreateOp(op) {
-      return this.$root.apiFetch("serviced-operations/", {
+      return this.$root.apiFetch("operations/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -182,7 +182,21 @@ export default {
         );
       });
     },
-
+    apiInitOp(opId, args) {
+      return this.$root.apiFetch("operations/" + opId + "/services/operation/init", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(args || {}),
+      }).then((response) => {
+        if (response.status == 201) return response.json();
+        this.$root.throwApiResponseError(
+          response,
+          "Unknown response when initializing operation"
+        );
+      });
+    },
     refreshProjects() {
       this.projects = null;
       this.projectId = null;
@@ -244,6 +258,9 @@ export default {
       this.newOp.project = this.projectId;
 
       this.apiCreateOp(this.newOp)
+        .then((op) => {
+          return this.apiInitOp(op["id"]);
+        })
         .finally(() => {
           this.isCreatingNewOp = false;
           this.resetOpsTable();

@@ -20,7 +20,7 @@ from .fixtures_api import resolve_bucket_url, build_cloud_url, json_response
 @pytest.fixture
 def api_fff(api_requests, api_project):
 
-    fff_operation = json_response(api_requests.post("/serviced-operations/", json={
+    fff_operation = json_response(api_requests.post("/operation-services/", json={
         "project": api_project["id"],
         "type_urn": "urn:x-mfg:operation:fff",
         "name": f"FFF for {__name__}",

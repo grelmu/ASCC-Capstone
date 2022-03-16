@@ -1,4 +1,5 @@
-from typing import Optional, List, ClassVar, Any
+from doctest import OutputChecker
+from typing import Optional, List, ClassVar, Any, Union, ForwardRef
 import fastapi
 from fastapi import Depends
 import fastapi.encoders
@@ -16,23 +17,160 @@ from . import repositories
 DATABASE_BUCKET_URN_PREFIX = f"{models.DigitalArtifact.URN_PREFIX}:database-bucket"
 FILE_BUCKET_URN_PREFIX = f"{models.DigitalArtifact.URN_PREFIX}:file-bucket"
 
+AttachmentKindRef = ForwardRef('AttachmentKind')
+
+class ArtifactType(pydantic.BaseModel):
+    type_urn: str
+    child_kinds: List[AttachmentKindRef]
+
+    @staticmethod
+    def make(spec):
+        if isinstance(spec, str):
+            return ArtifactType(type_urn=spec, child_kinds=[])
+        return ArtifactType(type_urn=spec[0], child_kinds=AttachmentKind.make(spec[1]))
+
+class AttachmentKind(pydantic.BaseModel):
+    kind_urn: str
+    types: List[ArtifactType]
+
+    @staticmethod
+    def make(spec):
+        kinds = []
+        for kind_urn, types in spec.items():
+            kind = AttachmentKind(kind_urn=kind_urn, types=[])
+            for type in types:
+                kind.types.append(ArtifactType.make(type))
+            kinds.append(kind)
+
+        return kinds
+
+ArtifactType.update_forward_refs()
+
+AttachmentNodeRef = ForwardRef('AttachmentNode')
+
+class ArtifactNode(models.BaseJsonModel):
+    artifact_id: Union[models.DbId, None]
+    is_input: bool
+    attachments: List[AttachmentNodeRef]
+
+class AttachmentNode(models.BaseJsonModel):
+    kind_urn: str
+    artifacts: List[ArtifactNode]
+
+    @staticmethod
+    def unflatten(transforms: List[models.ArtifactTransform]) -> ArtifactNode:
+        
+        transforms = list(transforms or [])
+        transforms.sort(key=lambda t: t.kind_urn)
+
+        artifact_paths = {
+            "": ArtifactNode(artifact_id=None, is_input=False, attachments=[])
+        }
+        for transform in transforms:
+            
+            attachment_path = transform.kind_urn.split(".")
+            kind_urn = attachment_path[-1]
+
+            attachment_node = AttachmentNode(kind_urn=kind_urn, artifacts=[])
+            inputs, outputs = (transform.input_artifacts or [], transform.output_artifacts or [])
+            for i, artifact_id in enumerate(inputs + outputs):
+                artifact_node = ArtifactNode(artifact_id=artifact_id, is_input=(i < len(inputs)), attachments=[])
+                attachment_node.artifacts.append(artifact_node)
+                artifact_paths[transform.kind_urn + "." + str(artifact_id)] = artifact_node
+
+            parent_artifact_node = artifact_paths.get(".".join(attachment_path[0:-1]))
+            if not parent_artifact_node: continue
+            parent_artifact_node.attachments.append(attachment_node)
+
+        return artifact_paths[""]
+
+ArtifactNode.update_forward_refs()
+
+class NewAttachment(pydantic.BaseModel):
+    kind_urn: str
+    artifact_id: str
+    is_input: bool
+
+class FrameCandidate(models.BaseJsonModel):
+    id: models.DbId
+    name: Optional[str]
+    kind_urn: str
+
+class NoStrategyFoundException(Exception):
+    pass
+
 class OperationServices:
 
     STATUS_DRAFT = "draft"
 
-    ARTIFACT_KIND_ATTACHMENTS = ":attachments"
-    ARTIFACT_KIND_PROCESS_DATA = ":process-data"
+    ATTACHMENT_KINDS: List[AttachmentKind] = AttachmentKind.make({
+        ":process-data": [":digital:database-bucket", ":digital:file-bucket", ":digital:file", ":digital:fiducial-points"],
+        ":attachments": [":digital:file-bucket", ":digital:file", "digital:text"],
+    })
+
+    ATTACHMENT_KIND_PROCESS_DATA = ATTACHMENT_KINDS[0]
+    ATTACHMENT_KIND_ATTACHMENTS = ATTACHMENT_KINDS[1]
 
     def __init__(self, repo_layer):
         self.repo_layer = repo_layer
 
-    def set_default_fields(self, operation: models.Operation, clazz):
+    @property
+    def default_name(self):
+        return type(self).__name__.replace("Services", "") + " Operation"
 
+    @property
+    def default_description(self):
+        return None
+
+    @staticmethod
+    def is_compatible_kind(general_kind:str, specific_kind: str):
+        return general_kind == specific_kind or specific_kind.startswith(general_kind + ":") 
+
+    def find_attachments_by_kind(self, operation: models.Operation, kind_urn: str, parent_artifact_node: ArtifactNode = None) -> List[AttachmentNode]:
+
+        artifacts_root = AttachmentNode.unflatten(operation.artifact_transform_graph) if parent_artifact_node is None else parent_artifact_node
+
+        matching = []
+        for attachment_node in artifacts_root.attachments:
+            if kind_urn == attachment_node.kind_urn: matching.append(attachment_node)
+
+        return matching
+
+    def find_attachment_by_kind(self, operation: models.Operation, kind_urn: str, parent_artifact_node: ArtifactNode = None) -> AttachmentNode:
+        return (self.find_attachments_by_kind(operation, kind_urn, parent_artifact_node=parent_artifact_node) or [None])[0]
+
+    def find_artifact_at(self, operation: models.Operation, artifact_path: List[str] = []) -> ArtifactNode:
+        
+        artifact_node = AttachmentNode.unflatten(operation.artifact_transform_graph)
+
+        def find_child_artifact(artifact_node: ArtifactNode, kind_urn, artifact_id) -> ArtifactNode:
+            for attachment_node in artifact_node.attachments:
+                if attachment_node.kind_urn == kind_urn:
+                    for child_artifact_node in attachment_node.artifacts:
+                        if str(child_artifact_node.artifact_id) == str(artifact_id): return child_artifact_node
+            return None
+
+        while artifact_node is not None and artifact_path:
+            
+            kind_urn, artifact_id = artifact_path[0:2]
+            artifact_path = artifact_path[2:]
+            artifact_node = find_child_artifact(artifact_node, kind_urn, artifact_id)
+
+        return artifact_node
+
+    def find_transform_by_kind(self, operation: models.Operation, kind_urn: str) -> models.ArtifactTransform:
+        for transform in operation.artifact_transform_graph:
+            if transform.kind_urn == kind_urn:
+                return transform
+        return None
+
+    def init(self, operation: models.Operation, process_data_scheme=None, attachments_scheme=None, **kwargs):
+        
         if not operation.name:
-            operation.name = clazz.DEFAULT_NAME
+            operation.name = self.default_name
 
         if not operation.description:
-            operation.description = clazz.DEFAULT_DESCRIPTION
+            operation.description = self.default_description
 
         if operation.start_at is None:
             start_at = datetime.datetime.now()
@@ -40,64 +178,119 @@ class OperationServices:
         if not operation.status:
             operation.status = OperationServices.STATUS_DRAFT
 
-    def create_default_attachments(self, project, scheme=None):
+        if operation.artifact_transform_graph is None:
+            operation.artifact_transform_graph = []
 
-        attachments = models.DigitalArtifact(
-            type_urn = FILE_BUCKET_URN_PREFIX,
-            project = project,
-            name = "Attachments",
-            description = "Default attachments",   
+        if self.find_attachment_by_kind(operation, OperationServices.ATTACHMENT_KIND_PROCESS_DATA.kind_urn) is None:
+            
+            process_data_artifact = self._init_process_data_artifact(operation, process_data_scheme)
+            operation.artifact_transform_graph.append(models.ArtifactTransform(
+                kind_urn = OperationServices.ATTACHMENT_KIND_PROCESS_DATA.kind_urn,
+                output_artifacts = [process_data_artifact.id]
+            ))
+
+        if self.find_attachment_by_kind(operation, OperationServices.ATTACHMENT_KIND_ATTACHMENTS.kind_urn) is None:
+            
+            attachments_artifact = self._init_attachments_artifact(operation, attachments_scheme)
+            operation.artifact_transform_graph.append(models.ArtifactTransform(
+                kind_urn = OperationServices.ATTACHMENT_KIND_ATTACHMENTS.kind_urn,
+                output_artifacts = [attachments_artifact.id]
+            ))
+
+        return operation if self.repo_layer.operations.update(operation) else None
+
+    def _init_attachments_artifact(self, operation: models.Operation, scheme=None):
+
+        attachments_artifact = models.DigitalArtifact(
+            type_urn = FileBucketServices.URN_PREFIX,
+            project = operation.project,
+            name = "Default Attachments",
         )
 
-        self.repo_layer.artifacts.create(attachments)
-        self.initialize_file_bucket_artifact(attachments, scheme)
-        self.repo_layer.artifacts.update(attachments)
+        self.repo_layer.artifacts.create(attachments_artifact)
+        artifact_service = FileBucketServices(self.repo_layer)
+        artifact_service.init(attachments_artifact)
 
-        return models.ArtifactTransform(
-            kind_urn = OperationServices.ARTIFACT_KIND_ATTACHMENTS,
-            output_artifacts = [attachments.id]
+        return attachments_artifact
+
+    def _init_process_data_artifact(self, operation: models.Operation, scheme=None):
+
+        process_data_artifact = models.DigitalArtifact(
+            type_urn = DatabaseBucketServices.URN_PREFIX,
+            project = operation.project,
+            name = "Default Process Data", 
         )
 
-    def create_default_process_data(self, project, scheme=None):
+        self.repo_layer.artifacts.create(process_data_artifact)
+        artifact_service = DatabaseBucketServices(self.repo_layer)
+        artifact_service.init(process_data_artifact)
 
-        process_data = models.DigitalArtifact(
-            type_urn = DATABASE_BUCKET_URN_PREFIX,
-            project = project,
-            name = "Process Data",
-            description = "Default process data",   
-        )
+        return process_data_artifact
 
-        self.repo_layer.artifacts.create(process_data)
-        self.initialize_db_bucket_artifact(process_data, scheme)
-        self.repo_layer.artifacts.update(process_data)
+    def get_default_attachments_artifact(self, operation: models.Operation):
+        attachment = self.find_attachment_by_kind(operation, OperationServices.ATTACHMENT_KIND_ATTACHMENTS.kind_urn)
+        if not attachment: return None
+        return self.repo_layer.artifacts.query_one(id=attachment.artifacts[0].artifact_id)
 
-        return models.ArtifactTransform(
-            kind_urn = OperationServices.ARTIFACT_KIND_PROCESS_DATA,
-            output_artifacts = [process_data.id]
-        )
+    def attach(self, operation: models.Operation, kind_urn: str, artifact_id: str, is_input: Optional[bool] = None, artifact_path: List[str] = None):
+        
+        if artifact_path is None: artifact_path = []
+        if is_input is None: is_input = False
 
-    def initialize_artifact(self, id: str, scheme=None):
-        artifact = self.repo_layer.artifacts.read(id)
-        if artifact.type_urn.startswith(DATABASE_BUCKET_URN_PREFIX):
-            return self.initialize_db_bucket_artifact(artifact)
-        elif artifact.type_urn.startswith(FILE_BUCKET_URN_PREFIX):
-            return self.initialize_file_bucket_artifact(artifact)
+        if self.find_artifact_at(operation, artifact_path) is None: return None
+
+        transform_kind = ".".join(artifact_path + [kind_urn])
+        transform = self.find_transform_by_kind(operation, transform_kind)
+
+        if transform is None:
+            transform = models.ArtifactTransform(kind_urn=transform_kind, input_artifacts=[], output_artifacts=[])
+            operation.artifact_transform_graph.append(transform)
+
+        (transform.input_artifacts if is_input else transform.output_artifacts).append(artifact_id)
+        
+        return self.repo_layer.operations.update(operation)
+
+    def detach(self, operation: models.Operation, kind_urn: str, artifact_id: str, is_input: Optional[bool] = None, artifact_path: List[str] = None):
+        
+        if artifact_path is None: artifact_path = []
+
+        transform_kind = ".".join(artifact_path + [kind_urn])
+        transform = self.find_transform_by_kind(operation, transform_kind)
+
+        if transform is None: return None
+        
+        if (is_input is None or is_input):
+            transform.input_artifacts = [id for id in transform.input_artifacts if not (artifact_id == str(id))]
+        elif (is_input is None or not is_input):
+            transform.output_artifacts = [id for id in transform.output_artifacts if not (artifact_id == str(id))]
         else:
-            return False
+            return None
 
-    def initialize_db_bucket_artifact(self, artifact: models.DigitalArtifact, scheme=None):
+        if not transform.input_artifacts and not transform.output_artifacts:
+            operation.artifact_transform_graph = list(filter(lambda t: not t.kind_urn == transform.kind_urn, operation.artifact_transform_graph))
 
-        bucket_id = f"artdb-{str(artifact.id)}"
-        scheme = scheme or self.repo_layer.buckets.default_db_bucket_scheme
-        artifact.url_data = self.repo_layer.buckets.create_db_bucket(bucket_id, scheme)
-        return True
+        child_transform_kind = ".".join(artifact_path + [kind_urn, artifact_id])
+        operation.artifact_transform_graph = list(filter(lambda t: not t.kind_urn.startswith(child_transform_kind + "."), operation.artifact_transform_graph))
 
-    def initialize_file_bucket_artifact(self, artifact: models.DigitalArtifact, scheme=None):
+        return self.repo_layer.operations.update(operation)
 
-        bucket_id = f"artfiles-{str(artifact.id)}"
-        scheme = scheme or self.repo_layer.buckets.default_file_bucket_scheme
-        artifact.url_data = self.repo_layer.buckets.create_file_bucket(bucket_id, scheme)
-        return True
+    def frame_candidates(self, operation: models.Operation, artifact_path: List[str], strategy: str = None):
+        
+        if strategy is None: strategy = "operation_local"
+        
+        if strategy == "operation_local":
+            return self.frame_candidates_operation_local(operation, artifact_path)
+        else:
+            raise NoStrategyFoundException(f"Could not understand strategy {strategy}")
+    
+    def frame_candidates_operation_local(self, operation: models.Operation, artifact_path: List[str]):
+        
+        for transform in operation.artifact_transform_graph:
+            for artifact_id in ((transform.input_artifacts or []) + (transform.output_artifacts or [])):
+                artifact = self.repo_layer.artifacts.query_one(id=artifact_id)
+                if artifact is None: continue
+                if not isinstance(artifact, models.DigitalArtifact): continue
+                yield FrameCandidate(id=artifact.id, name=artifact.name, kind_urn=transform.kind_urn)
 
 class FffServices(OperationServices):
 
@@ -105,35 +298,53 @@ class FffServices(OperationServices):
     DEFAULT_NAME = "FFF Manufacture"
     DEFAULT_DESCRIPTION = "FFF or FDM manufacturing operation"
 
-    ARTIFACT_KIND_OPERATOR_NOTES = ":operator-notes"
-    ARTIFACT_KIND_OUTPUT_PARTS = ":output-parts"
+    ATTACHMENT_KINDS = AttachmentKind.make({
+        ":toolpath": [":digital:file"],
+        ":input-materials": [
+            (":material:batch", {
+                ":notes" : [":digital:file", ":digital:text"],
+            }),
+        ],
+        ":output-parts": [
+            (":material:part", {
+                ":part-geometry" : [":digital:fiducial-points"],
+                ":images" : [":digital:file"],
+                ":notes" : [":digital:file", ":digital:text"],
+            }),
+        ],
+        ":operator-notes": [":digital:file", ":digital:text"],
+        ":thermal-cloud": [
+            (":digital:point-cloud", {
+                ":generation-notes" : [":digital:text"],
+            }),
+        ]
+    })
 
     def __init__(self, repo_layer):
         self.repo_layer = repo_layer
     
-    def create_default(self, operation: models.Operation):
-
-        self.set_default_fields(operation, type(self))
-        
-        if not operation.artifact_transform_graph:
-            operation.artifact_transform_graph = [
-                models.ArtifactTransform(
-                    kind_urn=FffServices.ARTIFACT_KIND_OPERATOR_NOTES,
-                ),
-                models.ArtifactTransform(
-                    kind_urn=FffServices.ARTIFACT_KIND_OUTPUT_PARTS,
-                ),
-                self.create_default_process_data(operation.project),
-                self.create_default_attachments(operation.project),
-            ]
-
-        return self.repo_layer.operations.create(operation)
+    @property
+    def attachment_kinds(self):
+        return FffServices.ATTACHMENT_KINDS + OperationServices.ATTACHMENT_KINDS
 
 class ArtifactServices:
 
     def __init__(self, repo_layer):
         self.repo_layer = repo_layer
 
+    def init(self, artifact: models.DigitalArtifact, **kwargs):
+        return artifact
+
+class FileServices(ArtifactServices):
+
+    URN_PREFIX = f"{models.DigitalArtifact.URN_PREFIX}:file"
+
+    def can_download(self, artifact: models.DigitalArtifact):
+        file_furl = furl.furl(artifact.url_data)
+        return file_furl.scheme in self.repo_layer.buckets.allowed_file_bucket_schemes
+
+    def download(self, artifact: models.DigitalArtifact):
+        return self.repo_layer.buckets.get_file_by_url(artifact.url_data)
 
 class DatabaseBucketServices(ArtifactServices):
 
@@ -145,7 +356,37 @@ class DatabaseBucketServices(ArtifactServices):
         scheme = scheme or self.repo_layer.buckets.default_db_bucket_scheme
         artifact.url_data = self.repo_layer.buckets.create_db_bucket(bucket_id, scheme)
 
+        if not self.repo_layer.artifacts.update(artifact):
+            return None
+        return artifact
+
+class FileBucketServices(ArtifactServices):
+
+    URN_PREFIX = FILE_BUCKET_URN_PREFIX
+
+    def init(self, artifact: models.DigitalArtifact, scheme=None):
+
+        bucket_id = f"artfiles-{str(artifact.id)}"
+        scheme = scheme or self.repo_layer.buckets.default_file_bucket_scheme
+        artifact.url_data = self.repo_layer.buckets.create_file_bucket(bucket_id, scheme)
+
         return self.repo_layer.artifacts.update(artifact)
+
+    def upload(self, artifact: models.DigitalArtifact, path: str, file):
+        return self.repo_layer.buckets.add_file_to_bucket(artifact.url_data, path, file)
+
+    def download(self, artifact: models.DigitalArtifact, path: str):
+        return self.repo_layer.buckets.get_file_by_path(artifact.url_data, path)
+
+    def ls(self, artifact: models.DigitalArtifact, path: str):
+        return self.repo_layer.buckets.ls_bucket(artifact.url_data, path)
+
+    def rename(self, artifact: models.DigitalArtifact, path: str, new_path: str):
+        return self.repo_layer.buckets.rename_file(artifact.url_data, path, new_path)
+    
+    def delete(self, artifact: models.DigitalArtifact, path: str):
+        return self.repo_layer.buckets.delete_file_by_path(artifact.url_data, path)
+
 
 class UnknownPointCloudTypeException(Exception):
     pass
@@ -252,8 +493,8 @@ class UnservicedArtifactTypeException(Exception):
 
 class ServiceLayer:
 
+    ARTIFACT_SERVICE_TYPES = [FileServices, DatabaseBucketServices, FileBucketServices, PointCloudServices]
     OPERATION_SERVICE_TYPES = [FffServices]
-    ARTIFACT_SERVICE_TYPES = [DatabaseBucketServices, PointCloudServices]
 
     def __init__(self, repo_layer):
         self.repo_layer = repo_layer
@@ -266,10 +507,50 @@ class ServiceLayer:
     def artifact_service_types(self):
         return ServiceLayer.ARTIFACT_SERVICE_TYPES
 
+    @staticmethod
+    def normal_artifact_type_urn_for(type_urn: str):
+        if type_urn.startswith(":"):
+            return models.Artifact.URN_PREFIX + type_urn
+        return type_urn
+
+    @staticmethod
+    def normal_operation_type_urn_for(type_urn: str):
+        if type_urn.startswith(":"):
+            return models.Operation.URN_PREFIX + type_urn
+        return type_urn
+
+    @staticmethod
+    def is_compatible_type(generic_type: str, specific_type: str):
+        return generic_type == specific_type or specific_type.startswith(generic_type + ":")
+
     def serviced_operation_types(self):
         return [ServicedOperationType(urn_prefix=service_type.URN_PREFIX,
                                       name=service_type.DEFAULT_NAME,
                                       description=service_type.DEFAULT_DESCRIPTION) for service_type in self.operation_service_types]
+
+    def artifact_services_for(self, type_urn) -> ArtifactServices:
+        if isinstance(type_urn, models.Artifact):
+            type_urn = type_urn.type_urn
+        type_urn = ServiceLayer.normal_artifact_type_urn_for(type_urn)
+        for service_type in self.artifact_service_types:
+            if ServiceLayer.is_compatible_type(service_type.URN_PREFIX, type_urn):
+                return service_type(self.repo_layer)
+        return ArtifactServices(self.repo_layer)
+
+    def artifact_service(self, type_urn):
+        return self.artifact_services_for(type_urn)
+
+    def operation_services_for(self, type_urn) -> OperationServices:
+        if isinstance(type_urn, models.Operation):
+            type_urn = type_urn.type_urn
+        type_urn = ServiceLayer.normal_operation_type_urn_for(type_urn)
+        for service_type in self.operation_service_types:
+            if ServiceLayer.is_compatible_type(service_type.URN_PREFIX, type_urn):
+                return service_type(self.repo_layer) 
+        return OperationServices(self.repo_layer)
+
+    def operation_service(self, type_urn):
+        return self.operation_services_for(type_urn)
 
     def create_default_operation(self, operation: models.Operation):
         for service_type in self.operation_service_types:
