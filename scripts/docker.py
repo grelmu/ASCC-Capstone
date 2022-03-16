@@ -50,10 +50,10 @@ def build(*args):
         fff_post_dir = os.path.join(root_dir, "fff_post")
         subprocess.run(["poetry", "build"], cwd=fff_post_dir)
 
-        shutil.rmtree(os.path.join(dist_dir, "fff_post"))
+        shutil.rmtree(os.path.join(dist_dir, "fff_post"), ignore_errors=True)
         shutil.copytree(os.path.join(fff_post_dir, "dist"), os.path.join(dist_dir, "fff_post"))
 
-        shutil.rmtree(os.path.join(containers_dir, project_name, "dist"))
+        shutil.rmtree(os.path.join(containers_dir, project_name, "dist"), ignore_errors=True)
         shutil.copytree(dist_dir, os.path.join(containers_dir, project_name, "dist"))
         shutil.copy(os.path.join(containers_dir, f"{project_name}-stack.yml"), os.path.join(containers_dir, project_name, "dist"))
 

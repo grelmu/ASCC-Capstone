@@ -203,7 +203,7 @@ def create_router(app):
 
         return list(service_layer.serviced_operation_types())
 
-    @router.get("/{rel_type_urn}/attachment-kinds/", response_model=List[services.AttachmentKind])
+    @router.get("/{rel_type_urn}/attachment-kinds", response_model=List[services.AttachmentKind])
     def query_attachment_kinds(rel_type_urn: str,
                                user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
                                service_layer: services.ServiceLayer = Depends(request_service_layer(app))):

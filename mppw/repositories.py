@@ -307,6 +307,12 @@ class BucketFile(models.DocModel):
     size_bytes: int
     md5: Optional[Any]
 
+def gridfs_bucket_data_gen(grid_out):
+    while True:
+        chunk = grid_out.readchunk()
+        if not chunk: break
+        yield chunk
+
 class BucketRepository:
 
     MONGODB_SCHEME = "mongodb"
@@ -605,7 +611,7 @@ class BucketRepository:
         result: gridfs.GridOut = (list(bucket.find(query)) or [None])[0]
         if result is None: return (None, None)
 
-        return (BucketRepository.grid_doc_to_bucket_file(result), result)
+        return (BucketRepository.grid_doc_to_bucket_file(result), gridfs_bucket_data_gen(result))
 
     @staticmethod
     def grid_doc_to_bucket_file(grid_doc: gridfs.GridOut):

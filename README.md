@@ -126,6 +126,16 @@ $ MPPW_VERSION=<X.Y.Z> MONGODB_ADMIN_PASSWORD=<password> [MPPW_ADMIN_PASSWORD=<o
     poetry run mppw-docker compose up [-d]
 ```
 
+## Alternate version with container copy
+
+Sometimes it isn't possible to build on the remote host directly - in this case we can use the form:
+
+```sh
+$ docker save ascc/mppw:dev | bzip2 | pv | ssh user@host docker load
+$ source .env-prod-host
+$ poetry run mppw-docker compose up -d mppw
+```
+
 ## Debug production deployments
 
 Often it's useful to be able to connect directly to ports on production machines - to do so, you can use SSH port-forwarding.  To make this easy, a helper script is available:
