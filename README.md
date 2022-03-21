@@ -2,22 +2,23 @@
 
 ## Prerequisites
 
-* Python 3.8 with Poetry installed
-    * `$ pip install poetry`
+### Ubuntu or Windows WSL
+
 * Docker and Docker Compose
+* Python 3.8.3 (with Poetry)
 * (Optional) PCL (Point Cloud Library) for PCL-file APIs
-    * (Ubuntu 20.04 only)
-      ```sh
+    * ```sh
       $ sudo apt install -y libpcl-apps1.10 libpcl-common1.10 libpcl-features1.10 libpcl-filters1.10 libpcl-io1.10 libpcl-kdtree1.10 libpcl-keypoints1.10 libpcl-ml1.10 libpcl-octree1.10 libpcl-outofcore1.10 libpcl-people1.10 libpcl-recognition1.10 libpcl-registration1.10 libpcl-sample-consensus1.10 libpcl-search1.10 libpcl-segmentation1.10 libpcl-stereo1.10 libpcl-surface1.10 libpcl-tracking1.10 libpcl-visualization1.10
       ```
 
 > NOTE that PCL is a very large and finicky dependency - installing the core libraries is system-specific, and then system-specific python bindings must be used.  Consider containerizing this functionality going forward if we start using it for more than I/O.
 
-> TODO determine if a subset of the PCL lib is needed
+For more details installing these basics on WSL, see ['README_WSL.md`](./README_WSL.md).
 
 ## Quickstart
 
 Git submodules are used - ensure these are properly checked-out:
+
 ```sh
 $ git submodule update --init --recursive
 ```
