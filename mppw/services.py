@@ -246,6 +246,8 @@ class OperationServices:
             transform = models.ArtifactTransform(kind_urn=transform_kind, input_artifacts=[], output_artifacts=[])
             operation.artifact_transform_graph.append(transform)
 
+        transform.input_artifacts = transform.input_artifacts or []
+        transform.output_artifacts = transform.output_artifacts or []
         (transform.input_artifacts if is_input else transform.output_artifacts).append(artifact_id)
         
         return self.repo_layer.operations.update(operation)
