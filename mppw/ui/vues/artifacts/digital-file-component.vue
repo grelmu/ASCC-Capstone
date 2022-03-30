@@ -61,61 +61,6 @@ export default {
   },
   methods: {
 
-     apiFetchArtifact(id) {
-      return this.$root
-        .apiFetch("artifacts/" + id, { method: "GET" })
-        .then((response) => {
-          if (response.status == 200) return response.json();
-          else return { version: "" };
-        })
-    },
-    apiFetchOpAttachments(opId) {
-      return this.$root
-        .apiFetch("operations/" + opId + "/artifacts/attachments/default", { method: "GET" })
-        .then((response) => {
-          if (response.status == 200) return response.json();
-          this.$root.throwApiResponseError(
-            response,
-            "Bad response when fetching attachments"
-          );
-        })
-    },
-    apiUploadAttachment(attachments_id, path, file) {
-
-      let formData = new FormData();
-      formData.append("path", path);
-      formData.append("file", file);
-
-      return this.$root
-        .apiFetch("artifacts/" + attachments_id + "/services/file-bucket/upload", {
-          method: "POST",
-          body: formData,
-        })
-        .then((response) => {
-          if (response.status == 201) return response.json();
-          this.$root.throwApiResponseError(
-            response,
-            "Bad response when uploading attachment"
-          );
-        })
-    },
-    apiUpdateArtifact(artifact) {
-      return this.$root
-        .apiFetch("artifacts/" + artifact["id"], { 
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(artifact),
-        })
-        .then((response) => {
-          if (response.status == 200) return response.json();
-          this.$root.throwApiResponseError(
-            response,
-            "Bad response when updating artifact"
-          );
-        })
-    },
     refreshArtifact() {
 
       this.artifact = null;
@@ -125,10 +70,10 @@ export default {
       this.uploadFile = null;
       this.remoteUrl = null;
 
-      return this.apiFetchArtifact(this.artifactId)
+      return this.$root.apiFetchArtifact(this.artifactId)
         .then((artifact) => {
           this.artifact = artifact;
-          return this.apiFetchOpAttachments(this.opId);
+          return this.$root.apiFetchOpAttachments(this.opId);
         })
         .then((opAttachments) => {
           this.opAttachments = opAttachments;
@@ -197,7 +142,7 @@ export default {
 
       if (this.storageType == "attachment") {
         if (this.uploadFile) {
-          urlPromise = this.apiUploadAttachment(this.opAttachments["id"], this.attachmentPath, this.uploadFile);
+          urlPromise = this.$root.apiUploadAttachment(this.opAttachments["id"], this.attachmentPath, this.uploadFile);
         }
         else {
           urlPromise = Promise.resolve(this.toOpAttachmentsUrl(this.attachmentPath));
@@ -209,8 +154,11 @@ export default {
 
       return urlPromise
         .then((file_url) => {
-          this.artifact["url_data"] = file_url;
-          return this.apiUpdateArtifact(this.artifact);
+          
+          let changes = [];
+          changes.push({ op: "replace", path: "url_data", value: file_url });
+
+          return this.$root.apiPatchArtifact(this.artifactId, changes);
         })
         .finally(() => {
           return this.refreshArtifact();

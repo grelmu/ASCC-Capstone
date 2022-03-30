@@ -32,93 +32,16 @@ export default {
     artifactId: String,
   },
   methods: {
-     apiFetchArtifact(id) {
-      return this.$root
-        .apiFetch("artifacts/" + id, { method: "GET" })
-        .then((response) => {
-          if (response.status == 200) return response.json();
-          else return { version: "" };
-        })
-    },
-    apiFetchFileBucketListing(id) {
-      return this.$root
-        .apiFetch("artifacts/" + id + "/services/file-bucket/ls", { 
-          method: "POST",
-          /*headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(artifact),*/
-        })
-        .then((response) => {
-          if (response.status == 200) return response.json();
-          this.$root.throwApiResponseError(
-            response,
-            "Bad response when fetching file bucket listing"
-          );
-        })
-    },
-    apiUploadFile(id, path, file) {
-
-      let formData = new FormData();
-      formData.append("path", path);
-      formData.append("file", file);
-
-      return this.$root
-        .apiFetch("artifacts/" + id + "/services/file-bucket/upload", {
-          method: "POST",
-          body: formData,
-        })
-        .then((response) => {
-          if (response.status == 201) return response.json();
-          this.$root.throwApiResponseError(
-            response,
-            "Bad response when uploading attachment"
-          );
-        });
-    },
-    apiRenameFile(id, path, newPath) {
-      return this.$root
-        .apiFetch("artifacts/" + id + "/services/file-bucket/rename", { 
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ path, new_path: newPath }),
-        })
-        .then((response) => {
-          if (response.status == 200) return;
-          this.$root.throwApiResponseError(
-            response,
-            "Bad response when deleting file"
-          );
-        })
-    },
-    apiDeleteFile(id, path) {
-      return this.$root
-        .apiFetch("artifacts/" + id + "/services/file-bucket/delete", { 
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(path),
-        })
-        .then((response) => {
-          if (response.status == 200) return;
-          this.$root.throwApiResponseError(
-            response,
-            "Bad response when deleting file"
-          );
-        })
-    },
+    
     refreshArtifact() {
 
       this.artifact = null;
       this.root = null;
       
-      return this.apiFetchArtifact(this.artifactId)
+      return this.$root.apiFetchArtifact(this.artifactId)
         .then((artifact) => {
           this.artifact = artifact;
-          return this.apiFetchFileBucketListing(this.artifactId);
+          return this.$root.apiFetchFileBucketListing(this.artifactId);
         })
         .then((listing) => {
           this.root = {
@@ -169,13 +92,13 @@ export default {
       return nodes;
     },
     onUploadFileSelect(event) {
-      return this.apiUploadFile(this.artifactId, event.path, event.file)
+      return this.$root.apiUploadFile(this.artifactId, event.path, event.file)
         .finally(() => {
           return this.refreshArtifact();
         });
     },
     onRenameFile(event) {
-      return this.apiRenameFile(this.artifactId, event.node.name, event.newName)
+      return this.$root.apiRenameFile(this.artifactId, event.node.name, event.newName)
         .finally(() => {
           return this.refreshArtifact();
         });
@@ -214,7 +137,7 @@ export default {
       this.isDeleting = true;
       let deletePromises = [];
       for (let i = 0; i < selectedNodes.length; ++i) {
-        deletePromises.push(this.apiDeleteFile(this.artifactId, selectedNodes[i].name));
+        deletePromises.push(this.$root.apiDeleteFile(this.artifactId, selectedNodes[i].name));
       }
 
       return Promise.all(deletePromises)

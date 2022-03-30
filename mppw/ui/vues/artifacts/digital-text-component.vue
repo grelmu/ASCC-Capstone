@@ -25,43 +25,22 @@ export default {
     artifactId: String,
   },
   methods: {
-    apiFetchArtifact(id) {
-      return this.$root
-        .apiFetch("artifacts/" + id, { method: "GET" })
-        .then((response) => {
-          if (response.status == 200) return response.json();
-          else return { version: "" };
-        });
-    },
     refreshArtifact() {
       this.artifact = null;
-      return this.apiFetchArtifact(this.artifactId).then((artifact) => {
+      return this.$root.apiFetchArtifact(this.artifactId).then((artifact) => {
         this.artifact = artifact;
         this.artifact.local_data ||= {};
         this.artifact.local_data.text ||= "";
       });
     },
     onSaveArtifact() {
-      return this.apiUpdateArtifact(this.artifact)
+
+      let changes = [];
+      changes.push({ op: "replace", path: "local_data", value: this.artifact.local_data });
+
+      return this.$root.apiPatchArtifact(this.artifactId, changes)
         .then(() => {
           return this.refreshArtifact();
-        });
-    },
-    apiUpdateArtifact(artifact) {
-      return this.$root
-        .apiFetch("artifacts/" + artifact["id"], {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(artifact),
-        })
-        .then((response) => {
-          if (response.status == 200) return response.json();
-          this.$root.throwApiResponseError(
-            response,
-            "Unknown response when updating artifact"
-          );
         });
     },
   },

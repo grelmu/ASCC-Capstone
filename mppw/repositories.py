@@ -244,6 +244,26 @@ class ArtifactRepository(MongoDBRepository):
         return self.collection.replace_one(
             self._query_doc_for(id=artifact.id, project_ids=project_ids), model_to_doc(artifact)).modified_count == 1
 
+    def partial_update(self, id: str, update_fn, project_ids: List[str] = None):
+        
+        txn = self.session.start_transaction()
+        
+        try:
+            
+            artifact = self.query_one(id=id, project_ids=project_ids)
+            if artifact is None: return False
+            artifact = update_fn(artifact)
+            if artifact is None: return False
+
+            result = self.update(artifact, project_ids=project_ids)
+            self.session.commit_transaction()
+            txn = None
+
+            return result
+
+        finally:
+            if txn: self.session.abort_transaction()
+
     def deactivate(self, id: str, project_ids: List[str] = None):
         return self.collection.update_one(
             self._query_doc_for(id=id, project_ids=project_ids), { "$set": { "active": False }}).modified_count == 1
@@ -258,26 +278,62 @@ class OperationRepository(MongoDBRepository):
     def collection(self) -> pymongo.collection.Collection:
         return self.db.get_collection("operations", codec_options=mdb_codec_options)
 
-    def _query_doc_for(self, id: str = None, project_ids: List[str] = None, name: Optional[str] = None, active: Optional[bool] = None):
+    def _query_doc_for(self,
+            id: str = None, 
+            project_ids: List[str] = None,
+            name: Optional[str] = None,
+            active: Optional[bool] = None,
+            input_artifact_id: Optional[str] = None,
+            output_artifact_id: Optional[str] = None):
+
         query_doc = {}
         if id is not None: query_doc["_id"] = coerce_doc_id(id)
         if project_ids is not None: query_doc["project"] = { "$in": list(map(coerce_doc_id, project_ids)) }
         if name is not None: query_doc["name"] = name
         if active is not None: query_doc["active"] = { "$ne": False } if active else False
+        if input_artifact_id is not None:
+            query_doc["artifact_transform_graph"] = { "$elemMatch" : {
+                "input_artifacts": coerce_doc_id(input_artifact_id),
+            }}
+        if output_artifact_id is not None:
+            query_doc["artifact_transform_graph"] = { "$elemMatch" : {
+                "output_artifacts": coerce_doc_id(output_artifact_id),
+            }}
         return query_doc
+
+    def _fulltext_agg_docs_for(self, fulltext_query, query_doc):
+        agg_docs = [
+            { "$match": { "$text": { "$search": fulltext_query }}},
+            { "$sort": { "score": { "$meta": "textScore" }, "_id": 1 }},
+            { "$unset": "score" },
+        ]
+
+        if query_doc is not None:
+            agg_docs.append({ "$match" : query_doc })
+
+        return agg_docs
 
     def create(self, operation: models.Operation):
         result = self.collection.insert_one(model_to_doc(operation))
         operation.id = models.ObjectDbId(result.inserted_id)
         return operation
 
-    def query(self, id: str = None, project_ids: List[str] = None, name: Optional[str] = None, active: Optional[bool] = None):
-        return map(lambda doc: doc_to_model(doc, models.Operation), list(self.collection.find(
-            self._query_doc_for(id=id, project_ids=project_ids, name=name, active=active))))
+    def query(self, id: str = None, project_ids: List[str] = None, name: Optional[str] = None, active: Optional[bool] = None, fulltext_query: str = None):
+        if fulltext_query is None:
+            return map(lambda doc: doc_to_model(doc, models.Operation), list(self.collection.find(
+                self._query_doc_for(id=id, project_ids=project_ids, name=name, active=active))))
+        else:
+            query_doc = self._query_doc_for(id=id, project_ids=project_ids, name=name, active=active)
+            return map(lambda doc: doc_to_model(doc, models.Operation), list(self.collection.aggregate(
+                self._fulltext_agg_docs_for(fulltext_query, query_doc))))
 
     def update(self, operation: models.Operation, project_ids: List[str] = None):
         return self.collection.replace_one(
             self._query_doc_for(id=operation.id, project_ids=project_ids), model_to_doc(operation)).modified_count == 1
+
+    def query_by_attached(self, input_artifact_id: str = None, output_artifact_id: str = None, project_ids: List[str] = None):
+        return map(lambda doc: doc_to_model(doc, models.Operation), list(self.collection.find(
+            self._query_doc_for(project_ids=project_ids, input_artifact_id=input_artifact_id, output_artifact_id=output_artifact_id))))
 
     def attach(self, id: str, transform: models.ArtifactTransform, project_ids: List[str] = None):
         return self.collection.update_one(

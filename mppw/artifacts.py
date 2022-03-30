@@ -20,6 +20,7 @@ from .security import request_user, PROVENANCE_SCOPE
 from . import projects
 from . import services
 from .services import request_service_layer
+from . import endpoints
 
 def create_router(app):
 
@@ -86,6 +87,29 @@ def create_router(app):
 
         return True
 
+    @router.patch("/{id}", response_model=bool)
+    def patch(id: str,
+              changes: List[endpoints.Change],
+              current_user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+              repo_layer = Depends(request_repo_layer(app))):
+
+        def update_fn(artifact: models.DigitalArtifact):
+            
+            for change in changes:
+                if change.op == "replace":
+                    setattr(artifact, change.path, change.value)
+                elif change.op == "remove":
+                    setattr(artifact, change.path, None)
+
+            return artifact
+
+        modified = repo_layer.artifacts.partial_update(id, update_fn, project_ids=projects.project_claims_for_user(current_user))
+        
+        if not modified:
+            raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
+
+        return True
+
     @router.delete("/{id}", response_model=bool)
     def delete(id: str,
                preserve_data: bool = True,
@@ -115,6 +139,15 @@ def create_router(app):
         artifact: models.Artifact = read(id, user, service_layer.repo_layer)
         services = service_layer.artifact_services_for(artifact)
         return services.init(artifact, **args)
+
+    @router.get("/{id}/services/artifact/parent", response_model=models.Operation)
+    def parent(id: str,
+               user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+               service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
+        
+        artifact: models.Artifact = read(id, user, service_layer.repo_layer)
+        services = service_layer.artifact_services_for(artifact)
+        return services.operation_parent(artifact)
 
     class SyncUploadFile:
 

@@ -16,18 +16,9 @@ export default {
     artifactId: String,
   },
   methods: {
-
-     apiFetchArtifact(id) {
-      return this.$root
-        .apiFetch("artifacts/" + id, { method: "GET" })
-        .then((response) => {
-          if (response.status == 200) return response.json();
-          else return { version: "" };
-        })
-    },
     refreshArtifact() {
       this.artifact = null;
-      return this.apiFetchArtifact(this.artifactId)
+      return this.$root.apiFetchArtifact(this.artifactId)
         .then((artifact) => {
           this.artifact = artifact;
         });

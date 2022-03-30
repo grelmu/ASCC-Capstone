@@ -4,6 +4,16 @@
       <o-collapse class="card" animation="slide" :open="false">
         <template v-slot:trigger="trigger">
           <div class="card-header" role="button">
+            <router-link
+              v-if="artifactNode['is_input']"
+              :to="'/operations/' + artifactOpParent['id']"
+              :title="artifactOpParent['name']"
+              target="_blank"
+              @click="onClickInputLink"
+              class="card-header-icon"
+            >
+              <o-icon :icon="'link'"></o-icon>
+            </router-link>
             <div class="card-header-title">
               <div style="flex-basis: 100%">
                 <div v-if="!artifact['name']">
@@ -106,7 +116,8 @@
               :value="candidate.id"
             >
               <span v-if="candidate.kind_urn">
-                {{ candidate.name ? candidate.name + " @ " : "" }}{{ candidate.kind_urn }}.{{ candidate.id }}
+                {{ candidate.name ? candidate.name + " @ " : ""
+                }}{{ candidate.kind_urn }}.{{ candidate.id }}
               </span>
               <span v-if="!candidate.kind_urn">
                 {{ candidate.name || id }} (current) ({{ candidate.id }})
@@ -118,14 +129,17 @@
         <o-field label="Translation XYZ">
           <o-input
             type="number"
+            step="any"
             v-model="newSpatialFrame['transform']['translation_xyz']['x']"
           ></o-input>
           <o-input
             type="number"
+            step="any"
             v-model="newSpatialFrame['transform']['translation_xyz']['y']"
           ></o-input>
           <o-input
             type="number"
+            step="any"
             v-model="newSpatialFrame['transform']['translation_xyz']['z']"
           ></o-input>
         </o-field>
@@ -133,14 +147,17 @@
         <o-field label="Rotation (Euler) αβγ">
           <o-input
             type="number"
+            step="any"
             v-model="newSpatialFrame['transform']['rotation_euler_abg']['a']"
           ></o-input>
           <o-input
             type="number"
+            step="any"
             v-model="newSpatialFrame['transform']['rotation_euler_abg']['b']"
           ></o-input>
           <o-input
             type="number"
+            step="any"
             v-model="newSpatialFrame['transform']['rotation_euler_abg']['g']"
           ></o-input>
         </o-field>
@@ -191,7 +208,9 @@ export default {
 
   data() {
     return {
+      artifactId: null,
       artifact: null,
+      artifactOpParent: null,
       artifactType: null,
       artifactKind: null,
       isCollapsed: true,
@@ -208,73 +227,40 @@ export default {
     projectId: String,
     opId: String,
     artifactPath: Array,
-    artifactId: String,
+    artifactNode: Object,
     attachmentKind: Object,
   },
 
   methods: {
-    apiFetchArtifact(id) {
-      return this.$root
-        .apiFetch("artifacts/" + id, { method: "GET" })
-        .then((response) => {
-          if (response.status == 200) return response.json();
-          else return { version: "" };
-        });
-    },
-    apiUpdateArtifact(artifact) {
-      return this.$root
-        .apiFetch("artifacts/" + artifact["id"], {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(artifact),
-        })
-        .then((response) => {
-          if (response.status == 200) return response.json();
-          this.$root.throwApiResponseError(
-            response,
-            "Unknown response when updating artifact"
-          );
-        });
-    },
-    apiFetchArtifactFrameCandidates(opId, artifactPath) {
-      return this.$root
-        .apiFetch(
-          "operations/" +
-            opId +
-            "/artifacts/frame_candidates?strategy=operation_local&artifact_path=" +
-            encodeURIComponent(artifactPath.join(".")),
-          {
-            method: "GET",
-          }
-        )
-        .then((response) => {
-          if (response.status == 200) return response.json();
-          this.$root.throwApiResponseError(
-            response,
-            "Unknown response when querying frame candidates"
-          );
-        });
-    },
     refreshArtifact() {
+
       this.artifact = null;
+      this.artifactOpParent = null;
       if (this.artifactId == null) {
         this.artifactType = this.attachmentKind["types"][0];
         return Promise.resolve(null);
       }
 
-      return this.apiFetchArtifact(this.artifactId).then((artifact) => {
-        this.artifact = artifact;
-        this.artifactType = this.findSimilarArtifactType(
-          this.artifact["type_urn"].replace("urn:x-mfg:artifact", "")
-        );
-      });
+      return this.$root.apiFetchArtifact(this.artifactId)
+        .then((artifact) => {
+          if (!this.artifactNode["is_input"]) return artifact;
+          return this.$root.apiFetchArtifactOperationParent(artifact["id"])
+            .then((opParent) => {
+              this.artifactOpParent = opParent;
+              return artifact;
+            });
+        })
+        .then((artifact) => {
+          this.artifact = artifact;
+          this.artifactType = this.findSimilarArtifactType(
+            this.artifact["type_urn"].replace("urn:x-mfg:artifact", "")
+          );
+        });
     },
     refreshParentFrameCandidates() {
       let currentFramePromise = (
         this.newSpatialFrame.parent_frame
-          ? this.apiFetchArtifact(this.newSpatialFrame.parent_frame)
+          ? this.$root.apiFetchArtifact(this.newSpatialFrame.parent_frame)
           : Promise.resolve(null)
       ).then((artifact) => {
         return artifact != null
@@ -282,22 +268,22 @@ export default {
           : [];
       });
 
-      let candidatesPromise = this.apiFetchArtifactFrameCandidates(
+      let candidatesPromise = this.$root.apiFetchArtifactFrameCandidates(
         this.opId,
         this.artifactPath
       );
 
       return Promise.all([currentFramePromise, candidatesPromise]).then(
         (allCandidates) => {
-          this.parentFrameCandidates = allCandidates[0].concat(allCandidates[1]);
+          this.parentFrameCandidates = allCandidates[0].concat(
+            allCandidates[1]
+          );
           this.sortParentFrameCandidates();
         }
       );
     },
     sortParentFrameCandidates() {
-      
       this.parentFrameCandidates.sort((a, b) => {
-        
         if (a.kind_urn == null) return -1;
         if (b.kind_urn == null) return 1;
 
@@ -363,30 +349,40 @@ export default {
       this.parentFrameCandidates = null;
       return this.refreshParentFrameCandidates();
     },
+    onClickInputLink(event) {
+      event.stopPropagation();
+      event.target.closest("a").click();
+    },
     onSubmitMeta() {
-      this.artifact.name = this.newName;
-      this.artifact.description = this.newDescription;
+
+      let changes = [];
+      changes.push({ op: "replace", path: "name", value: this.newName });
+      changes.push({ op: "replace", path: "description", value: this.newDescription });
+      
       if (this.isDigitalArtifact()) {
+        
         for (let k in this.newSpatialFrame.transform.translation_xyz)
           this.newSpatialFrame.transform.translation_xyz[k] = Number.parseFloat(
             this.newSpatialFrame.transform.translation_xyz[k]
           );
+        
         for (let k in this.newSpatialFrame.transform.rotation_euler_abg)
           this.newSpatialFrame.transform.rotation_euler_abg[k] =
             Number.parseFloat(
               this.newSpatialFrame.transform.rotation_euler_abg[k]
             );
 
-        this.artifact.spatial_frame = this.newSpatialFrame;
+        changes.push({ op: "replace", path: "spatial_frame", value: this.newSpatialFrame });
       }
 
-      return this.apiUpdateArtifact(this.artifact).finally(() => {
+      return this.$root.apiPatchArtifact(this.artifact.id, changes).finally(() => {
         this.isEditingMeta = false;
         return this.refreshArtifact();
       });
     },
   },
   created() {
+    this.artifactId = this.artifactNode["artifact_id"];
     if (this.artifactPath.length > 1)
       this.artifactKind = this.artifactPath[this.artifactPath.length - 2];
     return this.refreshArtifact();

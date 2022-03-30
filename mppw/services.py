@@ -91,9 +91,7 @@ class NewAttachment(pydantic.BaseModel):
     artifact_id: str
     is_input: bool
 
-class FrameCandidate(models.BaseJsonModel):
-    id: models.DbId
-    name: Optional[str]
+class AttachedArtifact(models.Artifact):
     kind_urn: str
 
 class NoStrategyFoundException(Exception):
@@ -276,6 +274,13 @@ class OperationServices:
 
         return self.repo_layer.operations.update(operation)
 
+    def artifacts_ls(self, operation: models.Operation):
+        for transform in operation.artifact_transform_graph:
+            for artifact_id in ((transform.input_artifacts or []) + (transform.output_artifacts or [])):
+                artifact = self.repo_layer.artifacts.query_one(id=artifact_id)
+                if artifact is None: continue
+                yield AttachedArtifact(kind_urn=transform.kind_urn, **artifact.dict())
+
     def frame_candidates(self, operation: models.Operation, artifact_path: List[str], strategy: str = None):
         
         if strategy is None: strategy = "operation_local"
@@ -292,7 +297,7 @@ class OperationServices:
                 artifact = self.repo_layer.artifacts.query_one(id=artifact_id)
                 if artifact is None: continue
                 if not isinstance(artifact, models.DigitalArtifact): continue
-                yield FrameCandidate(id=artifact.id, name=artifact.name, kind_urn=transform.kind_urn)
+                yield AttachedArtifact(kind_urn=transform.kind_urn, **artifact.dict())
 
 class FffServices(OperationServices):
 
@@ -334,6 +339,88 @@ class FffServices(OperationServices):
     def attachment_kinds(self):
         return FffServices.ATTACHMENT_KINDS + OperationServices.ATTACHMENT_KINDS
 
+class CutServices(OperationServices):
+
+    URN_PREFIX = f"{models.Operation.URN_PREFIX}:prepare:cut"
+    DEFAULT_NAME = "Cutting Operation"
+    DEFAULT_DESCRIPTION = "Some kind of cutting operation"
+
+    ATTACHMENT_KINDS = AttachmentKind.make({
+        ":cut-diagrams": [":digital:file"],
+        ":input-parts": [
+            (":material:part", {
+                ":output-parts" : [
+                    (":material:part", {
+                        ":part-geometry" : [":digital:fiducial-points"],
+                        ":images" : [":digital:file"],
+                        ":notes": [":digital:text"],
+                    }),
+                ],
+            }),
+        ],
+        ":operator-notes": [":digital:file", ":digital:text"],
+    })
+
+    def __init__(self, repo_layer):
+        self.repo_layer = repo_layer
+    
+    @property
+    def attachment_kinds(self):
+        return CutServices.ATTACHMENT_KINDS + OperationServices.ATTACHMENT_KINDS
+
+class MachiningServices(OperationServices):
+
+    URN_PREFIX = f"{models.Operation.URN_PREFIX}:prepare:machine"
+    DEFAULT_NAME = "Machining Operation"
+    DEFAULT_DESCRIPTION = "Some kind of machining operation"
+
+    ATTACHMENT_KINDS = AttachmentKind.make({
+        ":cut-diagrams": [":digital:file"],
+        ":input-parts": [
+            (":material:part", {
+                ":output-parts" : [
+                    (":material:part", {
+                        ":part-geometry" : [":digital:fiducial-points"],
+                        ":images" : [":digital:file"],
+                        ":notes": [":digital:text"],
+                    }),
+                ],
+            }),
+        ],
+        ":operator-notes": [":digital:file", ":digital:text"],
+    })
+
+    def __init__(self, repo_layer):
+        self.repo_layer = repo_layer
+    
+    @property
+    def attachment_kinds(self):
+        return MachiningServices.ATTACHMENT_KINDS + OperationServices.ATTACHMENT_KINDS
+
+class TensileTestServices(OperationServices):
+
+    URN_PREFIX = f"{models.Operation.URN_PREFIX}:characterize:tensiletest"
+    DEFAULT_NAME = "Tensile Test Operation"
+    DEFAULT_DESCRIPTION = "A test of tensile stress"
+
+    ATTACHMENT_KINDS = AttachmentKind.make({
+        ":input-parts": [
+            (":material:part", {
+                ":dimensions": [":digital:astm.d638.dimensions"],
+                ":measurements": [":digital:astm.d638.stressstrain", ":digital:astm.d638.yieldstrength", ":digital:astm.d638.elasticmod",],
+                ":notes" : [":digital:text", ":digital:file",],
+            }),
+        ],
+        ":operator-notes": [":digital:file", ":digital:text"],
+    })
+
+    def __init__(self, repo_layer):
+        self.repo_layer = repo_layer
+    
+    @property
+    def attachment_kinds(self):
+        return TensileTestServices.ATTACHMENT_KINDS + OperationServices.ATTACHMENT_KINDS
+
 class ArtifactServices:
 
     def __init__(self, repo_layer):
@@ -341,6 +428,12 @@ class ArtifactServices:
 
     def init(self, artifact: models.DigitalArtifact, **kwargs):
         return artifact
+
+    def operation_parents(self, artifact: models.AnyArtifact) -> List[models.Operation]:
+        return self.repo_layer.operations.query_by_attached(output_artifact_id=str(artifact.id), project_ids=[str(artifact.project)])        
+
+    def operation_parent(self, artifact: models.AnyArtifact) -> Optional[models.Operation]:
+        return (list(self.operation_parents(artifact)) or [None])[0]
 
 class FileServices(ArtifactServices):
 
@@ -501,7 +594,7 @@ class UnservicedArtifactTypeException(Exception):
 class ServiceLayer:
 
     ARTIFACT_SERVICE_TYPES = [FileServices, DatabaseBucketServices, FileBucketServices, PointCloudServices]
-    OPERATION_SERVICE_TYPES = [FffServices]
+    OPERATION_SERVICE_TYPES = [FffServices, CutServices, MachiningServices, TensileTestServices]
 
     def __init__(self, repo_layer):
         self.repo_layer = repo_layer

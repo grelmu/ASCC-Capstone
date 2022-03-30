@@ -4,6 +4,7 @@ import typing
 from typing import Union, List, Dict, Optional, Any
 import pydantic
 import datetime
+import itertools
 
 from mppw import logger
 from . import models
@@ -57,6 +58,8 @@ def create_router(app):
     def query(project_ids: List[str] = fastapi.Query(None),
               name: str = fastapi.Query(None),
               active: bool = fastapi.Query(True),
+              fulltext_query: str = fastapi.Query(None),
+              limit: int = fastapi.Query(None),
               user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
               repo_layer = Depends(request_repo_layer(app))):
 
@@ -65,11 +68,18 @@ def create_router(app):
 
         projects.check_project_claims_for_user(user, project_ids)
         
-        return list(repo_layer.operations.query(
+        result = repo_layer.operations.query(
             project_ids=project_ids,
             name=name,
             active=active,
-        ))
+            fulltext_query=fulltext_query,
+        )
+
+        # TODO: Pagination
+        if limit is not None:
+            result = itertools.islice(result, limit)
+
+        return list(result)
 
     @router.put("/{id}", response_model=bool)
     def update(id: str,
@@ -131,7 +141,16 @@ def create_router(app):
         services = service_layer.operation_services_for(operation)
         return services.find_artifact_at(operation, artifact_path)
 
-    @router.get("/{id}/artifacts/frame_candidates", response_model=List[services.FrameCandidate])
+    @router.get("/{id}/artifacts/ls", response_model=List[services.AttachedArtifact])
+    def artifacts_ls(id: str,
+                     user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+                     service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
+    
+        operation: models.Operation = read(id, user, service_layer.repo_layer)
+        services = service_layer.operation_services_for(operation)
+        return list(services.artifacts_ls(operation))
+
+    @router.get("/{id}/artifacts/frame_candidates", response_model=List[services.AttachedArtifact])
     def frame_candidates(id: str,
                          artifact_path: str,
                          strategy: str,
@@ -169,8 +188,6 @@ def create_router(app):
                attachment: ArtifactAttachment,
                user: security.ScopedUser = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
                service_layer: services.ServiceLayer = Depends(request_service_layer(app))):
-    
-        print(attachment)
 
         operation: models.Operation = read(id, user, service_layer.repo_layer)
         services = service_layer.operation_services_for(operation)

@@ -10,6 +10,7 @@
       :projectId="op.project"
       :opId="opId"
       :artifactPath="[]"
+      :artifactNode="artifactsRoot"
       :attachmentKind="{
         kind_urn: null,
         types: [{ type_urn: null, child_kinds: attachmentKinds }],
