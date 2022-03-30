@@ -33,6 +33,7 @@ pytest = "^6.2.5"
 #matplotlib = "^3.5.1"
 #ipympl = "^0.8.7"
 # END for (fff_)analysis
+black = {version = "^22.3.0", allow-prereleases = true}
 
 
 [tool.poetry.scripts]
