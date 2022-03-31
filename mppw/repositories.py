@@ -22,6 +22,7 @@ import gridfs
 from . import models
 from . import storage
 
+
 def init_request_repo_layer(app: fastapi.FastAPI):
 
     storage_layer = storage.app_storage_layer(app)
@@ -39,29 +40,43 @@ def init_request_repo_layer(app: fastapi.FastAPI):
                 cb(MongoDBRepositoryLayer(storage_layer, session))
 
         app.state.repositories_cb_repo_layer = cb_repo_layer
-    
+
     else:
-        raise Exception(f"No repository layer matches storage layer of type {type(storage_layer)}")
+        raise Exception(
+            f"No repository layer matches storage layer of type {type(storage_layer)}"
+        )
+
 
 def app_storage_layer(app: fastapi.FastAPI):
     return storage.app_storage_layer(app)
 
+
 def request_repo_layer(app: fastapi.FastAPI):
     return app.state.repositories_request_repo_layer
 
+
 def using_app_repo_layer(app: fastapi.FastAPI, cb):
     app.state.repositories_cb_repo_layer(cb)
+
 
 #
 # MongoDB repository layer implementation
 #
 
-mdb_codec_options = bson.codec_options.CodecOptions(type_registry=bson.codec_options.TypeRegistry([models.ObjectDbId.bson_encoder(), models.StrDbId.bson_encoder()]))
+mdb_codec_options = bson.codec_options.CodecOptions(
+    type_registry=bson.codec_options.TypeRegistry(
+        [models.ObjectDbId.bson_encoder(), models.StrDbId.bson_encoder()]
+    )
+)
+
 
 class MongoDBRepositoryLayer:
+    def __init__(
+        self,
+        storage_layer: storage.MongoDBStorageLayer,
+        session: pymongo.client_session.ClientSession,
+    ):
 
-    def __init__(self, storage_layer: storage.MongoDBStorageLayer, session: pymongo.client_session.ClientSession):
-        
         self.storage_layer = storage_layer
         self.session = session
 
@@ -72,8 +87,8 @@ class MongoDBRepositoryLayer:
         self.artifacts = ArtifactRepository(self.session)
         self.buckets = BucketRepository(self.storage_layer)
 
-class MongoDBRepository:
 
+class MongoDBRepository:
     def __init__(self, session: pymongo.client_session.ClientSession):
 
         self.session = session
@@ -82,6 +97,7 @@ class MongoDBRepository:
 
     def query_one(self, *args, **kwargs):
         return (list(self.query(*args, **kwargs)) or [None])[0]
+
 
 class ConfigKvRepository(MongoDBRepository):
 
@@ -94,31 +110,40 @@ class ConfigKvRepository(MongoDBRepository):
         return self.db["config_kv"]
 
     def get(self, key, default_value=None):
-        doc = self.collection.find_one({ "_id": key })
-        if doc is None: return default_value
+        doc = self.collection.find_one({"_id": key})
+        if doc is None:
+            return default_value
         return doc["value"]
 
     def set(self, key, value):
-        doc = { "_id": key, "value": value }
-        self.collection.replace_one({ "_id": key }, doc, upsert=True)
+        doc = {"_id": key, "value": value}
+        self.collection.replace_one({"_id": key}, doc, upsert=True)
 
     def setdefault(self, key, default_value):
         updated = self.collection.find_one_and_update(
-            { "_id": key },
-            { "$setOnInsert": { "value": default_value } }, 
-            upsert=True, return_document=pymongo.collection.ReturnDocument.AFTER)
+            {"_id": key},
+            {"$setOnInsert": {"value": default_value}},
+            upsert=True,
+            return_document=pymongo.collection.ReturnDocument.AFTER,
+        )
         return updated["value"]
 
+
 def coerce_doc_id(id):
-    if id is None: return None
+    if id is None:
+        return None
     return models.DbId.validate(id)
 
+
 def coerce_model_id(model):
-    if model is None: return None
+    if model is None:
+        return None
     return coerce_doc_id(model.id)
 
+
 def model_to_doc(model):
-    if model is None: return None
+    if model is None:
+        return None
     doc = model.dict()
     if "id" in doc:
         doc["_id"] = doc["id"]
@@ -127,25 +152,30 @@ def model_to_doc(model):
         del doc["_id"]
     return doc
 
+
 def doc_to_model(doc, clazz):
-    if doc is None: return None
+    if doc is None:
+        return None
     doc = dict(doc)
     if "_id" in doc:
         doc["id"] = doc["_id"]
         del doc["_id"]
     return clazz(**doc)
 
-class UserRepository(MongoDBRepository):
 
+class UserRepository(MongoDBRepository):
     @property
     def collection(self) -> pymongo.collection.Collection:
         return self.db.get_collection("users", codec_options=mdb_codec_options)
 
     def _query_doc_for(self, id: str = None, username: str = None, active: bool = None):
         query_doc = {}
-        if id is not None: query_doc["_id"] = coerce_doc_id(id)
-        if username is not None: query_doc["username"] = username
-        if active is not None: query_doc["active"] = { "$ne": False } if active else False
+        if id is not None:
+            query_doc["_id"] = coerce_doc_id(id)
+        if username is not None:
+            query_doc["username"] = username
+        if active is not None:
+            query_doc["active"] = {"$ne": False} if active else False
         return query_doc
 
     def create(self, user: models.User):
@@ -155,12 +185,22 @@ class UserRepository(MongoDBRepository):
 
     def query(self, id=None, username=None, active=None):
         logger.warn(self._query_doc_for(id=id, username=username, active=active))
-        return map(lambda doc: doc_to_model(doc, models.User), list(self.collection.find(
-            self._query_doc_for(id=id, username=username, active=active))))
+        return map(
+            lambda doc: doc_to_model(doc, models.User),
+            list(
+                self.collection.find(
+                    self._query_doc_for(id=id, username=username, active=active)
+                )
+            ),
+        )
 
     def deactivate(self, id: str):
-        return self.collection.update_one(
-            self._query_doc_for(id=id), { "$set": { "active": False }}).modified_count == 1
+        return (
+            self.collection.update_one(
+                self._query_doc_for(id=id), {"$set": {"active": False}}
+            ).modified_count
+            == 1
+        )
 
     def delete(self, id: str):
         return self.collection.delete_one(self._query_doc_for(id=id)).deleted_count == 1
@@ -177,16 +217,23 @@ class UserRepository(MongoDBRepository):
 
 
 class ProjectRepository(MongoDBRepository):
-
     @property
     def collection(self) -> pymongo.collection.Collection:
         return self.db.get_collection("projects", codec_options=mdb_codec_options)
 
-    def _query_doc_for(self, ids: List[str] = None, name: Optional[str] = None, active: Optional[bool] = None):
+    def _query_doc_for(
+        self,
+        ids: List[str] = None,
+        name: Optional[str] = None,
+        active: Optional[bool] = None,
+    ):
         query_doc = {}
-        if ids is not None: query_doc["_id"] = { "$in": list(map(coerce_doc_id, ids)) }
-        if name is not None: query_doc["name"] = name
-        if active is not None: query_doc["active"] = { "$ne": False } if active else False
+        if ids is not None:
+            query_doc["_id"] = {"$in": list(map(coerce_doc_id, ids))}
+        if name is not None:
+            query_doc["name"] = name
+        if active is not None:
+            query_doc["active"] = {"$ne": False} if active else False
         return query_doc
 
     def create(self, project: models.Project):
@@ -195,24 +242,38 @@ class ProjectRepository(MongoDBRepository):
         return project
 
     def query(self, ids=None, name=None, active=None):
-        return map(lambda doc: doc_to_model(doc, models.Project), list(self.collection.find(
-            self._query_doc_for(ids=ids, name=name, active=active))))
+        return map(
+            lambda doc: doc_to_model(doc, models.Project),
+            list(
+                self.collection.find(
+                    self._query_doc_for(ids=ids, name=name, active=active)
+                )
+            ),
+        )
 
     def deactivate(self, id: str):
-        return self.collection.update_one(
-            self._query_doc_for(ids=[id]), { "$set": { "active": False }}).modified_count == 1
+        return (
+            self.collection.update_one(
+                self._query_doc_for(ids=[id]), {"$set": {"active": False}}
+            ).modified_count
+            == 1
+        )
 
     def delete(self, id: str):
-        return self.collection.delete_one(self._query_doc_for(ids=[id])).deleted_count == 1
+        return (
+            self.collection.delete_one(self._query_doc_for(ids=[id])).deleted_count == 1
+        )
+
 
 class UnknownArtifactTypeException(Exception):
     pass
 
-class ArtifactRepository(MongoDBRepository):
 
+class ArtifactRepository(MongoDBRepository):
     @staticmethod
     def doc_to_artifact(doc):
-        if doc is None: return None
+        if doc is None:
+            return None
         elif doc["type_urn"].startswith(models.MaterialArtifact.URN_PREFIX):
             return doc_to_model(doc, models.MaterialArtifact)
         elif doc["type_urn"].startswith(models.DigitalArtifact.URN_PREFIX):
@@ -224,11 +285,19 @@ class ArtifactRepository(MongoDBRepository):
     def collection(self) -> pymongo.collection.Collection:
         return self.db.get_collection("artifacts", codec_options=mdb_codec_options)
 
-    def _query_doc_for(self, id: str = None, project_ids: List[str] = None, active: Optional[bool] = None):
+    def _query_doc_for(
+        self,
+        id: str = None,
+        project_ids: List[str] = None,
+        active: Optional[bool] = None,
+    ):
         query_doc = {}
-        if id is not None: query_doc["_id"] = coerce_doc_id(id)
-        if project_ids is not None: query_doc["project"] = { "$in": list(map(coerce_doc_id, project_ids)) }
-        if active is not None: query_doc["active"] = { "$ne": False } if active else False
+        if id is not None:
+            query_doc["_id"] = coerce_doc_id(id)
+        if project_ids is not None:
+            query_doc["project"] = {"$in": list(map(coerce_doc_id, project_ids))}
+        if active is not None:
+            query_doc["active"] = {"$ne": False} if active else False
         return query_doc
 
     def create(self, artifact: models.Artifact):
@@ -236,24 +305,42 @@ class ArtifactRepository(MongoDBRepository):
         artifact.id = models.ObjectDbId(result.inserted_id)
         return artifact
 
-    def query(self, id: str = None, project_ids: List[str] = None, active: Optional[bool] = None):
-        return map(lambda doc: type(self).doc_to_artifact(doc), list(self.collection.find(
-            self._query_doc_for(id=id, project_ids=project_ids, active=active))))
-        
+    def query(
+        self,
+        id: str = None,
+        project_ids: List[str] = None,
+        active: Optional[bool] = None,
+    ):
+        return map(
+            lambda doc: type(self).doc_to_artifact(doc),
+            list(
+                self.collection.find(
+                    self._query_doc_for(id=id, project_ids=project_ids, active=active)
+                )
+            ),
+        )
+
     def update(self, artifact: models.Artifact, project_ids: List[str] = None):
-        return self.collection.replace_one(
-            self._query_doc_for(id=artifact.id, project_ids=project_ids), model_to_doc(artifact)).modified_count == 1
+        return (
+            self.collection.replace_one(
+                self._query_doc_for(id=artifact.id, project_ids=project_ids),
+                model_to_doc(artifact),
+            ).modified_count
+            == 1
+        )
 
     def partial_update(self, id: str, update_fn, project_ids: List[str] = None):
-        
+
         txn = self.session.start_transaction()
-        
+
         try:
-            
+
             artifact = self.query_one(id=id, project_ids=project_ids)
-            if artifact is None: return False
+            if artifact is None:
+                return False
             artifact = update_fn(artifact)
-            if artifact is None: return False
+            if artifact is None:
+                return False
 
             result = self.update(artifact, project_ids=project_ids)
             self.session.commit_transaction()
@@ -262,54 +349,74 @@ class ArtifactRepository(MongoDBRepository):
             return result
 
         finally:
-            if txn: self.session.abort_transaction()
+            if txn:
+                self.session.abort_transaction()
 
     def deactivate(self, id: str, project_ids: List[str] = None):
-        return self.collection.update_one(
-            self._query_doc_for(id=id, project_ids=project_ids), { "$set": { "active": False }}).modified_count == 1
+        return (
+            self.collection.update_one(
+                self._query_doc_for(id=id, project_ids=project_ids),
+                {"$set": {"active": False}},
+            ).modified_count
+            == 1
+        )
 
     def delete(self, id: str, project_ids: List[str] = None):
-        return self.collection.delete_one(
-            self._query_doc_for(id=id, project_ids=project_ids)).deleted_count == 1
+        return (
+            self.collection.delete_one(
+                self._query_doc_for(id=id, project_ids=project_ids)
+            ).deleted_count
+            == 1
+        )
+
 
 class OperationRepository(MongoDBRepository):
-
     @property
     def collection(self) -> pymongo.collection.Collection:
         return self.db.get_collection("operations", codec_options=mdb_codec_options)
 
-    def _query_doc_for(self,
-            id: str = None, 
-            project_ids: List[str] = None,
-            name: Optional[str] = None,
-            active: Optional[bool] = None,
-            input_artifact_id: Optional[str] = None,
-            output_artifact_id: Optional[str] = None):
+    def _query_doc_for(
+        self,
+        id: str = None,
+        project_ids: List[str] = None,
+        name: Optional[str] = None,
+        active: Optional[bool] = None,
+        input_artifact_id: Optional[str] = None,
+        output_artifact_id: Optional[str] = None,
+    ):
 
         query_doc = {}
-        if id is not None: query_doc["_id"] = coerce_doc_id(id)
-        if project_ids is not None: query_doc["project"] = { "$in": list(map(coerce_doc_id, project_ids)) }
-        if name is not None: query_doc["name"] = name
-        if active is not None: query_doc["active"] = { "$ne": False } if active else False
+        if id is not None:
+            query_doc["_id"] = coerce_doc_id(id)
+        if project_ids is not None:
+            query_doc["project"] = {"$in": list(map(coerce_doc_id, project_ids))}
+        if name is not None:
+            query_doc["name"] = name
+        if active is not None:
+            query_doc["active"] = {"$ne": False} if active else False
         if input_artifact_id is not None:
-            query_doc["artifact_transform_graph"] = { "$elemMatch" : {
-                "input_artifacts": coerce_doc_id(input_artifact_id),
-            }}
+            query_doc["artifact_transform_graph"] = {
+                "$elemMatch": {
+                    "input_artifacts": coerce_doc_id(input_artifact_id),
+                }
+            }
         if output_artifact_id is not None:
-            query_doc["artifact_transform_graph"] = { "$elemMatch" : {
-                "output_artifacts": coerce_doc_id(output_artifact_id),
-            }}
+            query_doc["artifact_transform_graph"] = {
+                "$elemMatch": {
+                    "output_artifacts": coerce_doc_id(output_artifact_id),
+                }
+            }
         return query_doc
 
     def _fulltext_agg_docs_for(self, fulltext_query, query_doc):
         agg_docs = [
-            { "$match": { "$text": { "$search": fulltext_query }}},
-            { "$sort": { "score": { "$meta": "textScore" }, "_id": 1 }},
-            { "$unset": "score" },
+            {"$match": {"$text": {"$search": fulltext_query}}},
+            {"$sort": {"score": {"$meta": "textScore"}, "_id": 1}},
+            {"$unset": "score"},
         ]
 
         if query_doc is not None:
-            agg_docs.append({ "$match" : query_doc })
+            agg_docs.append({"$match": query_doc})
 
         return agg_docs
 
@@ -318,44 +425,114 @@ class OperationRepository(MongoDBRepository):
         operation.id = models.ObjectDbId(result.inserted_id)
         return operation
 
-    def query(self, id: str = None, project_ids: List[str] = None, name: Optional[str] = None, active: Optional[bool] = None, fulltext_query: str = None):
+    def query(
+        self,
+        id: str = None,
+        project_ids: List[str] = None,
+        name: Optional[str] = None,
+        active: Optional[bool] = None,
+        fulltext_query: str = None,
+    ):
         if fulltext_query is None:
-            return map(lambda doc: doc_to_model(doc, models.Operation), list(self.collection.find(
-                self._query_doc_for(id=id, project_ids=project_ids, name=name, active=active))))
+            return map(
+                lambda doc: doc_to_model(doc, models.Operation),
+                list(
+                    self.collection.find(
+                        self._query_doc_for(
+                            id=id, project_ids=project_ids, name=name, active=active
+                        )
+                    )
+                ),
+            )
         else:
-            query_doc = self._query_doc_for(id=id, project_ids=project_ids, name=name, active=active)
-            return map(lambda doc: doc_to_model(doc, models.Operation), list(self.collection.aggregate(
-                self._fulltext_agg_docs_for(fulltext_query, query_doc))))
+            query_doc = self._query_doc_for(
+                id=id, project_ids=project_ids, name=name, active=active
+            )
+            return map(
+                lambda doc: doc_to_model(doc, models.Operation),
+                list(
+                    self.collection.aggregate(
+                        self._fulltext_agg_docs_for(fulltext_query, query_doc)
+                    )
+                ),
+            )
 
     def update(self, operation: models.Operation, project_ids: List[str] = None):
-        return self.collection.replace_one(
-            self._query_doc_for(id=operation.id, project_ids=project_ids), model_to_doc(operation)).modified_count == 1
+        return (
+            self.collection.replace_one(
+                self._query_doc_for(id=operation.id, project_ids=project_ids),
+                model_to_doc(operation),
+            ).modified_count
+            == 1
+        )
 
-    def query_by_attached(self, input_artifact_id: str = None, output_artifact_id: str = None, project_ids: List[str] = None):
-        return map(lambda doc: doc_to_model(doc, models.Operation), list(self.collection.find(
-            self._query_doc_for(project_ids=project_ids, input_artifact_id=input_artifact_id, output_artifact_id=output_artifact_id))))
+    def query_by_attached(
+        self,
+        input_artifact_id: str = None,
+        output_artifact_id: str = None,
+        project_ids: List[str] = None,
+    ):
+        return map(
+            lambda doc: doc_to_model(doc, models.Operation),
+            list(
+                self.collection.find(
+                    self._query_doc_for(
+                        project_ids=project_ids,
+                        input_artifact_id=input_artifact_id,
+                        output_artifact_id=output_artifact_id,
+                    )
+                )
+            ),
+        )
 
-    def attach(self, id: str, transform: models.ArtifactTransform, project_ids: List[str] = None):
-        return self.collection.update_one(
-            self._query_doc_for(id=id, project_ids=project_ids), { "$push" : { "artifact_transform_graph": model_to_doc(transform) }}).modified_count == 1
+    def attach(
+        self,
+        id: str,
+        transform: models.ArtifactTransform,
+        project_ids: List[str] = None,
+    ):
+        return (
+            self.collection.update_one(
+                self._query_doc_for(id=id, project_ids=project_ids),
+                {"$push": {"artifact_transform_graph": model_to_doc(transform)}},
+            ).modified_count
+            == 1
+        )
 
     def detach(self, id: str, kind_urn: str, project_ids: List[str] = None):
-        return self.collection.update_one(
-            self._query_doc_for(id=id, project_ids=project_ids), { "$pull" : { "artifact_transform_graph": { "kind_urn": kind_urn }}}).modified_count == 1
+        return (
+            self.collection.update_one(
+                self._query_doc_for(id=id, project_ids=project_ids),
+                {"$pull": {"artifact_transform_graph": {"kind_urn": kind_urn}}},
+            ).modified_count
+            == 1
+        )
 
     def deactivate(self, id: str, project_ids: List[str] = None):
-        return self.collection.update_one(
-            self._query_doc_for(id=id, project_ids=project_ids), { "$set": { "active": False }}).modified_count == 1
+        return (
+            self.collection.update_one(
+                self._query_doc_for(id=id, project_ids=project_ids),
+                {"$set": {"active": False}},
+            ).modified_count
+            == 1
+        )
 
     def delete(self, id: str, project_ids: List[str] = None):
-        return self.collection.delete_one(
-            self._query_doc_for(id=id, project_ids=project_ids)).deleted_count == 1
+        return (
+            self.collection.delete_one(
+                self._query_doc_for(id=id, project_ids=project_ids)
+            ).deleted_count
+            == 1
+        )
+
 
 class UnsupportedSchemeException(Exception):
     pass
 
+
 class UnmanagedBucketException(Exception):
     pass
+
 
 class BucketFile(models.DocModel):
     name: str
@@ -363,11 +540,14 @@ class BucketFile(models.DocModel):
     size_bytes: int
     md5: Optional[Any]
 
+
 def gridfs_bucket_data_gen(grid_out):
     while True:
         chunk = grid_out.readchunk()
-        if not chunk: break
+        if not chunk:
+            break
         yield chunk
+
 
 class BucketRepository:
 
@@ -471,7 +651,9 @@ class BucketRepository:
     # Local MongoDB specific implementation below
     #
 
-    def create_local_mdb_user(self, username, db_name, coll_names=None, read_only=False, password=None):
+    def create_local_mdb_user(
+        self, username, db_name, coll_names=None, read_only=False, password=None
+    ):
 
         password = password if password is not None else secrets.token_hex(32)
         role_name = f"{username}-role"
@@ -483,48 +665,63 @@ class BucketRepository:
 
             roles = None
             if not read_only:
-                roles = [{ "role": "dbAdmin", "db": db_name }, { "role": "readWrite", "db": db_name }]
+                roles = [
+                    {"role": "dbAdmin", "db": db_name},
+                    {"role": "readWrite", "db": db_name},
+                ]
             else:
-                roles = [{ "role": "read", "db": db_name }]
+                roles = [{"role": "read", "db": db_name}]
 
-            role_doc = {
-                "createRole": role_name,
-                "privileges": [],
-                "roles": roles
-            }
+            role_doc = {"createRole": role_name, "privileges": [], "roles": roles}
 
         else:
-            
+
             priv_docs = []
             for coll_name in coll_names:
 
                 if not read_only:
-                    priv_docs.append({
-                        "resource": { "db": db_name, "collection": coll_name },
-                        "actions": ["find", "insert", "update", "remove", "changeStream",
-                                    "listIndexes", "createIndex", "reIndex", "dropIndex",
-                                    "collStats", "indexStats"]
-                    })
+                    priv_docs.append(
+                        {
+                            "resource": {"db": db_name, "collection": coll_name},
+                            "actions": [
+                                "find",
+                                "insert",
+                                "update",
+                                "remove",
+                                "changeStream",
+                                "listIndexes",
+                                "createIndex",
+                                "reIndex",
+                                "dropIndex",
+                                "collStats",
+                                "indexStats",
+                            ],
+                        }
+                    )
                 else:
-                    priv_docs.append({
-                        "resource": { "db": db_name, "collection": coll_name },
-                        "actions": ["find", "changeStream", "listIndexes", "collStats", "indexStats"]
-                    })
+                    priv_docs.append(
+                        {
+                            "resource": {"db": db_name, "collection": coll_name},
+                            "actions": [
+                                "find",
+                                "changeStream",
+                                "listIndexes",
+                                "collStats",
+                                "indexStats",
+                            ],
+                        }
+                    )
 
-            role_doc = {
-                "createRole": role_name,
-                "privileges": priv_docs,
-                "roles": []
-            }
+            role_doc = {"createRole": role_name, "privileges": priv_docs, "roles": []}
 
         user_doc = {
             "createUser": username,
             "pwd": password,
-            "customData": { 
+            "customData": {
                 "auto": True,
-                "created": datetime.datetime.now().isoformat()
+                "created": datetime.datetime.now().isoformat(),
             },
-            "roles": [{ "role": role_name, "db": db_name }]
+            "roles": [{"role": role_name, "db": db_name}],
         }
 
         db.command(role_doc)
@@ -545,28 +742,38 @@ class BucketRepository:
             logger.warn(f"Could not drop role {role_name} for {username}:\n{ex}")
 
     def create_local_mdb_furl(self, db_suffix=None):
-        
+
         mdb_furl = furl.furl(self.storage_layer.mdb_url)
         default_db_name = self.storage_layer.mdb_client.get_default_database().name
 
         db_names = [default_db_name]
-        if db_suffix: db_names.append(db_suffix)
+        if db_suffix:
+            db_names.append(db_suffix)
         db_name = "-".join(db_names)
-        
-        db_furl = furl.furl(f"{mdb_furl.scheme}://{self.storage_layer.local_storage_url_host()}/{db_name}")
+
+        db_furl = furl.furl(
+            f"{mdb_furl.scheme}://{self.storage_layer.local_storage_url_host()}/{db_name}"
+        )
         return db_furl
 
     def create_local_mdb_bucket(self, bucket_id):
 
         suffixes = ["bucket", bucket_id]
         bucket_furl = self.create_local_mdb_furl(db_suffix="-".join(suffixes))
-        bucket_furl.username, bucket_furl.password = self.create_local_mdb_user(f"bucket-{bucket_id}-user", bucket_furl.path.segments[0])
-        self.create_local_mdb_user(f"{bucket_furl.username}-ro", bucket_furl.path.segments[0], read_only=True, password=bucket_furl.password[0:int(len(bucket_furl.password) / 2)])
+        bucket_furl.username, bucket_furl.password = self.create_local_mdb_user(
+            f"bucket-{bucket_id}-user", bucket_furl.path.segments[0]
+        )
+        self.create_local_mdb_user(
+            f"{bucket_furl.username}-ro",
+            bucket_furl.path.segments[0],
+            read_only=True,
+            password=bucket_furl.password[0 : int(len(bucket_furl.password) / 2)],
+        )
 
         return bucket_furl.url
 
     def drop_local_mdb_bucket(self, bucket_url):
-        
+
         bucket_furl = furl.furl(bucket_url)
         db_name = bucket_furl.path.segments[0]
 
@@ -574,7 +781,9 @@ class BucketRepository:
         try:
             self.drop_local_mdb_user(f"{bucket_furl.username}-ro", db_name)
         except Exception as ex:
-            logger.warn(f"Could not drop read-only user for {bucket_furl.username}:\n{ex}")
+            logger.warn(
+                f"Could not drop read-only user for {bucket_furl.username}:\n{ex}"
+            )
 
         self.storage_layer.mdb_client.drop_database(db_name)
 
@@ -590,9 +799,17 @@ class BucketRepository:
         bucket = gridfs.GridFSBucket(db, bucket_id)
         coll_names = [coll.name for coll in [bucket._files, bucket._chunks]]
 
-        bucket_furl.username, bucket_furl.password = \
-            self.create_local_mdb_user(f"gridfs-{bucket_id}-user", bucket_furl.path.segments[0], coll_names=coll_names)
-        self.create_local_mdb_user(f"{bucket_furl.username}-ro", bucket_furl.path.segments[0], read_only=True, password=bucket_furl.password[0:int(len(bucket_furl.password) / 2)])
+        bucket_furl.username, bucket_furl.password = self.create_local_mdb_user(
+            f"gridfs-{bucket_id}-user",
+            bucket_furl.path.segments[0],
+            coll_names=coll_names,
+        )
+        self.create_local_mdb_user(
+            f"{bucket_furl.username}-ro",
+            bucket_furl.path.segments[0],
+            read_only=True,
+            password=bucket_furl.password[0 : int(len(bucket_furl.password) / 2)],
+        )
 
         return bucket_furl.url
 
@@ -606,11 +823,13 @@ class BucketRepository:
         try:
             self.drop_local_mdb_user(f"{bucket_furl.username}-ro", db_name)
         except Exception as ex:
-            logger.warn(f"Could not drop read-only user for {bucket_furl.username}:\n{ex}")
+            logger.warn(
+                f"Could not drop read-only user for {bucket_furl.username}:\n{ex}"
+            )
 
         db = self.storage_layer.mdb_client[db_name]
         bucket = gridfs.GridFSBucket(db, bucket_id)
-        
+
         db.drop_collection(bucket._files)
         db.drop_collection(bucket._chunks)
 
@@ -629,19 +848,21 @@ class BucketRepository:
             raise UnmanagedBucketException(bucket_furl.url)
 
     def get_gridfs_bucket(self, gridfs_url):
-        
+
         gridfs_furl = furl.furl(gridfs_url)
         gridfs_furl.scheme = "mongodb"
         bucket_id = gridfs_furl.path.segments[1]
         gridfs_furl.path.segments = gridfs_furl.path.segments[0:1]
-        
+
         client = pymongo.MongoClient(gridfs_furl.url)
         db = client.get_default_database()
         return gridfs.GridFSBucket(db, bucket_id)
 
     def add_file_to_gridfs_bucket(self, bucket_url, path, file: tempfile.TemporaryFile):
 
-        resolved_bucket_url = self.storage_layer.resolve_local_storage_url_host(bucket_url)
+        resolved_bucket_url = self.storage_layer.resolve_local_storage_url_host(
+            bucket_url
+        )
         bucket: gridfs.GridFSBucket = self.get_gridfs_bucket(resolved_bucket_url)
         bucket.upload_from_stream(path, file)
 
@@ -657,66 +878,87 @@ class BucketRepository:
 
     def get_gridfs_file_by_path(self, bucket_url, path):
 
-        if not path.startswith("/"): path = "/" + path
+        if not path.startswith("/"):
+            path = "/" + path
 
         bucket_url = self.storage_layer.resolve_local_storage_url_host(bucket_url)
         bucket: gridfs.GridFSBucket = self.get_gridfs_bucket(bucket_url)
-        
-        query = { "filename" : path }
+
+        query = {"filename": path}
 
         result: gridfs.GridOut = (list(bucket.find(query)) or [None])[0]
-        if result is None: return (None, None)
+        if result is None:
+            return (None, None)
 
-        return (BucketRepository.grid_doc_to_bucket_file(result), gridfs_bucket_data_gen(result))
+        return (
+            BucketRepository.grid_doc_to_bucket_file(result),
+            gridfs_bucket_data_gen(result),
+        )
 
     @staticmethod
     def grid_doc_to_bucket_file(grid_doc: gridfs.GridOut):
-        return BucketFile(id=grid_doc._id, name=grid_doc.name, content_type=grid_doc.content_type, size_bytes=grid_doc.length, md5=grid_doc.md5)
+        return BucketFile(
+            id=grid_doc._id,
+            name=grid_doc.name,
+            content_type=grid_doc.content_type,
+            size_bytes=grid_doc.length,
+            md5=grid_doc.md5,
+        )
 
     def ls_gridfs_bucket(self, bucket_url, path):
 
         bucket_url = self.storage_layer.resolve_local_storage_url_host(bucket_url)
         bucket: gridfs.GridFSBucket = self.get_gridfs_bucket(bucket_url)
-        
-        if path is None: path = ""
-        while path.startswith("/"): path = path[1:]
-        if path != "" and (not path.endswith("/")): path = path + "/"
 
-        query = { "filename" : { "$regex": f"{path}[^/]+" } }
-        
-        return map(lambda gd: BucketRepository.grid_doc_to_bucket_file(gd), bucket.find(query))
+        if path is None:
+            path = ""
+        while path.startswith("/"):
+            path = path[1:]
+        if path != "" and (not path.endswith("/")):
+            path = path + "/"
+
+        query = {"filename": {"$regex": f"{path}[^/]+"}}
+
+        return map(
+            lambda gd: BucketRepository.grid_doc_to_bucket_file(gd), bucket.find(query)
+        )
 
     def rename_gridfs_file(self, bucket_url, path, new_path):
 
-        if not path.startswith("/"): path = "/" + path
-        if not new_path.startswith("/"): new_path = "/" + new_path
+        if not path.startswith("/"):
+            path = "/" + path
+        if not new_path.startswith("/"):
+            new_path = "/" + new_path
 
         bucket_url = self.storage_layer.resolve_local_storage_url_host(bucket_url)
         bucket: gridfs.GridFSBucket = self.get_gridfs_bucket(bucket_url)
 
-        query = { "filename" : path }
+        query = {"filename": path}
 
         result: gridfs.GridOut = (list(bucket.find(query)) or [None])[0]
-        if result is None: return False
+        if result is None:
+            return False
 
         try:
             bucket.rename(result._id, new_path)
         except gridfs.NoFile:
             return False
-        
+
         return True
 
     def delete_gridfs_file_by_path(self, bucket_url, path):
 
-        if not path.startswith("/"): path = "/" + path
+        if not path.startswith("/"):
+            path = "/" + path
 
         bucket_url = self.storage_layer.resolve_local_storage_url_host(bucket_url)
         bucket: gridfs.GridFSBucket = self.get_gridfs_bucket(bucket_url)
-        
-        query = { "filename" : path }
+
+        query = {"filename": path}
 
         result: gridfs.GridOut = (list(bucket.find(query)) or [None])[0]
-        if result is None: return False
+        if result is None:
+            return False
 
         try:
             bucket.delete(result._id)

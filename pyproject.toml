@@ -41,6 +41,11 @@ mppw-docker = "scripts.docker:main"
 mppw-migrations = "scripts.migrations:main"
 mppw-app = "scripts.app:main"
 
+[tool.black]
+extend-exclude = '''
+(^/(containers|fff_post|mppw/pcl))
+'''
+
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"

@@ -4,7 +4,11 @@ from threading import local
 import typing
 import fastapi
 from fastapi import APIRouter, Depends, Security, status, HTTPException
-from fastapi.security import SecurityScopes, OAuth2PasswordRequestForm, OAuth2PasswordBearer
+from fastapi.security import (
+    SecurityScopes,
+    OAuth2PasswordRequestForm,
+    OAuth2PasswordBearer,
+)
 
 import pydantic
 from typing import List, Dict, Any
@@ -30,26 +34,29 @@ LOCAL_TOKEN_ENDPOINT = "token"
 ADMIN_SCOPE, ADMIN_SCOPE_NAME = "*", "Admin Scope"
 PROVENANCE_SCOPE, PROVENANCE_SCOPE_NAME = "provenance", "Provenance Scope"
 
-SCOPES = {
-    ADMIN_SCOPE: ADMIN_SCOPE_NAME,
-    PROVENANCE_SCOPE: PROVENANCE_SCOPE_NAME
-}
+SCOPES = {ADMIN_SCOPE: ADMIN_SCOPE_NAME, PROVENANCE_SCOPE: PROVENANCE_SCOPE_NAME}
+
 
 class JwtUser(models.DocModel):
     username: str
+
 
 class ScopedUser(models.SafeUser):
     scopes: List[str]
     claims: Dict[str, Any]
 
+
 class NewUser(models.SafeUser):
     password: str
+
 
 def is_admin_user(user: models.User):
     return ADMIN_SCOPE in user.allowed_scopes
 
+
 def has_admin_scope(user: ScopedUser):
     return ADMIN_SCOPE in user.scopes
+
 
 def create_router(app):
 
@@ -59,7 +66,7 @@ def create_router(app):
     # Initialize secrets
     #
 
-    @router.on_event('startup')
+    @router.on_event("startup")
     def init_admin_user():
 
         logger.info("Ensuring admin user...")
@@ -68,65 +75,88 @@ def create_router(app):
 
             user_repo = repo_layer.users
 
-            admin_username = os.environ.get("MPPW_ADMIN_USERNAME") or app_storage_layer(app).get_credentials()[0]
+            admin_username = (
+                os.environ.get("MPPW_ADMIN_USERNAME")
+                or app_storage_layer(app).get_credentials()[0]
+            )
             if not admin_username:
-                raise Exception(f"Cannot infer admin username, please specify MPPW_ADMIN_USERNAME env variable")
-            
+                raise Exception(
+                    f"Cannot infer admin username, please specify MPPW_ADMIN_USERNAME env variable"
+                )
+
             admin_user = user_repo.query_one(username=admin_username)
-            if admin_user is not None: return admin_user
+            if admin_user is not None:
+                return admin_user
 
-            admin_password = os.environ.get("MPPW_ADMIN_PASSWORD") or app_storage_layer(app).get_credentials()[1]
+            admin_password = (
+                os.environ.get("MPPW_ADMIN_PASSWORD")
+                or app_storage_layer(app).get_credentials()[1]
+            )
             if not admin_password:
-                raise Exception(f"Cannot infer admin password, please specify MPPW_ADMIN_PASSWORD env variable")
+                raise Exception(
+                    f"Cannot infer admin password, please specify MPPW_ADMIN_PASSWORD env variable"
+                )
 
-            admin_user = models.User(username=admin_username,
-                                     hashed_password=hash_password(admin_password),
-                                     allowed_scopes=["*"])
+            admin_user = models.User(
+                username=admin_username,
+                hashed_password=hash_password(admin_password),
+                allowed_scopes=["*"],
+            )
 
             user_repo.create(admin_user)
 
         using_app_repo_layer(app, ensure_admin_user)
 
-    @router.on_event('startup')
+    @router.on_event("startup")
     def init_jwt_secret_key():
 
         logger.info("Ensuring JWT secret key...")
 
         def ensure_key(repo_layer):
-            
+
             kv_repo = repo_layer.kv
 
             jwt_key_key = "%s.local_jwt_secret_key" % __name__
-            init_app_local_jwt_secret_key(app, kv_repo.setdefault(jwt_key_key, passlib.pwd.genword(length=32, charset="hex")))
+            init_app_local_jwt_secret_key(
+                app,
+                kv_repo.setdefault(
+                    jwt_key_key, passlib.pwd.genword(length=32, charset="hex")
+                ),
+            )
 
         using_app_repo_layer(app, ensure_key)
 
     #
-    # Local authentication 
+    # Local authentication
     #
 
     token_endpoint = "%s/%s" % (router.prefix, LOCAL_TOKEN_ENDPOINT)
 
     class CookifiedOAuth2PasswordBearer(OAuth2PasswordBearer):
-        
+
         DEFAULT_TOKEN_COOKIE_NAME = "oauth2_token"
 
         def __init__(self, *args, cookie_name=None, **kwargs):
             super().__init__(*args, **kwargs)
-            self.cookie_name = (cookie_name or CookifiedOAuth2PasswordBearer.DEFAULT_TOKEN_COOKIE_NAME)
+            self.cookie_name = (
+                cookie_name or CookifiedOAuth2PasswordBearer.DEFAULT_TOKEN_COOKIE_NAME
+            )
 
         async def __call__(self, request: fastapi.Request) -> typing.Optional[str]:
             try:
                 return await super().__call__(request)
             except fastapi.HTTPException as ex:
                 token = request.cookies.get(self.cookie_name)
-                if not token: raise ex
+                if not token:
+                    raise ex
                 return token
 
-    local_oauth2_scheme = CookifiedOAuth2PasswordBearer(tokenUrl=token_endpoint, scopes=SCOPES)
+    local_oauth2_scheme = CookifiedOAuth2PasswordBearer(
+        tokenUrl=token_endpoint, scopes=SCOPES
+    )
 
     def local_authenticate_request_user(username, password, user_repo) -> models.User:
-        
+
         user = user_repo.query_one(username=username, active=True)
         if not user:
             logger.info(f"User {username} failed to authenticate (user not found).")
@@ -135,12 +165,11 @@ def create_router(app):
         if not verify_password(password, user.hashed_password):
             logger.info(f"User {username} failed to authenticate (incorrect password).")
             return False
-        
+
         logger.info(f"User {username} authenticated successfully (password).")
         return user
 
     def build_get_request_user(app: fastapi.FastAPI):
-        
         @functools.lru_cache(maxsize=1024)
         def decode_token_user(token: str, app: fastapi.FastAPI):
 
@@ -152,6 +181,7 @@ def create_router(app):
                 return (None, None)
 
             user = None
+
             def find_user(repo_layer):
                 nonlocal user
                 user_repo = repo_layer.users
@@ -162,14 +192,15 @@ def create_router(app):
 
             return (user, user_scopes)
 
-        def get_request_user(required_scopes: SecurityScopes,
-                             token: str = Depends(local_oauth2_scheme)):
-            
+        def get_request_user(
+            required_scopes: SecurityScopes, token: str = Depends(local_oauth2_scheme)
+        ):
+
             if required_scopes.scopes:
                 authenticate_value = f'Bearer scope="{required_scopes.scope_str}"'
             else:
                 authenticate_value = f"Bearer"
-            
+
             credentials_exception = HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Could not validate credentials",
@@ -181,7 +212,7 @@ def create_router(app):
                 detail="Not enough permissions",
                 headers={"WWW-Authenticate": authenticate_value},
             )
-            
+
             user = None
             current_scopes = []
             try:
@@ -200,12 +231,13 @@ def create_router(app):
             scoped_user = ScopedUser(
                 scopes=current_scopes,
                 claims=dict(user.local_claims or {}),
-                **user.dict())
+                **user.dict(),
+            )
 
             return scoped_user
-        
+
         get_request_user.reload_claims = lambda: decode_token_user.cache_clear()
-        
+
         return get_request_user
 
     init_request_user(app, build_get_request_user(app))
@@ -217,13 +249,17 @@ def create_router(app):
     class Token(pydantic.BaseModel):
         access_token: str
         token_type: str
-        
+
     @router.post("/" + LOCAL_TOKEN_ENDPOINT, response_model=Token)
-    def post_login_for_local_access_token(form_data: OAuth2PasswordRequestForm = Depends(OAuth2PasswordRequestForm),
-                                          repo_layer = Depends(request_repo_layer(app))):
+    def post_login_for_local_access_token(
+        form_data: OAuth2PasswordRequestForm = Depends(OAuth2PasswordRequestForm),
+        repo_layer=Depends(request_repo_layer(app)),
+    ):
 
         user_repo = repo_layer.users
-        user = local_authenticate_request_user(form_data.username, form_data.password, user_repo)
+        user = local_authenticate_request_user(
+            form_data.username, form_data.password, user_repo
+        )
 
         if not user:
             raise HTTPException(
@@ -231,7 +267,7 @@ def create_router(app):
                 detail="Incorrect username or password",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        
+
         requested_scopes = form_data.scopes or user.allowed_scopes
 
         if is_admin_user(user):
@@ -243,16 +279,22 @@ def create_router(app):
                         headers={"WWW-Authenticate": "Bearer"},
                     )
 
-        access_token = encode_local_access_token({
-            "sub": user.username,
-            "user": json.loads(JwtUser(**user.dict()).json()),
-            "scopes": requested_scopes}, app_local_jwt_secret_key(app))
+        access_token = encode_local_access_token(
+            {
+                "sub": user.username,
+                "user": json.loads(JwtUser(**user.dict()).json()),
+                "scopes": requested_scopes,
+            },
+            app_local_jwt_secret_key(app),
+        )
 
         return {"access_token": access_token, "token_type": "bearer"}
 
     @router.post("/token-to-cookie", response_model=bool)
-    def token_to_cookie(token: str = Depends(local_oauth2_scheme),
-                        response: fastapi.Response = fastapi.Response(None)):
+    def token_to_cookie(
+        token: str = Depends(local_oauth2_scheme),
+        response: fastapi.Response = fastapi.Response(None),
+    ):
         response.set_cookie(key=local_oauth2_scheme.cookie_name, value=token)
         return True
 
@@ -261,11 +303,19 @@ def create_router(app):
         response.delete_cookie(key=local_oauth2_scheme.cookie_name)
         return True
 
-    @router.post("/users/", response_model=models.SafeUser, status_code = fastapi.status.HTTP_201_CREATED)
-    def create(new_user: NewUser,
-               current_user: ScopedUser = Security(request_user(app), scopes=[ADMIN_SCOPE_NAME]),
-               repo_layer = Depends(request_repo_layer(app))):
-        
+    @router.post(
+        "/users/",
+        response_model=models.SafeUser,
+        status_code=fastapi.status.HTTP_201_CREATED,
+    )
+    def create(
+        new_user: NewUser,
+        current_user: ScopedUser = Security(
+            request_user(app), scopes=[ADMIN_SCOPE_NAME]
+        ),
+        repo_layer=Depends(request_repo_layer(app)),
+    ):
+
         new_user_dict = new_user.dict()
         new_user_dict["hashed_password"] = hash_password(new_user_dict["password"])
         del new_user_dict["password"]
@@ -279,31 +329,50 @@ def create_router(app):
         return current_user
 
     @router.get("/users/{id}", response_model=models.SafeUser)
-    def read(id: str,
-              current_user: ScopedUser = Security(request_user(app), scopes=[ADMIN_SCOPE_NAME]),
-              repo_layer = Depends(request_repo_layer(app))):
-        
+    def read(
+        id: str,
+        current_user: ScopedUser = Security(
+            request_user(app), scopes=[ADMIN_SCOPE_NAME]
+        ),
+        repo_layer=Depends(request_repo_layer(app)),
+    ):
+
         result = repo_layer.users.query_one(id=id)
         if result is None:
             raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
-        
-        return result
-    
-    @router.get("/users/", response_model=typing.List[models.SafeUser])
-    def query(active: bool = fastapi.Query(True),
-              current_user: ScopedUser = Security(request_user(app), scopes=[ADMIN_SCOPE_NAME]),
-              repo_layer = Depends(request_repo_layer(app))):
-        
-        return list(map(lambda u: models.SafeUser(**u.dict()), repo_layer.users.query(active=active)))
-        
-    @router.delete("/users/{id}", response_model=bool)
-    def delete(id: str,
-               preserve_data: bool = True,
-               current_user: models.User = Security(request_user(app), scopes=[ADMIN_SCOPE_NAME]),
-               repo_layer = Depends(request_repo_layer(app))):
 
-        modified = (repo_layer.users.deactivate if preserve_data else repo_layer.users.delete)(id)
-        
+        return result
+
+    @router.get("/users/", response_model=typing.List[models.SafeUser])
+    def query(
+        active: bool = fastapi.Query(True),
+        current_user: ScopedUser = Security(
+            request_user(app), scopes=[ADMIN_SCOPE_NAME]
+        ),
+        repo_layer=Depends(request_repo_layer(app)),
+    ):
+
+        return list(
+            map(
+                lambda u: models.SafeUser(**u.dict()),
+                repo_layer.users.query(active=active),
+            )
+        )
+
+    @router.delete("/users/{id}", response_model=bool)
+    def delete(
+        id: str,
+        preserve_data: bool = True,
+        current_user: models.User = Security(
+            request_user(app), scopes=[ADMIN_SCOPE_NAME]
+        ),
+        repo_layer=Depends(request_repo_layer(app)),
+    ):
+
+        modified = (
+            repo_layer.users.deactivate if preserve_data else repo_layer.users.delete
+        )(id)
+
         if not modified:
             raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
 
@@ -311,20 +380,26 @@ def create_router(app):
 
     return router
 
+
 def init_request_user(app: fastapi.FastAPI, get_request_user):
     app.state.security_request_user = get_request_user
+
 
 def request_user(app: fastapi.FastAPI):
     return app.state.security_request_user
 
+
 def reload_project_claims(app: fastapi.FastAPI):
     return request_user(app).reload_claims()
+
 
 def init_app_local_jwt_secret_key(app: fastapi.FastAPI, local_jwt_secret_key):
     app.state.security_local_jwt_secret_key = local_jwt_secret_key
 
+
 def app_local_jwt_secret_key(app: fastapi.FastAPI):
     return app.state.security_local_jwt_secret_key
+
 
 #
 # Utilities
@@ -332,27 +407,39 @@ def app_local_jwt_secret_key(app: fastapi.FastAPI):
 
 password_context = passlib.context.CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+
 def hash_password(password):
     return password_context.hash(password)
+
 
 def verify_password(password, password_hash):
     return password_context.verify(password, password_hash)
 
-def encode_local_access_token(data: dict, jwt_secret_key: str, expires_delta=timedelta(minutes=LOCAL_ACCESS_TOKEN_EXPIRE_MINUTES)):
+
+def encode_local_access_token(
+    data: dict,
+    jwt_secret_key: str,
+    expires_delta=timedelta(minutes=LOCAL_ACCESS_TOKEN_EXPIRE_MINUTES),
+):
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
         expire = datetime.utcnow() + timedelta(minutes=15)
     to_encode.update({"exp": expire})
-    encoded_jwt = jose.jwt.encode(to_encode, jwt_secret_key, algorithm=LOCAL_JWT_ALGORITHM)
+    encoded_jwt = jose.jwt.encode(
+        to_encode, jwt_secret_key, algorithm=LOCAL_JWT_ALGORITHM
+    )
     return encoded_jwt
+
 
 def decode_local_access_token(token_jwt: str, jwt_secret_key: str):
     return jose.jwt.decode(token_jwt, jwt_secret_key, algorithms=[LOCAL_JWT_ALGORITHM])
 
+
 def encode_pagination_token(*args, **kwargs):
     return encode_local_access_token(*args, **kwargs)
 
+
 def decode_pagination_token(*args, **kwargs):
-    return decode_local_access_token(*args, **kwargs)    
+    return decode_local_access_token(*args, **kwargs)
