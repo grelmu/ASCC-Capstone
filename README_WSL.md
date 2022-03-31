@@ -110,11 +110,12 @@ $ python --version
 Python 3.8.3
 ```
 
-We'll also want to upgrade pip to the latest version and install the Poetry tools (but nothing else):
+We'll also want to upgrade pip to the latest version and install the Poetry tools (but nothing else), then rehash pyenv to have it recognize the poetry install:
 
 ```sh
 $ python -m pip install --upgrade pip
 $ python -m pip install poetry
+$ pyenv rehash
 ```
 
 If this is the first time installing this version of Python, you may need to re-navigate to the MPPW directory (or restart your shell) so that pyenv correctly creates the Poetry shims:
