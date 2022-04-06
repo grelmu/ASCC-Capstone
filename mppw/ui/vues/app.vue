@@ -238,6 +238,39 @@ export default {
         );
       });
     },
+    apiCreateArtifact(artifact) {
+      return this.apiFetch("artifacts/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(artifact),
+      }).then((response) => {
+        if (response.status == 201) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when creating artifact"
+        );
+      });
+    },
+    apiInitArtifact(artifactId, args) {
+      return this.apiFetch(
+        "artifacts/" + artifactId + "/services/artifact/init",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(args || {}),
+        }
+      ).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when initializing artifact"
+        );
+      });
+    },
     apiFetchArtifact(id) {
       return this.apiFetch("artifacts/" + id, { method: "GET" }).then(
         (response) => {
@@ -284,6 +317,23 @@ export default {
         this.throwApiResponseError(
           response,
           "Unknown response when patching artifact"
+        );
+      });
+    },
+    apiFetchAttachedArtifacts(opId, artifactPath) {
+      return this.apiFetch(
+        "operations/" +
+          opId +
+          "/artifacts?artifact_path=" +
+          encodeURIComponent(artifactPath.join(".")),
+        {
+          method: "GET",
+        }
+      ).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when querying attached artifact"
         );
       });
     },
@@ -357,6 +407,134 @@ export default {
       }).then((response) => {
         if (response.status == 200) return;
         this.throwApiResponseError(response, "Bad response when deleting file");
+      });
+    },
+    apiTextQueryOperations(text_query) {
+      return this.apiFetch(
+        "operations/?fulltext_query=" + encodeURIComponent(text_query),
+        {
+          method: "GET",
+        }
+      ).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when text searching operations"
+        );
+      });
+    },
+    apiFetchOperation(id) {
+      return this.apiFetch("operations/" + id, { method: "GET" }).then(
+        (response) => {
+          if (response.status == 200) return response.json();
+          this.throwApiResponseError(
+            response,
+            "Unknown response when fetching operation"
+          );
+        }
+      );
+    },
+    apiFetchArtifactGraph(operation) {
+      let fetches = [];
+      let graph = {};
+      operation["artifact_transform_graph"].forEach((transform) => {
+        graph[transform.kind_urn] = [];
+        let inputs = transform["input_artifacts"] || [];
+        let outputs = transform["output_artifacts"] || [];
+
+        inputs.concat(outputs).forEach((artifactId) => {
+          fetches.push(
+            this.apiFetchArtifact(artifactId).then((artifact) => {
+              graph[transform.kind_urn].push(artifact);
+            })
+          );
+        });
+      });
+
+      return Promise.all(fetches).then(() => {
+        return graph;
+      });
+    },
+    apiFetchAttachmentKinds(type_urn) {
+      return this.apiFetch(
+        "operation-services/" +
+          type_urn.replace("urn:x-mfg:operation:", "") +
+          "/attachment-kinds",
+        {
+          method: "GET",
+        }
+      ).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when querying for serviced operation attachment kinds"
+        );
+      });
+    },
+    apiFetchArtifactsRoot(id) {
+      return this.apiFetch("operations/" + id + "/artifacts", {
+        method: "GET",
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when querying artifacts root"
+        );
+      });
+    },
+    apiAttachArtifact(opId, artifactPath, kindUrn, artifactId, isInput) {
+      let attachment = {
+        kind_urn: kindUrn,
+        artifact_id: artifactId,
+        is_input: isInput || false,
+        artifact_path: artifactPath,
+      };
+
+      return this.apiFetch("operations/" + opId + "/artifacts/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(attachment),
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when creating attachment"
+        );
+      });
+    },
+    apiDetachArtifact(opId, artifactPath, kindUrn, artifactId, isInput) {
+      let attachment = {
+        kind_urn: kindUrn,
+        artifact_id: artifactId,
+        is_input: isInput,
+        artifact_path: artifactPath,
+      };
+
+      return this.apiFetch("operations/" + opId + "/artifacts/", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(attachment),
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when removing attachment"
+        );
+      });
+    },
+    apiFetchArtifactsLs(opId) {
+      return this.apiFetch("operations/" + opId + "/artifacts/ls", {
+        method: "GET",
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when querying artifacts listing"
+        );
       });
     },
     apiFetchOpAttachments(opId) {

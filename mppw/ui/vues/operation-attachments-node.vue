@@ -52,7 +52,7 @@
                 onDetachArtifact(
                   attachmentNode['kind_urn'],
                   artifactNode['artifact_id'],
-                  artifactNode['is_input'],
+                  artifactNode['is_input']
                 )
               "
               style="color: red"
@@ -221,147 +221,12 @@ export default {
   },
 
   methods: {
-    apiCreateArtifact(artifact) {
-      return this.$root
-        .apiFetch("artifacts/", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(artifact),
-        })
-        .then((response) => {
-          if (response.status == 201) return response.json();
-          this.$root.throwApiResponseError(
-            response,
-            "Unknown response when creating artifact"
-          );
-        });
-    },
-
-    apiInitArtifact(artifactId, args) {
-      return this.$root
-        .apiFetch("artifacts/" + artifactId + "/services/artifact/init", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(args || {}),
-        })
-        .then((response) => {
-          if (response.status == 200) return response.json();
-          this.$root.throwApiResponseError(
-            response,
-            "Unknown response when initializing artifact"
-          );
-        });
-    },
-
-    apiFetchAttachedArtifacts(opId, artifactPath) {
-      return this.$root
-        .apiFetch(
-          "operations/" +
-            opId +
-            "/artifacts?artifact_path=" +
-            encodeURIComponent(artifactPath.join(".")),
-          {
-            method: "GET",
-          }
-        )
-        .then((response) => {
-          if (response.status == 200) return response.json();
-          this.$root.throwApiResponseError(
-            response,
-            "Unknown response when querying attached artifact"
-          );
-        });
-    },
-
-    apiTextQueryOperations(text_query) {
-      return this.$root
-        .apiFetch(
-          "operations/?fulltext_query=" + encodeURIComponent(text_query),
-          {
-            method: "GET",
-          }
-        )
-        .then((response) => {
-          if (response.status == 200) return response.json();
-          this.$root.throwApiResponseError(
-            response,
-            "Unknown response when text searching operations"
-          );
-        });
-    },
-
-    apiFetchArtifactsLs(opId) {
-      return this.$root
-        .apiFetch("operations/" + opId + "/artifacts/ls", {
-          method: "GET",
-        })
-        .then((response) => {
-          if (response.status == 200) return response.json();
-          this.$root.throwApiResponseError(
-            response,
-            "Unknown response when querying artifacts listing"
-          );
-        });
-    },
-
-    apiAttachArtifact(opId, artifactPath, kindUrn, artifactId, isInput) {
-      let attachment = {
-        kind_urn: kindUrn,
-        artifact_id: artifactId,
-        is_input: isInput || false,
-        artifact_path: artifactPath,
-      };
-
-      return this.$root
-        .apiFetch("operations/" + opId + "/artifacts/", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(attachment),
-        })
-        .then((response) => {
-          if (response.status == 200) return response.json();
-          this.$root.throwApiResponseError(
-            response,
-            "Unknown response when creating attachment"
-          );
-        });
-    },
-    apiDetachArtifact(opId, artifactPath, kindUrn, artifactId, isInput) {
-      let attachment = {
-        kind_urn: kindUrn,
-        artifact_id: artifactId,
-        is_input: isInput,
-        artifact_path: artifactPath,
-      };
-
-      return this.$root
-        .apiFetch("operations/" + opId + "/artifacts/", {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(attachment),
-        })
-        .then((response) => {
-          if (response.status == 200) return response.json();
-          this.$root.throwApiResponseError(
-            response,
-            "Unknown response when removing attachment"
-          );
-        });
-    },
-
     refreshAttachments() {
       this.attachmentNodes = null;
 
-      return this.apiFetchAttachedArtifacts(this.opId, this.artifactPath).then(
-        (artifactNode) => {
+      return this.$root
+        .apiFetchAttachedArtifacts(this.opId, this.artifactPath)
+        .then((artifactNode) => {
           this.attachmentNodes = artifactNode["attachments"];
           for (let i = 0; i < this.attachmentKinds.length; ++i) {
             let attachmentKind = this.attachmentKinds[i];
@@ -373,8 +238,7 @@ export default {
           }
 
           this.sortAttachments();
-        }
-      );
+        });
     },
 
     splitKind(kindUrn) {
@@ -483,7 +347,8 @@ export default {
       this.isTextQueryingOperations = true;
       this.operationsTextQuery = textQuery;
 
-      return this.apiTextQueryOperations(this.operationsTextQuery)
+      return this.$root
+        .apiTextQueryOperations(this.operationsTextQuery)
         .then((result) => {
           this.operationsTextQueryResult = result;
         })
@@ -496,16 +361,16 @@ export default {
       this.selectedOperationCandidates = null;
       this.selectedCandidate = null;
 
-      return this.apiFetchArtifactsLs(this.selectedOperation.id).then(
-        (listing) => {
+      return this.$root
+        .apiFetchArtifactsLs(this.selectedOperation.id)
+        .then((listing) => {
           let typeUrns = this.newKind.types.map(
             (t) => "urn:x-mfg:artifact" + t["type_urn"]
           );
           this.selectedOperationCandidates = listing.filter(
             (c) => typeUrns.indexOf(c.type_urn) >= 0
           );
-        }
-      );
+        });
     },
 
     onAttachArtifactSubmit() {
@@ -516,17 +381,17 @@ export default {
     },
 
     onAttachInputArtifactSubmit() {
-      
       let fullKindUrn =
         this.newKindUrn + (this.newKindKey ? ":" + this.newKindKey : "");
 
-      return this.apiAttachArtifact(
-        this.opId,
-        this.artifactPath,
-        fullKindUrn,
-        this.selectedCandidate["id"],
-        true
-      )
+      return this.$root
+        .apiAttachArtifact(
+          this.opId,
+          this.artifactPath,
+          fullKindUrn,
+          this.selectedCandidate["id"],
+          true
+        )
         .then(() => {
           return this.refreshAttachments();
         })
@@ -546,14 +411,16 @@ export default {
       if (artifact["type_urn"].startsWith(":"))
         artifact["type_urn"] = "urn:x-mfg:artifact" + artifact["type_urn"];
 
-      return this.apiCreateArtifact(artifact)
+      return this.$root
+        .apiCreateArtifact(artifact)
         .then((artifact) => {
           let fullKindUrn =
             this.newKindUrn + (this.newKindKey ? ":" + this.newKindKey : "");
 
-          return this.apiInitArtifact(artifact["id"], {})
+          return this.$root
+            .apiInitArtifact(artifact["id"], {})
             .then(() => {
-              return this.apiAttachArtifact(
+              return this.$root.apiAttachArtifact(
                 this.opId,
                 this.artifactPath,
                 fullKindUrn,
@@ -574,15 +441,17 @@ export default {
       )
         return;
 
-      return this.apiDetachArtifact(
-        this.opId,
-        this.artifactPath,
-        kindUrn,
-        artifactId,
-        isInput,
-      ).finally(() => {
-        this.refreshAttachments();
-      });
+      return this.$root
+        .apiDetachArtifact(
+          this.opId,
+          this.artifactPath,
+          kindUrn,
+          artifactId,
+          isInput
+        )
+        .finally(() => {
+          this.refreshAttachments();
+        });
     },
   },
   created() {

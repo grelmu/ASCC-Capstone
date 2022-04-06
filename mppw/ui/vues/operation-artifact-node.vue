@@ -105,7 +105,29 @@
       <div v-if="isDigitalArtifact()">
         <h3>Spatial Frame</h3>
 
-        <o-field label="Parent Frame">
+        <o-field label="Parent Frame Artifact">
+          <o-autocomplete
+            rounded
+            expanded
+            v-model="selectedOperationName"
+            :data="operationsTextQueryResult"
+            field="name"
+            placeholder="Operation Name"
+            icon="text-search"
+            clearable
+            :loading="isTextQueryingOperations"
+            :debounce-typing="500"
+            @typing="onTextQueryOperations"
+            @select="onOperationSelected"
+          >
+            <template v-slot:empty>No results found</template>
+            <template v-slot:default="props">
+              {{ props.option.name }}
+            </template>
+          </o-autocomplete>
+        </o-field>
+
+        <o-field v-if="selectedOperation || newSpatialFrame.parent_frame">
           <o-select
             placeholder="Select a spatial parent artifact"
             v-model="newSpatialFrame.parent_frame"
@@ -218,6 +240,13 @@ export default {
       isEditingMeta: false,
       newName: null,
       newDescription: null,
+
+      isTextQueryingOperations: false,
+      operationsTextQuery: null,
+      operationsTextQueryResult: null,
+      selectedOperation: null,
+      selectedOperationName: null,
+
       newSpatialFrame: null,
       parentFrameCandidates: null,
     };
@@ -233,7 +262,6 @@ export default {
 
   methods: {
     refreshArtifact() {
-
       this.artifact = null;
       this.artifactOpParent = null;
       if (this.artifactId == null) {
@@ -241,10 +269,12 @@ export default {
         return Promise.resolve(null);
       }
 
-      return this.$root.apiFetchArtifact(this.artifactId)
+      return this.$root
+        .apiFetchArtifact(this.artifactId)
         .then((artifact) => {
           if (!this.artifactNode["is_input"]) return artifact;
-          return this.$root.apiFetchArtifactOperationParent(artifact["id"])
+          return this.$root
+            .apiFetchArtifactOperationParent(artifact["id"])
             .then((opParent) => {
               this.artifactOpParent = opParent;
               return artifact;
@@ -268,10 +298,13 @@ export default {
           : [];
       });
 
-      let candidatesPromise = this.$root.apiFetchArtifactFrameCandidates(
-        this.opId,
-        this.artifactPath
-      );
+      let candidatesPromise =
+        this.selectedOperation != null
+          ? this.$root.apiFetchArtifactFrameCandidates(
+              this.selectedOperation.id,
+              this.artifactPath
+            )
+          : Promise.resolve([]);
 
       return Promise.all([currentFramePromise, candidatesPromise]).then(
         (allCandidates) => {
@@ -323,10 +356,20 @@ export default {
       }
       return componentMap["default"];
     },
+    onClickInputLink(event) {
+      event.stopPropagation();
+      event.target.closest("a").click();
+    },
     onStartEditMeta() {
       this.newName = this.artifact["name"];
       this.newDescription = this.artifact["description"];
       this.isEditingMeta = true;
+
+      this.isTextQueryingOperations = false;
+      this.operationsTextQuery = null;
+      this.operationsTextQueryResult = null;
+      this.selectedOperation = null;
+
       event.stopPropagation();
 
       if (!this.isDigitalArtifact()) return;
@@ -346,39 +389,93 @@ export default {
         (this.artifact["spatial_frame"] || {}).transform
       );
 
-      this.parentFrameCandidates = null;
+      if (this.newSpatialFrame["parent_frame"] == null) return;
+
+      return this.$root
+        .apiFetchArtifactOperationParent(this.newSpatialFrame["parent_frame"])
+        .then((parent) => {
+          if (parent != null) {
+            this.operationsTextQueryResult = [parent];
+            this.selectedOperation = parent;
+            this.selectedOperationName = parent["name"];
+          }
+
+          return this.refreshParentFrameCandidates();
+        });
+    },
+    onTextQueryOperations(textQuery) {
+      if (this.isTextQueryingOperations) return;
+      textQuery = textQuery.trim();
+      if (this.operationsTextQuery == textQuery) return;
+      this.operationsTextQuery = textQuery;
+
+      let emptyQuery =
+        this.operationsTextQuery == null ||
+        this.operationsTextQuery.length == 0;
+
+      let queryPromise = this.$root.apiFetchOperation(this.opId);
+
+      queryPromise = (
+        !emptyQuery
+          ? Promise.all([
+              queryPromise,
+              this.$root.apiTextQueryOperations(this.operationsTextQuery),
+            ])
+          : Promise.all([queryPromise, Promise.resolve([])])
+      ).then((results) => {
+        return [results[0]].concat(results[1]);
+      });
+
+      this.isTextQueryingOperations = true;
+      this.operationsTextQuery = textQuery;
+
+      return queryPromise
+        .then((result) => {
+          this.operationsTextQueryResult = result;
+        })
+        .finally(() => {
+          this.isTextQueryingOperations = false;
+        });
+    },
+    onOperationSelected(selected) {
+      this.selectedOperation = selected;
+      this.newSpatialFrame.parent_frame = null;
       return this.refreshParentFrameCandidates();
     },
-    onClickInputLink(event) {
-      event.stopPropagation();
-      event.target.closest("a").click();
-    },
     onSubmitMeta() {
-
       let changes = [];
       changes.push({ op: "replace", path: "name", value: this.newName });
-      changes.push({ op: "replace", path: "description", value: this.newDescription });
-      
+      changes.push({
+        op: "replace",
+        path: "description",
+        value: this.newDescription,
+      });
+
       if (this.isDigitalArtifact()) {
-        
         for (let k in this.newSpatialFrame.transform.translation_xyz)
           this.newSpatialFrame.transform.translation_xyz[k] = Number.parseFloat(
             this.newSpatialFrame.transform.translation_xyz[k]
           );
-        
+
         for (let k in this.newSpatialFrame.transform.rotation_euler_abg)
           this.newSpatialFrame.transform.rotation_euler_abg[k] =
             Number.parseFloat(
               this.newSpatialFrame.transform.rotation_euler_abg[k]
             );
 
-        changes.push({ op: "replace", path: "spatial_frame", value: this.newSpatialFrame });
+        changes.push({
+          op: "replace",
+          path: "spatial_frame",
+          value: this.newSpatialFrame,
+        });
       }
 
-      return this.$root.apiPatchArtifact(this.artifact.id, changes).finally(() => {
-        this.isEditingMeta = false;
-        return this.refreshArtifact();
-      });
+      return this.$root
+        .apiPatchArtifact(this.artifact.id, changes)
+        .finally(() => {
+          this.isEditingMeta = false;
+          return this.refreshArtifact();
+        });
     },
   },
   created() {
