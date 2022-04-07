@@ -2,7 +2,7 @@
   <div class="form-body text-center">
     <div class="form-signin">
       <form>
-        <h1><img src="favicon.ico" class="p-1">MPPW</h1>
+        <h1><img src="favicon.ico" class="p-1" />MPPW</h1>
         <h1 class="h3 mb-3 fw-normal">Please sign in</h1>
 
         <div class="form-floating">
@@ -57,7 +57,6 @@ export default {
   },
   methods: {
     doLogin() {
-      
       this.fetchOauth2PasswordBearer({
         method: "POST",
         body: new URLSearchParams({
