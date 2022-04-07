@@ -208,7 +208,7 @@ export default {
           body: JSON.stringify(args || {}),
         })
         .then((response) => {
-          if (response.status == 201) return response.json();
+          if (response.status == 200) return response.json();
           this.$root.throwApiResponseError(
             response,
             "Unknown response when initializing operation"

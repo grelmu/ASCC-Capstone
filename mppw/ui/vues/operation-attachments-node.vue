@@ -348,7 +348,7 @@ export default {
       this.operationsTextQuery = textQuery;
 
       return this.$root
-        .apiTextQueryOperations(this.operationsTextQuery)
+        .apiTextQueryOperations(this.operationsTextQuery, this.projectId)
         .then((result) => {
           this.operationsTextQueryResult = result;
         })

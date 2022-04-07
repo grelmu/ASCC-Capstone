@@ -408,13 +408,14 @@ export default {
         this.throwApiResponseError(response, "Bad response when deleting file");
       });
     },
-    apiTextQueryOperations(text_query) {
-      return this.apiFetch(
-        "operations/?fulltext_query=" + encodeURIComponent(text_query),
-        {
-          method: "GET",
-        }
-      ).then((response) => {
+    apiTextQueryOperations(text_query, projectId) {
+      let query = "?fulltext_query=" + encodeURIComponent(text_query);
+      if (projectId)
+        query = query + "&project_id=" + encodeURIComponent(projectId);
+
+      return this.apiFetch("operations/" + query, {
+        method: "GET",
+      }).then((response) => {
         if (response.status == 200) return response.json();
         this.throwApiResponseError(
           response,

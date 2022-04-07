@@ -419,7 +419,10 @@ export default {
         !emptyQuery
           ? Promise.all([
               queryPromise,
-              this.$root.apiTextQueryOperations(this.operationsTextQuery),
+              this.$root.apiTextQueryOperations(
+                this.operationsTextQuery,
+                this.projectId
+              ),
             ])
           : Promise.all([queryPromise, Promise.resolve([])])
       ).then((results) => {

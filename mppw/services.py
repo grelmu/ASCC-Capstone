@@ -121,18 +121,30 @@ class OperationServices:
 
     ATTACHMENT_KINDS: List[AttachmentKind] = AttachmentKind.make(
         {
+            ":operator-notes": [":digital:file", ":digital:text"],
             ":process-data": [
-                ":digital:database-bucket",
-                ":digital:file-bucket",
+                (
+                    ":digital:database-bucket",
+                    {
+                        ":streams": [":digital:time-series"],
+                    },
+                ),
+                (
+                    ":digital:file-bucket",
+                    {
+                        ":streams": [":digital:time-series"],
+                    },
+                ),
                 ":digital:file",
-                ":digital:fiducial-points",
+                ":digital:text",
+                ":digital:time-series",
             ],
             ":attachments": [":digital:file-bucket", ":digital:file", "digital:text"],
         }
     )
 
-    ATTACHMENT_KIND_PROCESS_DATA = ATTACHMENT_KINDS[0]
-    ATTACHMENT_KIND_ATTACHMENTS = ATTACHMENT_KINDS[1]
+    ATTACHMENT_KIND_PROCESS_DATA = ATTACHMENT_KINDS[1]
+    ATTACHMENT_KIND_ATTACHMENTS = ATTACHMENT_KINDS[2]
 
     def __init__(self, repo_layer):
         self.repo_layer = repo_layer
@@ -456,18 +468,26 @@ class FffServices(OperationServices):
                 (
                     ":material:part",
                     {
-                        ":part-geometry": [":digital:fiducial-points", ":digital:mesh"],
-                        ":images": [":digital:file"],
-                        ":notes": [":digital:file", ":digital:text"],
+                        ":part-geometry": [
+                            ":digital:fiducial-points",
+                            ":digital:point-cloud",
+                            ":digital:mesh",
+                        ],
+                        ":images": [
+                            ":digital:file",
+                        ],
+                        ":notes": [
+                            ":digital-file",
+                            ":digital:text",
+                        ],
                     },
                 ),
             ],
-            ":operator-notes": [":digital:file", ":digital:text"],
             ":toolpath-cloud": [
                 (
                     ":digital:point-cloud",
                     {
-                        ":generation-notes": [":digital:text"],
+                        ":notes": [":digital:file", ":digital:text"],
                     },
                 ),
             ],
@@ -475,7 +495,7 @@ class FffServices(OperationServices):
                 (
                     ":digital:point-cloud",
                     {
-                        ":generation-notes": [":digital:text"],
+                        ":notes": [":digital-file", ":digital:text"],
                     },
                 ),
             ],
@@ -490,56 +510,17 @@ class FffServices(OperationServices):
         return FffServices.ATTACHMENT_KINDS + OperationServices.ATTACHMENT_KINDS
 
 
-class CutServices(OperationServices):
-
-    URN_PREFIX = f"{models.Operation.URN_PREFIX}:prepare:cut"
-    DEFAULT_NAME = "Cutting Operation"
-    DEFAULT_DESCRIPTION = "Some kind of cutting operation"
-
-    ATTACHMENT_KINDS = AttachmentKind.make(
-        {
-            ":cut-diagrams": [":digital:file"],
-            ":input-parts": [
-                (
-                    ":material:part",
-                    {
-                        ":output-parts": [
-                            (
-                                ":material:part",
-                                {
-                                    ":part-geometry": [
-                                        ":digital:fiducial-points",
-                                        ":digital:mesh",
-                                    ],
-                                    ":images": [":digital:file"],
-                                    ":notes": [":digital:text"],
-                                },
-                            ),
-                        ],
-                    },
-                ),
-            ],
-            ":operator-notes": [":digital:file", ":digital:text"],
-        }
-    )
-
-    def __init__(self, repo_layer):
-        self.repo_layer = repo_layer
-
-    @property
-    def attachment_kinds(self):
-        return CutServices.ATTACHMENT_KINDS + OperationServices.ATTACHMENT_KINDS
-
-
 class MachiningServices(OperationServices):
 
-    URN_PREFIX = f"{models.Operation.URN_PREFIX}:prepare:machine"
-    DEFAULT_NAME = "Machining Operation"
-    DEFAULT_DESCRIPTION = "Some kind of machining operation"
+    URN_PREFIX = f"{models.Operation.URN_PREFIX}:prepare:machining"
+
+    DEFAULT_NAME = "Generic Machining Operation"
+    DEFAULT_DESCRIPTION = (
+        "Manufacturing operation which machines parts from one geometry to another"
+    )
 
     ATTACHMENT_KINDS = AttachmentKind.make(
         {
-            ":cut-diagrams": [":digital:file"],
             ":input-parts": [
                 (
                     ":material:part",
@@ -551,16 +532,33 @@ class MachiningServices(OperationServices):
                                     ":part-geometry": [
                                         ":digital:fiducial-points",
                                         ":digital:mesh",
+                                        ":digital:point-cloud",
                                     ],
-                                    ":images": [":digital:file"],
-                                    ":notes": [":digital:text"],
+                                    ":images": [
+                                        ":digital:file",
+                                    ],
+                                    ":notes": [
+                                        ":digital-file",
+                                        ":digital:text",
+                                    ],
                                 },
                             ),
+                        ],
+                        ":part-geometry": [
+                            ":digital:fiducial-points",
+                            ":digital:point-cloud",
+                            ":digital:mesh",
+                        ],
+                        ":images": [
+                            ":digital:file",
+                        ],
+                        ":notes": [
+                            ":digital-file",
+                            ":digital:text",
                         ],
                     },
                 ),
             ],
-            ":operator-notes": [":digital:file", ":digital:text"],
         }
     )
 
@@ -570,6 +568,73 @@ class MachiningServices(OperationServices):
     @property
     def attachment_kinds(self):
         return MachiningServices.ATTACHMENT_KINDS + OperationServices.ATTACHMENT_KINDS
+
+
+class WaterjetCutServices(MachiningServices):
+
+    URN_PREFIX = f"{models.Operation.URN_PREFIX}:prepare:waterjetcut"
+    DEFAULT_NAME = "Waterjet Cutting Operation"
+    DEFAULT_DESCRIPTION = "Machining operation using a waterjet cutter"
+
+    ATTACHMENT_KINDS = AttachmentKind.make(
+        {
+            ":toolpath": [":digital:file"],
+        }
+    )
+
+    def __init__(self, repo_layer):
+        self.repo_layer = repo_layer
+
+    @property
+    def attachment_kinds(self):
+        return (
+            WaterjetCutServices.ATTACHMENT_KINDS
+            + MachiningServices.ATTACHMENT_KINDS
+            + OperationServices.ATTACHMENT_KINDS
+        )
+
+
+class DimensioningServices(OperationServices):
+
+    URN_PREFIX = f"{models.Operation.URN_PREFIX}:characterize:dimensioning"
+
+    DEFAULT_NAME = "Generic Dimensioning Operation"
+    DEFAULT_DESCRIPTION = (
+        "Material dimensioning operation which measures the geometry of a part"
+    )
+
+    ATTACHMENT_KINDS = AttachmentKind.make(
+        {
+            ":input-parts": [
+                (
+                    ":material:part",
+                    {
+                        ":part-geometry": [
+                            ":digital:fiducial-points",
+                            ":digital:point-cloud",
+                            ":digital:mesh",
+                        ],
+                        ":images": [
+                            ":digital:file",
+                        ],
+                        ":notes": [
+                            ":digital-file",
+                            ":digital:text",
+                        ],
+                    },
+                ),
+            ],
+        }
+    )
+
+    def __init__(self, repo_layer):
+        self.repo_layer = repo_layer
+
+    @property
+    def attachment_kinds(self):
+        return (
+            DimensioningServices.ATTACHMENT_KINDS + OperationServices.ATTACHMENT_KINDS
+        )
 
 
 class TensileTestServices(OperationServices):
@@ -584,20 +649,24 @@ class TensileTestServices(OperationServices):
                 (
                     ":material:part",
                     {
-                        ":dimensions": [":digital:astm.d638.dimensions"],
+                        ":part-geometry": [
+                            ":digital:astm.d638.dimensions",
+                        ],
                         ":measurements": [
                             ":digital:astm.d638.stressstrain",
                             ":digital:astm.d638.yieldstrength",
                             ":digital:astm.d638.elasticmod",
                         ],
-                        ":notes": [
-                            ":digital:text",
+                        ":images": [
                             ":digital:file",
+                        ],
+                        ":notes": [
+                            ":digital-file",
+                            ":digital:text",
                         ],
                     },
                 ),
             ],
-            ":operator-notes": [":digital:file", ":digital:text"],
         }
     )
 
@@ -828,8 +897,9 @@ class ServiceLayer:
     ]
     OPERATION_SERVICE_TYPES = [
         FffServices,
-        CutServices,
         MachiningServices,
+        WaterjetCutServices,
+        DimensioningServices,
         TensileTestServices,
     ]
 
