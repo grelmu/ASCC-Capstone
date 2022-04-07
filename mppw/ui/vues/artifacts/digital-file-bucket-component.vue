@@ -1,22 +1,32 @@
 <template>
   <div v-if="artifact && root">
-
-    <digital-file-bucket-node-component :artifactId="artifact['id']" :node="root" :selectable="true" 
-      @upload-file="onUploadFileSelect" @rename-file="onRenameFile"></digital-file-bucket-node-component>
+    <digital-file-bucket-node-component
+      :artifactId="artifact['id']"
+      :node="root"
+      :selectable="true"
+      @upload-file="onUploadFileSelect"
+      @rename-file="onRenameFile"
+    ></digital-file-bucket-node-component>
 
     <div class="mt-3 text-end">
-      <o-button @click="onDeleteFiles()" variant="danger" class="text-end" :disabled="isDeleting">Delete Selected</o-button>
+      <o-button
+        @click="onDeleteFiles()"
+        variant="danger"
+        class="text-end"
+        :disabled="isDeleting"
+        >Delete Selected</o-button
+      >
     </div>
-
   </div>
 </template>
 
 <script>
-import DigitalFileBucketNodeComponent from './digital-file-bucket-node-component.vue';
+import DigitalFileBucketNodeComponent from "./digital-file-bucket-node-component.vue";
 export default {
-
   components: {
-    "digital-file-bucket-node-component": RemoteVue.asyncComponent("vues/artifacts/digital-file-bucket-node-component.vue")
+    "digital-file-bucket-node-component": RemoteVue.asyncComponent(
+      "vues/artifacts/digital-file-bucket-node-component.vue"
+    ),
   },
 
   data() {
@@ -32,93 +42,15 @@ export default {
     artifactId: String,
   },
   methods: {
-     apiFetchArtifact(id) {
-      return this.$root
-        .apiFetch("artifacts/" + id, { method: "GET" })
-        .then((response) => {
-          if (response.status == 200) return response.json();
-          else return { version: "" };
-        })
-    },
-    apiFetchFileBucketListing(id) {
-      return this.$root
-        .apiFetch("artifacts/" + id + "/services/file-bucket/ls", { 
-          method: "POST",
-          /*headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(artifact),*/
-        })
-        .then((response) => {
-          if (response.status == 200) return response.json();
-          this.$root.throwApiResponseError(
-            response,
-            "Bad response when fetching file bucket listing"
-          );
-        })
-    },
-    apiUploadFile(id, path, file) {
-
-      let formData = new FormData();
-      formData.append("path", path);
-      formData.append("file", file);
-
-      return this.$root
-        .apiFetch("artifacts/" + id + "/services/file-bucket/upload", {
-          method: "POST",
-          body: formData,
-        })
-        .then((response) => {
-          if (response.status == 201) return response.json();
-          this.$root.throwApiResponseError(
-            response,
-            "Bad response when uploading attachment"
-          );
-        });
-    },
-    apiRenameFile(id, path, newPath) {
-      return this.$root
-        .apiFetch("artifacts/" + id + "/services/file-bucket/rename", { 
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ path, new_path: newPath }),
-        })
-        .then((response) => {
-          if (response.status == 200) return;
-          this.$root.throwApiResponseError(
-            response,
-            "Bad response when deleting file"
-          );
-        })
-    },
-    apiDeleteFile(id, path) {
-      return this.$root
-        .apiFetch("artifacts/" + id + "/services/file-bucket/delete", { 
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(path),
-        })
-        .then((response) => {
-          if (response.status == 200) return;
-          this.$root.throwApiResponseError(
-            response,
-            "Bad response when deleting file"
-          );
-        })
-    },
     refreshArtifact() {
-
       this.artifact = null;
       this.root = null;
-      
-      return this.apiFetchArtifact(this.artifactId)
+
+      return this.$root
+        .apiFetchArtifact(this.artifactId)
         .then((artifact) => {
           this.artifact = artifact;
-          return this.apiFetchFileBucketListing(this.artifactId);
+          return this.$root.apiFetchFileBucketListing(this.artifactId);
         })
         .then((listing) => {
           this.root = {
@@ -129,13 +61,11 @@ export default {
         });
     },
     listingToNodes(listing) {
-      
       let nodes = [];
-      listing.sort((x, y) => (x.name).localeCompare(y.name))
+      listing.sort((x, y) => x.name.localeCompare(y.name));
 
-      let folders = {}
+      let folders = {};
       for (let i = 0; i < listing.length; ++i) {
-        
         let node = listing[i];
         let path_segments = node.name.split("/");
         let path = "/";
@@ -144,7 +74,7 @@ export default {
         for (let j = 0; j < path_segments.length - 1; ++j) {
           if (path_segments[j] == "") continue;
           path = path + path_segments[j] + "/";
-          
+
           let folder = folders[path];
           if (!folder) {
             folder = {
@@ -153,7 +83,7 @@ export default {
               children: [],
             };
             folders[path] = folder;
-            
+
             if (lastFolder) lastFolder.children.push(folder);
             else nodes.push(folder);
           }
@@ -169,24 +99,24 @@ export default {
       return nodes;
     },
     onUploadFileSelect(event) {
-      return this.apiUploadFile(this.artifactId, event.path, event.file)
+      return this.$root
+        .apiUploadFile(this.artifactId, event.path, event.file)
         .finally(() => {
           return this.refreshArtifact();
         });
     },
     onRenameFile(event) {
-      return this.apiRenameFile(this.artifactId, event.node.name, event.newName)
+      return this.$root
+        .apiRenameFile(this.artifactId, event.node.name, event.newName)
         .finally(() => {
           return this.refreshArtifact();
         });
     },
     getSelectedNodes() {
-      
       let fringe = [[false, this.root]];
       let selectedNodes = [];
 
       while (fringe.length > 0) {
-
         let next = fringe.pop();
         let parentSelected = next[0];
         let node = next[1];
@@ -196,8 +126,7 @@ export default {
           for (let i = 0; i < node.children.length; ++i) {
             fringe.push([selected, node.children[i]]);
           }
-        }
-        else if (selected) {
+        } else if (selected) {
           selectedNodes.push(node);
         }
       }
@@ -205,23 +134,27 @@ export default {
       return selectedNodes;
     },
     onDeleteFiles() {
-
       let selectedNodes = this.getSelectedNodes();
 
-      if (!confirm("Are you sure you want to delete " + selectedNodes.length + " files?"))
+      if (
+        !confirm(
+          "Are you sure you want to delete " + selectedNodes.length + " files?"
+        )
+      )
         return;
 
       this.isDeleting = true;
       let deletePromises = [];
       for (let i = 0; i < selectedNodes.length; ++i) {
-        deletePromises.push(this.apiDeleteFile(this.artifactId, selectedNodes[i].name));
+        deletePromises.push(
+          this.$root.apiDeleteFile(this.artifactId, selectedNodes[i].name)
+        );
       }
 
-      return Promise.all(deletePromises)
-        .finally(() => {
-          this.isDeleting = false;
-          return this.refreshArtifact();
-        })
+      return Promise.all(deletePromises).finally(() => {
+        this.isDeleting = false;
+        return this.refreshArtifact();
+      });
     },
   },
   created() {

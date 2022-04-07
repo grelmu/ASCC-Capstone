@@ -104,12 +104,17 @@
   </div>
 </template>
 
-
 <script>
 const routes = [
-  { path: "/", component: RemoteVue.lazyComponent("vues/browse-operations-page.vue") },
+  {
+    path: "/",
+    component: RemoteVue.lazyComponent("vues/browse-operations-page.vue"),
+  },
   { path: "/about", component: RemoteVue.lazyComponent("vues/about-page.vue") },
-  { path: "/operations/:id", component: RemoteVue.lazyComponent("vues/operations-page.vue") },
+  {
+    path: "/operations/:id",
+    component: RemoteVue.lazyComponent("vues/operations-page.vue"),
+  },
 ];
 
 const initRoutes = function (app) {
@@ -145,8 +150,11 @@ export default {
       return this.apiLogout();
     },
     newApiCredentials(credentials) {
-
-      return (credentials.token ? this.apiFetchTokenCookie(credentials.token) : Promise.resolve(null))
+      return (
+        credentials.token
+          ? this.apiFetchTokenCookie(credentials.token)
+          : Promise.resolve(null)
+      )
         .then(() => {
           credentials.token = null;
           credentials.cookie = true;
@@ -163,7 +171,7 @@ export default {
         .catch((err) => {
           console.error(err);
           return this.resetApiCredentials();
-        })
+        });
     },
     apiUrl(input) {
       return location.origin + "/api/" + input;
@@ -172,7 +180,8 @@ export default {
       input = this.apiUrl(input);
       init.headers = init.headers || {};
       if (token || this.credentials.api.token)
-        init.headers["Authorization"] = "Bearer " + (token != null ? token : this.credentials.api.token);
+        init.headers["Authorization"] =
+          "Bearer " + (token != null ? token : this.credentials.api.token);
       return fetch(input, init).then((response) => {
         if (response.status == 401) {
           console.warn("User is no longer logged into API.");
@@ -185,9 +194,13 @@ export default {
       return this.apiFetch("security/token", init);
     },
     apiFetchCurrentUser(token) {
-      return this.apiFetch("security/users/me", {
-        method: "GET",
-      }, token).then((response) => {
+      return this.apiFetch(
+        "security/users/me",
+        {
+          method: "GET",
+        },
+        token
+      ).then((response) => {
         if (response.status == 200) return response.json();
         this.throwApiResponseError(
           response,
@@ -197,9 +210,13 @@ export default {
       });
     },
     apiFetchTokenCookie(token) {
-      return this.apiFetch("security/token-to-cookie", {
-        method: "POST"
-      }, token).then((response) => {
+      return this.apiFetch(
+        "security/token-to-cookie",
+        {
+          method: "POST",
+        },
+        token
+      ).then((response) => {
         if (response.status == 200) return;
         this.throwApiResponseError(
           response,
@@ -210,13 +227,344 @@ export default {
     },
     apiLogout() {
       return this.apiFetch("security/logout", {
-        method: "POST"
+        method: "POST",
       }).then((response) => {
         if (response.status == 200) return;
         this.throwApiResponseError(
           response,
           "Unknown response when logging out",
           true
+        );
+      });
+    },
+    apiCreateArtifact(artifact) {
+      return this.apiFetch("artifacts/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(artifact),
+      }).then((response) => {
+        if (response.status == 201) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when creating artifact"
+        );
+      });
+    },
+    apiInitArtifact(artifactId, args) {
+      return this.apiFetch(
+        "artifacts/" + artifactId + "/services/artifact/init",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(args || {}),
+        }
+      ).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when initializing artifact"
+        );
+      });
+    },
+    apiFetchArtifact(id) {
+      return this.apiFetch("artifacts/" + id, { method: "GET" }).then(
+        (response) => {
+          if (response.status == 200) return response.json();
+          else return { version: "" };
+        }
+      );
+    },
+    apiFetchArtifactOperationParent(id) {
+      return this.apiFetch("artifacts/" + id + "/services/artifact/parent", {
+        method: "GET",
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when retrieving parent of artifact"
+        );
+      });
+    },
+    apiUpdateArtifact(artifact) {
+      return this.apiFetch("artifacts/" + artifact["id"], {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(artifact),
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when updating artifact"
+        );
+      });
+    },
+    apiPatchArtifact(id, changes) {
+      return this.apiFetch("artifacts/" + id, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(changes),
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when patching artifact"
+        );
+      });
+    },
+    apiFetchAttachedArtifacts(opId, artifactPath) {
+      return this.apiFetch(
+        "operations/" +
+          opId +
+          "/artifacts?artifact_path=" +
+          encodeURIComponent(artifactPath.join(".")),
+        {
+          method: "GET",
+        }
+      ).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when querying attached artifact"
+        );
+      });
+    },
+    apiFetchArtifactFrameCandidates(opId, artifactPath) {
+      return this.apiFetch(
+        "operations/" +
+          opId +
+          "/artifacts/frame_candidates?strategy=operation_local&artifact_path=" +
+          encodeURIComponent(artifactPath.join(".")),
+        {
+          method: "GET",
+        }
+      ).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when querying frame candidates"
+        );
+      });
+    },
+    apiFetchFileBucketListing(id) {
+      return this.apiFetch("artifacts/" + id + "/services/file-bucket/ls", {
+        method: "POST",
+        /*headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(artifact),*/
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Bad response when fetching file bucket listing"
+        );
+      });
+    },
+    apiUploadFile(id, path, file) {
+      let formData = new FormData();
+      formData.append("path", path);
+      formData.append("file", file);
+
+      return this.apiFetch("artifacts/" + id + "/services/file-bucket/upload", {
+        method: "POST",
+        body: formData,
+      }).then((response) => {
+        if (response.status == 201) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Bad response when uploading attachment"
+        );
+      });
+    },
+    apiRenameFile(id, path, newPath) {
+      return this.apiFetch("artifacts/" + id + "/services/file-bucket/rename", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ path, new_path: newPath }),
+      }).then((response) => {
+        if (response.status == 200) return;
+        this.throwApiResponseError(response, "Bad response when deleting file");
+      });
+    },
+    apiDeleteFile(id, path) {
+      return this.apiFetch("artifacts/" + id + "/services/file-bucket/delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(path),
+      }).then((response) => {
+        if (response.status == 200) return;
+        this.throwApiResponseError(response, "Bad response when deleting file");
+      });
+    },
+    apiTextQueryOperations(text_query, projectId) {
+      let query = "?fulltext_query=" + encodeURIComponent(text_query);
+      if (projectId)
+        query = query + "&project_id=" + encodeURIComponent(projectId);
+
+      return this.apiFetch("operations/" + query, {
+        method: "GET",
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when text searching operations"
+        );
+      });
+    },
+    apiFetchOperation(id) {
+      return this.apiFetch("operations/" + id, { method: "GET" }).then(
+        (response) => {
+          if (response.status == 200) return response.json();
+          this.throwApiResponseError(
+            response,
+            "Unknown response when fetching operation"
+          );
+        }
+      );
+    },
+    apiFetchArtifactGraph(operation) {
+      let fetches = [];
+      let graph = {};
+      operation["artifact_transform_graph"].forEach((transform) => {
+        graph[transform.kind_urn] = [];
+        let inputs = transform["input_artifacts"] || [];
+        let outputs = transform["output_artifacts"] || [];
+
+        inputs.concat(outputs).forEach((artifactId) => {
+          fetches.push(
+            this.apiFetchArtifact(artifactId).then((artifact) => {
+              graph[transform.kind_urn].push(artifact);
+            })
+          );
+        });
+      });
+
+      return Promise.all(fetches).then(() => {
+        return graph;
+      });
+    },
+    apiFetchAttachmentKinds(type_urn) {
+      return this.apiFetch(
+        "operation-services/" +
+          type_urn.replace("urn:x-mfg:operation:", "") +
+          "/attachment-kinds",
+        {
+          method: "GET",
+        }
+      ).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when querying for serviced operation attachment kinds"
+        );
+      });
+    },
+    apiFetchArtifactsRoot(id) {
+      return this.apiFetch("operations/" + id + "/artifacts", {
+        method: "GET",
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when querying artifacts root"
+        );
+      });
+    },
+    apiAttachArtifact(opId, artifactPath, kindUrn, artifactId, isInput) {
+      let attachment = {
+        kind_urn: kindUrn,
+        artifact_id: artifactId,
+        is_input: isInput || false,
+        artifact_path: artifactPath,
+      };
+
+      return this.apiFetch("operations/" + opId + "/artifacts/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(attachment),
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when creating attachment"
+        );
+      });
+    },
+    apiDetachArtifact(opId, artifactPath, kindUrn, artifactId, isInput) {
+      let attachment = {
+        kind_urn: kindUrn,
+        artifact_id: artifactId,
+        is_input: isInput,
+        artifact_path: artifactPath,
+      };
+
+      return this.apiFetch("operations/" + opId + "/artifacts/", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(attachment),
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when removing attachment"
+        );
+      });
+    },
+    apiFetchArtifactsLs(opId) {
+      return this.apiFetch("operations/" + opId + "/artifacts/ls", {
+        method: "GET",
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when querying artifacts listing"
+        );
+      });
+    },
+    apiFetchOpAttachments(opId) {
+      return this.apiFetch(
+        "operations/" + opId + "/artifacts/attachments/default",
+        { method: "GET" }
+      ).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Bad response when fetching attachments"
+        );
+      });
+    },
+    apiUploadAttachment(attachments_id, path, file) {
+      let formData = new FormData();
+      formData.append("path", path);
+      formData.append("file", file);
+
+      return this.apiFetch(
+        "artifacts/" + attachments_id + "/services/file-bucket/upload",
+        {
+          method: "POST",
+          body: formData,
+        }
+      ).then((response) => {
+        if (response.status == 201) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Bad response when uploading attachment"
         );
       });
     },
@@ -229,22 +577,26 @@ export default {
     },
   },
   created() {
-
     let savedCredentials = null;
     try {
-      savedCredentials = JSON.parse(localStorage.getItem((this.appName || "mppw") + "CredentialsApi")) || null;
+      savedCredentials =
+        JSON.parse(
+          localStorage.getItem((this.appName || "mppw") + "CredentialsApi")
+        ) || null;
     } catch (ex) {
       // Unknown credentials
     }
 
-    return (savedCredentials == null ? this.resetApiCredentials() : this.newApiCredentials(savedCredentials))
-      .finally(() => {
-        this.ready = true;
-      });
+    return (
+      savedCredentials == null
+        ? this.resetApiCredentials()
+        : this.newApiCredentials(savedCredentials)
+    ).finally(() => {
+      this.ready = true;
+    });
   },
 };
 </script>
-
 
 <style scoped>
 .feather {

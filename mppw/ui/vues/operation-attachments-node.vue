@@ -1,57 +1,78 @@
 <template>
-
   <div v-if="(attachmentNodes || []).length > 0 || attachmentKinds.length > 0">
     <div class="mt-4 row">
       <div class="col-auto">
-        <o-button @click="onAttachArtifactBegin()" class="text-end" :disabled="attachmentKinds.length == 0"
-          >Attach Artifact</o-button>
+        <o-button
+          @click="onAttachArtifactBegin()"
+          class="text-end"
+          :disabled="attachmentKinds.length == 0"
+          >Attach Artifact</o-button
+        >
       </div>
-      <div class="col-auto" style="flex: auto;"><hr /></div>
+      <div class="col-auto" style="flex: auto"><hr /></div>
     </div>
 
     <div
-      v-for="attachmentNode in (attachmentNodes || [])"
+      v-for="attachmentNode in attachmentNodes || []"
       :key="attachmentNode['kind_urn']"
     >
-      <h3 v-if="attachmentNode['artifacts']" class="mt-4">{{ attachmentNode["kind_urn"] }}</h3>
-      <h3 v-if="!attachmentNode['artifacts']" class="mt-4 text-muted fw-lighter">{{ attachmentNode["kind_urn"] }}</h3>
+      <h3 v-if="attachmentNode['artifacts']" class="mt-4">
+        {{ attachmentNode["kind_urn"] }}
+      </h3>
+      <h3
+        v-if="!attachmentNode['artifacts']"
+        class="mt-4 text-muted fw-lighter"
+      >
+        {{ attachmentNode["kind_urn"] }}
+      </h3>
 
       <div
         v-for="artifactNode in attachmentNode['artifacts']"
         :key="artifactNode['artifact_id']"
       >
         <div class="row">
-
           <div class="ms-4 col">
-
             <operation-artifact-node
               :projectId="projectId"
               :opId="opId"
-              :artifactPath="artifactPath.concat([attachmentNode['kind_urn'], artifactNode['artifact_id']])"
-              :artifactId="artifactNode['artifact_id']"
+              :artifactPath="
+                artifactPath.concat([
+                  attachmentNode['kind_urn'],
+                  artifactNode['artifact_id'],
+                ])
+              "
+              :artifactNode="artifactNode"
               :attachmentKind="attachmentKindFor(attachmentNode['kind_urn'])"
             ></operation-artifact-node>
-
           </div>
           <div class="col-auto my-auto">
-              <o-icon
-                :icon="'trash-can'"
-                @click="onDetachArtifact(attachmentNode['kind_urn'], artifactNode['artifact_id'])"
-                style="color: red"
-              ></o-icon>
+            <o-icon
+              :icon="artifactNode['is_input'] ? 'link-off' : 'trash-can'"
+              @click="
+                onDetachArtifact(
+                  attachmentNode['kind_urn'],
+                  artifactNode['artifact_id'],
+                  artifactNode['is_input']
+                )
+              "
+              style="color: red"
+            ></o-icon>
           </div>
         </div>
       </div>
     </div>
 
     <o-modal v-model:active="isAttachingArtifact">
-
       <h2>Attach New Artifact</h2>
 
-      <o-field label="Attachment Kind">      
-        <o-select placeholder="Select an attachment kind" v-model="newKindUrn" @update:modelValue="onAttachmentKindSelected">
+      <o-field label="Attachment Kind">
+        <o-select
+          placeholder="Select an attachment kind"
+          v-model="newKindUrn"
+          @update:modelValue="onAttachmentKindSelected"
+        >
           <option
-            v-for="kind in (attachmentKinds || [])"
+            v-for="kind in attachmentKinds || []"
             :key="kind.kind_urn"
             :value="kind.kind_urn"
           >
@@ -63,32 +84,102 @@
       </o-field>
 
       <div v-if="newKind">
-        <o-field label="Artifact Type">
-            <o-select placeholder="Select an artifact type" v-model="newTypeUrn">
-              <option
-                v-for="artifactType in newKind.types"
-                :key="artifactType['type_urn']"
-                :value="artifactType['type_urn']"
-              >
-                {{ artifactType['type_urn'] }}
-              </option>
-            </o-select>
-        </o-field>
+        <div class="mt-3 row">
+          <div class="col-md-auto">
+            <o-radio
+              v-model="newAttachType"
+              name="name"
+              native-value="output"
+            ></o-radio>
+          </div>
+          <div class="col-md-auto">
+            <h5>New Artifact</h5>
+            <div v-if="newAttachType == 'output'">
+              <o-field label="Artifact Type">
+                <o-select
+                  placeholder="Select an artifact type"
+                  v-model="newTypeUrn"
+                >
+                  <option
+                    v-for="artifactType in newKind.types"
+                    :key="artifactType['type_urn']"
+                    :value="artifactType['type_urn']"
+                  >
+                    {{ artifactType["type_urn"] }}
+                  </option>
+                </o-select>
+              </o-field>
 
-        <o-field label="Name">
-          <o-input v-model="newName"></o-input>
-        </o-field>
+              <o-field label="Name">
+                <o-input v-model="newName"></o-input>
+              </o-field>
 
-        <o-field label="Description">
-          <o-input v-model="newDescription"></o-input>
-        </o-field>
+              <o-field label="Description">
+                <o-input v-model="newDescription"></o-input>
+              </o-field>
+            </div>
+          </div>
+        </div>
+        <div class="mt-3 row">
+          <div class="col-md-auto">
+            <o-radio
+              v-model="newAttachType"
+              name="name"
+              native-value="input"
+            ></o-radio>
+          </div>
+          <div class="col-md-auto">
+            <h5>Existing Artifact</h5>
+            <div v-if="newAttachType == 'input'">
+              <o-field label="Find an operation">
+                <o-autocomplete
+                  rounded
+                  expanded
+                  :data="operationsTextQueryResult"
+                  field="name"
+                  placeholder="Operation Name"
+                  icon="text-search"
+                  clearable
+                  :loading="isTextQueryingOperations"
+                  :debounce-typing="500"
+                  @typing="onTextQueryOperations"
+                  @select="onOperationSelected"
+                >
+                  <template v-slot:empty>No results found</template>
+                  <template v-slot:default="props">
+                    {{ props.option.name }}
+                  </template>
+                </o-autocomplete>
+              </o-field>
 
+              <div v-if="selectedOperationCandidates">
+                <o-select
+                  :placeholder="
+                    selectedOperationCandidates.length > 0
+                      ? 'Select an artifact'
+                      : 'No artifacts of correct types found'
+                  "
+                  v-model="selectedCandidate"
+                >
+                  <option
+                    v-for="candidate in selectedOperationCandidates || []"
+                    :key="candidate.id"
+                    :value="candidate"
+                  >
+                    {{ candidate.name ? candidate.name + " @ " : ""
+                    }}{{ candidate.kind_urn }}.{{ candidate.id }}
+                  </option>
+                </o-select>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <o-button @click="onAttachArtifactSubmit()" class="mt-4">Attach new artifact</o-button>
-
+      <o-button @click="onAttachArtifactSubmit()" class="mt-4"
+        >Attach new artifact</o-button
+      >
     </o-modal>
-
   </div>
 </template>
 
@@ -102,15 +193,23 @@ export default {
 
   data() {
     return {
-
       attachmentNodes: null,
 
       isAttachingArtifact: false,
       newKindUrn: null,
       newKind: null,
+      newAttachType: "output",
+
       newTypeUrn: null,
       newName: null,
       newDescription: null,
+
+      isTextQueryingOperations: false,
+      operationsTextQuery: null,
+      operationsTextQueryResult: null,
+      selectedOperation: null,
+      selectedOperationCandidates: null,
+      selectedCandidate: null,
     };
   },
 
@@ -122,131 +221,43 @@ export default {
   },
 
   methods: {
-    
-    apiCreateArtifact(artifact) {
-      return this.$root.apiFetch("artifacts/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(artifact),
-      }).then((response) => {
-        if (response.status == 201) return response.json();
-        this.$root.throwApiResponseError(
-          response,
-          "Unknown response when creating artifact"
-        );
-      });
-    },
-
-    apiInitArtifact(artifactId, args) {
-      return this.$root.apiFetch("artifacts/" + artifactId + "/services/artifact/init", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(args || {}),
-      }).then((response) => {
-        if (response.status == 200) return response.json();
-        this.$root.throwApiResponseError(
-          response,
-          "Unknown response when initializing artifact"
-        );
-      });
-    },
-
-    apiFetchAttachedArtifacts(opId, artifactPath) {
-      return this.$root.apiFetch("operations/" + opId + "/artifacts?artifact_path=" + encodeURIComponent(artifactPath.join(".")), {
-        method: "GET",
-      }).then((response) => {
-        if (response.status == 200) return response.json();
-        this.$root.throwApiResponseError(
-          response,
-          "Unknown response when querying attached artifact"
-        );
-      });
-    },
-
-    apiAttachArtifact(opId, artifactPath, kindUrn, artifactId, isInput) {
-      
-      let attachment = {
-        kind_urn: kindUrn,
-        artifact_id: artifactId,
-        is_input: isInput || false,
-        artifact_path: artifactPath,
-      }
-
-      return this.$root.apiFetch("operations/" + opId + "/artifacts/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(attachment),
-      }).then((response) => {
-        if (response.status == 200) return response.json();
-        this.$root.throwApiResponseError(
-          response,
-          "Unknown response when creating attachment"
-        );
-      });
-    },
-    apiDetachArtifact(opId, artifactPath, kindUrn, artifactId) {
-      
-      let attachment = {
-        kind_urn: kindUrn,
-        artifact_id: artifactId,
-        artifact_path: artifactPath,
-      }
-
-      return this.$root.apiFetch("operations/" + opId + "/artifacts/", {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(attachment),
-      }).then((response) => {
-        if (response.status == 200) return response.json();
-        this.$root.throwApiResponseError(
-          response,
-          "Unknown response when removing attachment"
-        );
-      });
-    },
-
     refreshAttachments() {
-      
       this.attachmentNodes = null;
-      
-      return this.apiFetchAttachedArtifacts(this.opId, this.artifactPath).then(
-        (artifactNode) => {
-          this.attachmentNodes = artifactNode['attachments'];
+
+      return this.$root
+        .apiFetchAttachedArtifacts(this.opId, this.artifactPath)
+        .then((artifactNode) => {
+          this.attachmentNodes = artifactNode["attachments"];
           for (let i = 0; i < this.attachmentKinds.length; ++i) {
             let attachmentKind = this.attachmentKinds[i];
             if (this.findSimilarAttachmentNode(attachmentKind.kind_urn) == null)
-              this.attachmentNodes.push({ kind_urn: attachmentKind.kind_urn, attachments: [] });
+              this.attachmentNodes.push({
+                kind_urn: attachmentKind.kind_urn,
+                attachments: [],
+              });
           }
 
           this.sortAttachments();
-        }
-      );
+        });
     },
 
     splitKind(kindUrn) {
       let splitAt = kindUrn.lastIndexOf(":");
       if (splitAt == 0) splitAt = -1;
       if (splitAt < 0) return [kindUrn, null];
-      return [kindUrn.substring(0, splitAt), kindUrn.substring(splitAt + 1, kindUrn.length)];
+      return [
+        kindUrn.substring(0, splitAt),
+        kindUrn.substring(splitAt + 1, kindUrn.length),
+      ];
     },
 
     sortAttachments() {
-      
       let kindIndices = {};
       for (let i = 0; i < this.attachmentKinds.length; ++i) {
         kindIndices[this.attachmentKinds[i].kind_urn] = i;
       }
 
       this.attachmentNodes.sort((a, b) => {
-
         let splitA = this.splitKind(a.kind_urn);
         let kindA = splitA[0];
         let keyA = splitA[1];
@@ -259,7 +270,8 @@ export default {
         let bIndex = kindIndices[kindB];
 
         // Unknown types, just compare full kind urns
-        if (aIndex == null && bIndex == null) return a.kind_urn.localeCompare(b.kind_urn);
+        if (aIndex == null && bIndex == null)
+          return a.kind_urn.localeCompare(b.kind_urn);
         if (aIndex == null) return 1;
         if (bIndex == null) return -1;
 
@@ -300,35 +312,120 @@ export default {
     onAttachArtifactBegin() {
       this.newKindUrn = null;
       this.newKind = null;
+      this.newAttachType = "output";
       this.newKindKey = null;
       this.newTypeUrn = null;
       this.newName = null;
       this.newDescription = null;
       this.isAttachingArtifact = true;
+
+      this.isTextQueryingOperations = false;
+      this.operationsTextQuery = null;
+      this.operationsTextQueryResult = null;
+      this.selectedOperation = null;
+      this.selectedOperationCandidates = null;
+      this.selectedCandidate = null;
     },
     onAttachmentKindSelected(kindUrn) {
       this.newKindUrn = kindUrn;
       this.newKind = this.findSimilarAttachmentKind(this.newKindUrn);
     },
-    onAttachArtifactSubmit() {
+    onTextQueryOperations(textQuery) {
+      if (this.isTextQueryingOperations) return;
+      textQuery = textQuery.trim();
+      if (this.operationsTextQuery == textQuery) return;
+      this.operationsTextQuery = textQuery;
 
+      if (
+        this.operationsTextQuery == null ||
+        this.operationsTextQuery.length == 0
+      ) {
+        this.operationsTextQueryResult = null;
+        return;
+      }
+
+      this.isTextQueryingOperations = true;
+      this.operationsTextQuery = textQuery;
+
+      return this.$root
+        .apiTextQueryOperations(this.operationsTextQuery, this.projectId)
+        .then((result) => {
+          this.operationsTextQueryResult = result;
+        })
+        .finally(() => {
+          this.isTextQueryingOperations = false;
+        });
+    },
+    onOperationSelected(selected) {
+      this.selectedOperation = selected;
+      this.selectedOperationCandidates = null;
+      this.selectedCandidate = null;
+
+      return this.$root
+        .apiFetchArtifactsLs(this.selectedOperation.id)
+        .then((listing) => {
+          let typeUrns = this.newKind.types.map(
+            (t) => "urn:x-mfg:artifact" + t["type_urn"]
+          );
+          this.selectedOperationCandidates = listing.filter(
+            (c) => typeUrns.indexOf(c.type_urn) >= 0
+          );
+        });
+    },
+
+    onAttachArtifactSubmit() {
+      if (this.newAttachType == "output")
+        return this.onAttachOutputArtifactSubmit();
+      else if (this.newAttachType == "input")
+        return this.onAttachInputArtifactSubmit();
+    },
+
+    onAttachInputArtifactSubmit() {
+      let fullKindUrn =
+        this.newKindUrn + (this.newKindKey ? ":" + this.newKindKey : "");
+
+      return this.$root
+        .apiAttachArtifact(
+          this.opId,
+          this.artifactPath,
+          fullKindUrn,
+          this.selectedCandidate["id"],
+          true
+        )
+        .then(() => {
+          return this.refreshAttachments();
+        })
+        .finally(() => {
+          this.isAttachingArtifact = false;
+        });
+    },
+
+    onAttachOutputArtifactSubmit() {
       let artifact = {
         type_urn: this.newTypeUrn,
         project: this.projectId,
         name: this.newName,
         description: this.newDescription,
-      }
+      };
 
-      if (artifact['type_urn'].startsWith(":")) artifact['type_urn'] = "urn:x-mfg:artifact" + artifact['type_urn'];
+      if (artifact["type_urn"].startsWith(":"))
+        artifact["type_urn"] = "urn:x-mfg:artifact" + artifact["type_urn"];
 
-      return this.apiCreateArtifact(artifact)
+      return this.$root
+        .apiCreateArtifact(artifact)
         .then((artifact) => {
+          let fullKindUrn =
+            this.newKindUrn + (this.newKindKey ? ":" + this.newKindKey : "");
 
-          let fullKindUrn = this.newKindUrn + (this.newKindKey ? ":" + this.newKindKey : "");
-
-          return this.apiInitArtifact(artifact['id'], {})
+          return this.$root
+            .apiInitArtifact(artifact["id"], {})
             .then(() => {
-              return this.apiAttachArtifact(this.opId, this.artifactPath, fullKindUrn, artifact['id']);
+              return this.$root.apiAttachArtifact(
+                this.opId,
+                this.artifactPath,
+                fullKindUrn,
+                artifact["id"]
+              );
             })
             .then(() => {
               return this.refreshAttachments();
@@ -338,10 +435,20 @@ export default {
           this.isAttachingArtifact = false;
         });
     },
-    onDetachArtifact(kindUrn, artifactId) {
-      if (!confirm("Are you sure you want to detach a " + kindUrn + " artifact?")) return;
+    onDetachArtifact(kindUrn, artifactId, isInput) {
+      if (
+        !confirm("Are you sure you want to detach a " + kindUrn + " artifact?")
+      )
+        return;
 
-      return this.apiDetachArtifact(this.opId, this.artifactPath, kindUrn, artifactId)
+      return this.$root
+        .apiDetachArtifact(
+          this.opId,
+          this.artifactPath,
+          kindUrn,
+          artifactId,
+          isInput
+        )
         .finally(() => {
           this.refreshAttachments();
         });
@@ -353,5 +460,4 @@ export default {
 };
 </script>
 
-<style scoped>
-</style>
+<style scoped></style>

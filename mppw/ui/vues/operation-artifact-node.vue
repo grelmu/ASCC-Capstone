@@ -4,6 +4,16 @@
       <o-collapse class="card" animation="slide" :open="false">
         <template v-slot:trigger="trigger">
           <div class="card-header" role="button">
+            <router-link
+              v-if="artifactNode['is_input']"
+              :to="'/operations/' + artifactOpParent['id']"
+              :title="artifactOpParent['name']"
+              target="_blank"
+              @click="onClickInputLink"
+              class="card-header-icon"
+            >
+              <o-icon :icon="'link'"></o-icon>
+            </router-link>
             <div class="card-header-title">
               <div style="flex-basis: 100%">
                 <div v-if="!artifact['name']">
@@ -95,7 +105,29 @@
       <div v-if="isDigitalArtifact()">
         <h3>Spatial Frame</h3>
 
-        <o-field label="Parent Frame">
+        <o-field label="Parent Frame Artifact">
+          <o-autocomplete
+            rounded
+            expanded
+            v-model="selectedOperationName"
+            :data="operationsTextQueryResult"
+            field="name"
+            placeholder="Operation Name"
+            icon="text-search"
+            clearable
+            :loading="isTextQueryingOperations"
+            :debounce-typing="500"
+            @typing="onTextQueryOperations"
+            @select="onOperationSelected"
+          >
+            <template v-slot:empty>No results found</template>
+            <template v-slot:default="props">
+              {{ props.option.name }}
+            </template>
+          </o-autocomplete>
+        </o-field>
+
+        <o-field v-if="selectedOperation || newSpatialFrame.parent_frame">
           <o-select
             placeholder="Select a spatial parent artifact"
             v-model="newSpatialFrame.parent_frame"
@@ -106,7 +138,8 @@
               :value="candidate.id"
             >
               <span v-if="candidate.kind_urn">
-                {{ candidate.name ? candidate.name + " @ " : "" }}{{ candidate.kind_urn }}.{{ candidate.id }}
+                {{ candidate.name ? candidate.name + " @ " : ""
+                }}{{ candidate.kind_urn }}.{{ candidate.id }}
               </span>
               <span v-if="!candidate.kind_urn">
                 {{ candidate.name || id }} (current) ({{ candidate.id }})
@@ -118,14 +151,17 @@
         <o-field label="Translation XYZ">
           <o-input
             type="number"
+            step="any"
             v-model="newSpatialFrame['transform']['translation_xyz']['x']"
           ></o-input>
           <o-input
             type="number"
+            step="any"
             v-model="newSpatialFrame['transform']['translation_xyz']['y']"
           ></o-input>
           <o-input
             type="number"
+            step="any"
             v-model="newSpatialFrame['transform']['translation_xyz']['z']"
           ></o-input>
         </o-field>
@@ -133,14 +169,17 @@
         <o-field label="Rotation (Euler) αβγ">
           <o-input
             type="number"
+            step="any"
             v-model="newSpatialFrame['transform']['rotation_euler_abg']['a']"
           ></o-input>
           <o-input
             type="number"
+            step="any"
             v-model="newSpatialFrame['transform']['rotation_euler_abg']['b']"
           ></o-input>
           <o-input
             type="number"
+            step="any"
             v-model="newSpatialFrame['transform']['rotation_euler_abg']['g']"
           ></o-input>
         </o-field>
@@ -191,7 +230,9 @@ export default {
 
   data() {
     return {
+      artifactId: null,
       artifact: null,
+      artifactOpParent: null,
       artifactType: null,
       artifactKind: null,
       isCollapsed: true,
@@ -199,6 +240,13 @@ export default {
       isEditingMeta: false,
       newName: null,
       newDescription: null,
+
+      isTextQueryingOperations: false,
+      operationsTextQuery: null,
+      operationsTextQueryResult: null,
+      selectedOperation: null,
+      selectedOperationName: null,
+
       newSpatialFrame: null,
       parentFrameCandidates: null,
     };
@@ -208,73 +256,41 @@ export default {
     projectId: String,
     opId: String,
     artifactPath: Array,
-    artifactId: String,
+    artifactNode: Object,
     attachmentKind: Object,
   },
 
   methods: {
-    apiFetchArtifact(id) {
-      return this.$root
-        .apiFetch("artifacts/" + id, { method: "GET" })
-        .then((response) => {
-          if (response.status == 200) return response.json();
-          else return { version: "" };
-        });
-    },
-    apiUpdateArtifact(artifact) {
-      return this.$root
-        .apiFetch("artifacts/" + artifact["id"], {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(artifact),
-        })
-        .then((response) => {
-          if (response.status == 200) return response.json();
-          this.$root.throwApiResponseError(
-            response,
-            "Unknown response when updating artifact"
-          );
-        });
-    },
-    apiFetchArtifactFrameCandidates(opId, artifactPath) {
-      return this.$root
-        .apiFetch(
-          "operations/" +
-            opId +
-            "/artifacts/frame_candidates?strategy=operation_local&artifact_path=" +
-            encodeURIComponent(artifactPath.join(".")),
-          {
-            method: "GET",
-          }
-        )
-        .then((response) => {
-          if (response.status == 200) return response.json();
-          this.$root.throwApiResponseError(
-            response,
-            "Unknown response when querying frame candidates"
-          );
-        });
-    },
     refreshArtifact() {
       this.artifact = null;
+      this.artifactOpParent = null;
       if (this.artifactId == null) {
         this.artifactType = this.attachmentKind["types"][0];
         return Promise.resolve(null);
       }
 
-      return this.apiFetchArtifact(this.artifactId).then((artifact) => {
-        this.artifact = artifact;
-        this.artifactType = this.findSimilarArtifactType(
-          this.artifact["type_urn"].replace("urn:x-mfg:artifact", "")
-        );
-      });
+      return this.$root
+        .apiFetchArtifact(this.artifactId)
+        .then((artifact) => {
+          if (!this.artifactNode["is_input"]) return artifact;
+          return this.$root
+            .apiFetchArtifactOperationParent(artifact["id"])
+            .then((opParent) => {
+              this.artifactOpParent = opParent;
+              return artifact;
+            });
+        })
+        .then((artifact) => {
+          this.artifact = artifact;
+          this.artifactType = this.findSimilarArtifactType(
+            this.artifact["type_urn"].replace("urn:x-mfg:artifact", "")
+          );
+        });
     },
     refreshParentFrameCandidates() {
       let currentFramePromise = (
         this.newSpatialFrame.parent_frame
-          ? this.apiFetchArtifact(this.newSpatialFrame.parent_frame)
+          ? this.$root.apiFetchArtifact(this.newSpatialFrame.parent_frame)
           : Promise.resolve(null)
       ).then((artifact) => {
         return artifact != null
@@ -282,22 +298,25 @@ export default {
           : [];
       });
 
-      let candidatesPromise = this.apiFetchArtifactFrameCandidates(
-        this.opId,
-        this.artifactPath
-      );
+      let candidatesPromise =
+        this.selectedOperation != null
+          ? this.$root.apiFetchArtifactFrameCandidates(
+              this.selectedOperation.id,
+              this.artifactPath
+            )
+          : Promise.resolve([]);
 
       return Promise.all([currentFramePromise, candidatesPromise]).then(
         (allCandidates) => {
-          this.parentFrameCandidates = allCandidates[0].concat(allCandidates[1]);
+          this.parentFrameCandidates = allCandidates[0].concat(
+            allCandidates[1]
+          );
           this.sortParentFrameCandidates();
         }
       );
     },
     sortParentFrameCandidates() {
-      
       this.parentFrameCandidates.sort((a, b) => {
-        
         if (a.kind_urn == null) return -1;
         if (b.kind_urn == null) return 1;
 
@@ -337,10 +356,20 @@ export default {
       }
       return componentMap["default"];
     },
+    onClickInputLink(event) {
+      event.stopPropagation();
+      event.target.closest("a").click();
+    },
     onStartEditMeta() {
       this.newName = this.artifact["name"];
       this.newDescription = this.artifact["description"];
       this.isEditingMeta = true;
+
+      this.isTextQueryingOperations = false;
+      this.operationsTextQuery = null;
+      this.operationsTextQueryResult = null;
+      this.selectedOperation = null;
+
       event.stopPropagation();
 
       if (!this.isDigitalArtifact()) return;
@@ -360,40 +389,106 @@ export default {
         (this.artifact["spatial_frame"] || {}).transform
       );
 
-      this.parentFrameCandidates = null;
+      if (this.newSpatialFrame["parent_frame"] == null) return;
+
+      return this.$root
+        .apiFetchArtifactOperationParent(this.newSpatialFrame["parent_frame"])
+        .then((parent) => {
+          if (parent != null) {
+            this.operationsTextQueryResult = [parent];
+            this.selectedOperation = parent;
+            this.selectedOperationName = parent["name"];
+          }
+
+          return this.refreshParentFrameCandidates();
+        });
+    },
+    onTextQueryOperations(textQuery) {
+      if (this.isTextQueryingOperations) return;
+      textQuery = textQuery.trim();
+      if (this.operationsTextQuery == textQuery) return;
+      this.operationsTextQuery = textQuery;
+
+      let emptyQuery =
+        this.operationsTextQuery == null ||
+        this.operationsTextQuery.length == 0;
+
+      let queryPromise = this.$root.apiFetchOperation(this.opId);
+
+      queryPromise = (
+        !emptyQuery
+          ? Promise.all([
+              queryPromise,
+              this.$root.apiTextQueryOperations(
+                this.operationsTextQuery,
+                this.projectId
+              ),
+            ])
+          : Promise.all([queryPromise, Promise.resolve([])])
+      ).then((results) => {
+        return [results[0]].concat(results[1]);
+      });
+
+      this.isTextQueryingOperations = true;
+      this.operationsTextQuery = textQuery;
+
+      return queryPromise
+        .then((result) => {
+          this.operationsTextQueryResult = result;
+        })
+        .finally(() => {
+          this.isTextQueryingOperations = false;
+        });
+    },
+    onOperationSelected(selected) {
+      this.selectedOperation = selected;
+      this.newSpatialFrame.parent_frame = null;
       return this.refreshParentFrameCandidates();
     },
     onSubmitMeta() {
-      this.artifact.name = this.newName;
-      this.artifact.description = this.newDescription;
+      let changes = [];
+      changes.push({ op: "replace", path: "name", value: this.newName });
+      changes.push({
+        op: "replace",
+        path: "description",
+        value: this.newDescription,
+      });
+
       if (this.isDigitalArtifact()) {
         for (let k in this.newSpatialFrame.transform.translation_xyz)
           this.newSpatialFrame.transform.translation_xyz[k] = Number.parseFloat(
             this.newSpatialFrame.transform.translation_xyz[k]
           );
+
         for (let k in this.newSpatialFrame.transform.rotation_euler_abg)
           this.newSpatialFrame.transform.rotation_euler_abg[k] =
             Number.parseFloat(
               this.newSpatialFrame.transform.rotation_euler_abg[k]
             );
 
-        this.artifact.spatial_frame = this.newSpatialFrame;
+        changes.push({
+          op: "replace",
+          path: "spatial_frame",
+          value: this.newSpatialFrame,
+        });
       }
 
-      return this.apiUpdateArtifact(this.artifact).finally(() => {
-        this.isEditingMeta = false;
-        return this.refreshArtifact();
-      });
+      return this.$root
+        .apiPatchArtifact(this.artifact.id, changes)
+        .finally(() => {
+          this.isEditingMeta = false;
+          return this.refreshArtifact();
+        });
     },
   },
   created() {
+    this.artifactId = this.artifactNode["artifact_id"];
     if (this.artifactPath.length > 1)
       this.artifactKind = this.artifactPath[this.artifactPath.length - 2];
     return this.refreshArtifact();
   },
 };
 </script>
-
 
 <style scoped>
 .card {

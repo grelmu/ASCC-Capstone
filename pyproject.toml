@@ -33,12 +33,18 @@ pytest = "^6.2.5"
 #matplotlib = "^3.5.1"
 #ipympl = "^0.8.7"
 # END for (fff_)analysis
+black = {version = "^22.3.0", allow-prereleases = true}
 
 
 [tool.poetry.scripts]
 mppw-docker = "scripts.docker:main"
 mppw-migrations = "scripts.migrations:main"
 mppw-app = "scripts.app:main"
+
+[tool.black]
+extend-exclude = '''
+(^/(containers|fff_post|mppw/pcl))
+'''
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

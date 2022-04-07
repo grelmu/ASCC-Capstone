@@ -7,16 +7,18 @@ import datetime
 
 from mppw import logger
 
-class DbId:
 
+class DbId:
     @classmethod
     def __get_validators__(cls):
         yield cls.validate
 
     @classmethod
     def validate(cls, val):
-        if isinstance(val, DbId): return val
-        if isinstance(val, bson.ObjectId): return ObjectDbId(val)
+        if isinstance(val, DbId):
+            return val
+        if isinstance(val, bson.ObjectId):
+            return ObjectDbId(val)
         if isinstance(val, str):
             try:
                 return ObjectDbId(bson.ObjectId(val))
@@ -27,18 +29,20 @@ class DbId:
 
     @classmethod
     def __modify_schema__(cls, field_schema):
-        field_schema.update(type='string')
+        field_schema.update(type="string")
 
     @classmethod
     def bson_encoder(cls):
         class BsonEncoder(bson.codec_options.TypeEncoder):
             python_type = cls
+
             def transform_python(self, value):
                 return value.id
+
         return BsonEncoder()
 
-class ObjectDbId(DbId):
 
+class ObjectDbId(DbId):
     def __init__(self, id: bson.ObjectId):
         self.id = id
 
@@ -51,8 +55,8 @@ class ObjectDbId(DbId):
     def __json__(self):
         return str(self.id)
 
-class StrDbId(DbId):
 
+class StrDbId(DbId):
     def __init__(self, id: str):
         self.id = id
 
@@ -64,13 +68,14 @@ class StrDbId(DbId):
 
     def __json__(self):
         return self.id
-  
+
+
 class ConfigKv(pydantic.BaseModel):
     key: str
     value: Optional[str]
 
-class BaseJsonModel(pydantic.BaseModel):
 
+class BaseJsonModel(pydantic.BaseModel):
     class Config(pydantic.BaseConfig):
         json_encoders = {
             datetime.datetime: lambda dt: dt.isoformat(),
@@ -81,15 +86,16 @@ class BaseJsonModel(pydantic.BaseModel):
 
     @staticmethod
     def to_json(value):
-
         class SerializeModel(BaseJsonModel):
             v: Any
-        
+
         ser_model = SerializeModel(v=value)
-        return ser_model.json()[len("{\"v\":"):-1]
+        return ser_model.json()[len('{"v":') : -1]
+
 
 class DocModel(BaseJsonModel):
     id: Optional[DbId]
+
 
 class SafeUser(DocModel):
     username: str
@@ -97,22 +103,27 @@ class SafeUser(DocModel):
     local_claims: Optional[Dict[str, Any]]
     active: bool = True
 
+
 class User(SafeUser):
     hashed_password: str
+
 
 # class Scope(SQLModel, table=True):
 #     id: Optional[int] = Field(default=None, primary_key=True)
 #     name: str
 #     description: str
 
+
 class Project(DocModel):
     name: str
     description: Optional[str]
     active: bool = True
 
+
 class GeometryLabel(pydantic.BaseModel):
     name: str
     coordinate: List[float]
+
 
 class Artifact(DocModel):
 
@@ -127,6 +138,7 @@ class Artifact(DocModel):
     tags: Optional[List[str]]
     active: bool = True
 
+
 class MaterialArtifact(Artifact):
 
     URN_PREFIX: ClassVar = f"{Artifact.URN_PREFIX}:material"
@@ -140,13 +152,17 @@ class MaterialArtifact(Artifact):
     @pydantic.validator("type_urn")
     def valid_type_urn_prefix(cls, v):
         if not v.startswith(MaterialArtifact.URN_PREFIX):
-            raise ValueError(f"material artifact URNs must start with {MaterialArtifact.URN_PREFIX}: {v}")
+            raise ValueError(
+                f"material artifact URNs must start with {MaterialArtifact.URN_PREFIX}: {v}"
+            )
         return v
+
 
 class SpatialFrame(pydantic.BaseModel):
 
     parent_frame: Optional[DbId]
     transform: Any
+
 
 class DigitalArtifact(Artifact):
 
@@ -160,10 +176,14 @@ class DigitalArtifact(Artifact):
     @pydantic.validator("type_urn")
     def valid_type_urn_prefix(cls, v):
         if not v.startswith(DigitalArtifact.URN_PREFIX):
-            raise ValueError(f"digital artifact URNs must start with {DigitalArtifact.URN_PREFIX}: {v}")
+            raise ValueError(
+                f"digital artifact URNs must start with {DigitalArtifact.URN_PREFIX}: {v}"
+            )
         return v
 
+
 AnyArtifact = Union[MaterialArtifact, DigitalArtifact]
+
 
 class ArtifactTransform(BaseJsonModel):
 
@@ -173,6 +193,7 @@ class ArtifactTransform(BaseJsonModel):
     input_artifacts: Optional[List[DbId]]
     output_artifacts: Optional[List[DbId]]
     parameters: Any
+
 
 class Operation(DocModel):
 
@@ -201,8 +222,14 @@ class Operation(DocModel):
     @pydantic.validator("type_urn")
     def valid_type_urn_prefix(cls, v):
         if not v.startswith(Operation.URN_PREFIX):
-            raise ValueError(f"operation URNs must start with {Operation.URN_PREFIX}: {v}")
+            raise ValueError(
+                f"operation URNs must start with {Operation.URN_PREFIX}: {v}"
+            )
         return v
 
     def get_artifacts_of_kind(self, kind_urn: str):
-        return list(filter(lambda t: t.kind_urn.startswith(kind_urn), self.artifact_transform_graph))
+        return list(
+            filter(
+                lambda t: t.kind_urn.startswith(kind_urn), self.artifact_transform_graph
+            )
+        )

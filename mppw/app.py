@@ -6,6 +6,7 @@ import fastapi.staticfiles
 from mppw import logger
 from mppw import __version__ as __mppw_version__
 
+
 def create_app(storage_layer):
 
     app = fastapi.FastAPI()
@@ -19,7 +20,7 @@ def create_app(storage_layer):
     storage.init_app_storage_layer(app, storage_layer)
 
     from . import repositories
-    
+
     repositories.init_request_repo_layer(app)
 
     from . import services
@@ -39,7 +40,13 @@ def create_app(storage_layer):
     def ui_root():
         return fastapi.responses.RedirectResponse("/ui/index.html")
 
-    app.mount("/ui", fastapi.staticfiles.StaticFiles(directory=os.path.join(os.path.dirname(__file__), "ui")), name="ui")
+    app.mount(
+        "/ui",
+        fastapi.staticfiles.StaticFiles(
+            directory=os.path.join(os.path.dirname(__file__), "ui")
+        ),
+        name="ui",
+    )
 
     @app.get("/version")
     def version():
