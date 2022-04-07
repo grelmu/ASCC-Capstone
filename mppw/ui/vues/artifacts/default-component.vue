@@ -18,10 +18,9 @@ export default {
   methods: {
     refreshArtifact() {
       this.artifact = null;
-      return this.$root.apiFetchArtifact(this.artifactId)
-        .then((artifact) => {
-          this.artifact = artifact;
-        });
+      return this.$root.apiFetchArtifact(this.artifactId).then((artifact) => {
+        this.artifact = artifact;
+      });
     },
   },
   created() {

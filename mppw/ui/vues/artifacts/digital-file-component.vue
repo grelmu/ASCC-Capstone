@@ -1,43 +1,91 @@
 <template>
   <div v-if="artifact && opAttachments">
-
     <div class="mt-3 row">
       <div class="col-md-auto">
-        <o-radio v-model="storageType" name="name" native-value="attachment"></o-radio>
+        <o-radio
+          v-model="storageType"
+          name="name"
+          native-value="attachment"
+        ></o-radio>
       </div>
       <div class="col-md-auto">
         <o-field label="Local File Attachment">
-          <o-input v-if="storageType == 'attachment'" v-model="attachmentPath"></o-input>
-          <o-button v-if="storageType == 'attachment' && computeStorageType(artifact) == 'attachment' && (!uploadFile)" variant="primary" @click="onDownloadFile"><o-icon icon="download" size="small"></o-icon>&nbsp;Download</o-button>
-          <o-upload v-if="storageType == 'attachment'" @update:modelValue="onUploadFileSelected">
-            <o-button tag="a" variant="info"><o-icon icon="upload" size="small"></o-icon>&nbsp;Upload</o-button>
+          <o-input
+            v-if="storageType == 'attachment'"
+            v-model="attachmentPath"
+          ></o-input>
+          <o-button
+            v-if="
+              storageType == 'attachment' &&
+              computeStorageType(artifact) == 'attachment' &&
+              !uploadFile
+            "
+            variant="primary"
+            @click="onDownloadFile"
+            ><o-icon icon="download" size="small"></o-icon
+            >&nbsp;Download</o-button
+          >
+          <o-upload
+            v-if="storageType == 'attachment'"
+            @update:modelValue="onUploadFileSelected"
+          >
+            <o-button tag="a" variant="info"
+              ><o-icon icon="upload" size="small"></o-icon
+              >&nbsp;Upload</o-button
+            >
           </o-upload>
-          <o-button v-if="storageType == 'attachment' && uploadFile" variant="warning" @click="onUploadFileRemoved"><o-icon icon="trash-can" size="small"></o-icon>&nbsp;Cancel</o-button>
+          <o-button
+            v-if="storageType == 'attachment' && uploadFile"
+            variant="warning"
+            @click="onUploadFileRemoved"
+            ><o-icon icon="trash-can" size="small"></o-icon
+            >&nbsp;Cancel</o-button
+          >
         </o-field>
         <div v-if="uploadFile">
-          <o-icon icon="upload"></o-icon><span class="font-monospace"><span class="fw-bold">.../{{ uploadFile.name }}</span> ({{ uploadFile.size }} bytes)</span>
+          <o-icon icon="upload"></o-icon
+          ><span class="font-monospace"
+            ><span class="fw-bold">.../{{ uploadFile.name }}</span> ({{
+              uploadFile.size
+            }}
+            bytes)</span
+          >
         </div>
         <div v-if="isProbablyImageFile()">
-          <img :src="this.buildDownloadUrl()" style="width: 30%;">
+          <img :src="this.buildDownloadUrl()" style="width: 30%" />
         </div>
       </div>
     </div>
     <div class="mt-3 row">
       <div class="col-md-auto">
-        <o-radio v-model="storageType" name="name" native-value="remote"></o-radio>
+        <o-radio
+          v-model="storageType"
+          name="name"
+          native-value="remote"
+        ></o-radio>
       </div>
       <div class="col-md-auto">
         <o-field label="Remote File URL">
           <o-input v-if="storageType == 'remote'" v-model="remoteUrl"></o-input>
-          <o-button v-if="storageType == 'remote' && computeStorageType(artifact) == 'remote' && (!uploadFile)" variant="primary" @click="onFollowUrl"><o-icon icon="arrow-right" size="small"></o-icon>&nbsp;Go</o-button>
+          <o-button
+            v-if="
+              storageType == 'remote' &&
+              computeStorageType(artifact) == 'remote' &&
+              !uploadFile
+            "
+            variant="primary"
+            @click="onFollowUrl"
+            ><o-icon icon="arrow-right" size="small"></o-icon>&nbsp;Go</o-button
+          >
         </o-field>
       </div>
     </div>
 
     <div class="mt-3 text-end">
-      <o-button @click="onSaveArtifact()" class="text-end" variant="primary">Save Changes</o-button>
+      <o-button @click="onSaveArtifact()" class="text-end" variant="primary"
+        >Save Changes</o-button
+      >
     </div>
-
   </div>
 </template>
 
@@ -48,7 +96,7 @@ export default {
       artifact: null,
       opAttachments: null,
       storageType: null,
-      
+
       attachmentPath: null,
       uploadFile: null,
       remoteUrl: null,
@@ -60,9 +108,7 @@ export default {
     artifactId: String,
   },
   methods: {
-
     refreshArtifact() {
-
       this.artifact = null;
       this.opAttachments = null;
       this.storageType = null;
@@ -70,7 +116,8 @@ export default {
       this.uploadFile = null;
       this.remoteUrl = null;
 
-      return this.$root.apiFetchArtifact(this.artifactId)
+      return this.$root
+        .apiFetchArtifact(this.artifactId)
         .then((artifact) => {
           this.artifact = artifact;
           return this.$root.apiFetchOpAttachments(this.opId);
@@ -80,9 +127,10 @@ export default {
 
           this.storageType = this.computeStorageType(this.artifact);
           if (this.storageType == "attachment") {
-            this.attachmentPath = this.toOpAttachmentPath(this.artifact["url_data"]);
-          }
-          else if (this.storageType == "remote") {
+            this.attachmentPath = this.toOpAttachmentPath(
+              this.artifact["url_data"]
+            );
+          } else if (this.storageType == "remote") {
             this.remoteUrl = this.artifact["url_data"];
           }
         });
@@ -100,10 +148,19 @@ export default {
       return this.opAttachments["url_data"] + "/" + path;
     },
     computeStorageType(artifact) {
-      return this.artifact["url_data"] ? (this.isOpAttachmentsUrl(this.artifact["url_data"]) ? "attachment" : "remote") : null;
+      return this.artifact["url_data"]
+        ? this.isOpAttachmentsUrl(this.artifact["url_data"])
+          ? "attachment"
+          : "remote"
+        : null;
     },
     onFollowUrl() {
-      window.open(this.$root.apiUrl("artifacts/" + this.artifact["id"] + "/services/file/download"), "_blank");
+      window.open(
+        this.$root.apiUrl(
+          "artifacts/" + this.artifact["id"] + "/services/file/download"
+        ),
+        "_blank"
+      );
     },
     isProbablyImageFile() {
       if (!this.artifact || !this.artifact["url_data"]) return false;
@@ -114,7 +171,9 @@ export default {
     },
     buildDownloadUrl() {
       if (!this.artifact) return null;
-      return this.$root.apiUrl("artifacts/" + this.artifact["id"] + "/services/file/download");
+      return this.$root.apiUrl(
+        "artifacts/" + this.artifact["id"] + "/services/file/download"
+      );
     },
     onDownloadFile() {
       const link = document.createElement("a");
@@ -127,34 +186,42 @@ export default {
     onUploadFileSelected(uploadFile) {
       this.uploadFile = uploadFile;
       if (!this.uploadFile) return;
-      this.attachmentPath = "/" + this.artifactKind.replaceAll(":", "") + "/" + this.uploadFile.name;
+      this.attachmentPath =
+        "/" +
+        this.artifactKind.replaceAll(":", "") +
+        "/" +
+        this.uploadFile.name;
     },
     onUploadFileRemoved() {
       this.uploadFile = null;
       this.attachmentPath = null;
       if (this.computeStorageType(this.artifact) == "attachment") {
-        this.attachmentPath = this.toOpAttachmentPath(this.artifact["url_data"]);
+        this.attachmentPath = this.toOpAttachmentPath(
+          this.artifact["url_data"]
+        );
       }
     },
     onSaveArtifact() {
-      
       let urlPromise = null;
 
       if (this.storageType == "attachment") {
         if (this.uploadFile) {
-          urlPromise = this.$root.apiUploadAttachment(this.opAttachments["id"], this.attachmentPath, this.uploadFile);
+          urlPromise = this.$root.apiUploadAttachment(
+            this.opAttachments["id"],
+            this.attachmentPath,
+            this.uploadFile
+          );
+        } else {
+          urlPromise = Promise.resolve(
+            this.toOpAttachmentsUrl(this.attachmentPath)
+          );
         }
-        else {
-          urlPromise = Promise.resolve(this.toOpAttachmentsUrl(this.attachmentPath));
-        }
-      }
-      else if (this.storageType == "remote") {
+      } else if (this.storageType == "remote") {
         urlPromise = Promise.resolve(this.remoteUrl);
       }
 
       return urlPromise
         .then((file_url) => {
-          
           let changes = [];
           changes.push({ op: "replace", path: "url_data", value: file_url });
 

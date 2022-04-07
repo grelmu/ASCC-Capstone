@@ -1,27 +1,29 @@
-import * as Vue from "vue"
-import {loadModule} from "vue3-sfc-loader"
+import * as Vue from "vue";
+import { loadModule } from "vue3-sfc-loader";
 
 const loadVueOptions = {
-    moduleCache: { vue: Vue, },
+  moduleCache: { vue: Vue },
 
-    async getFile(url) {
-        const res = await fetch(url);
-        if (!res.ok) throw Object.assign(new Error(url + ' ' + res.statusText), { res });
-        return await res.text();
-    },
+  async getFile(url) {
+    const res = await fetch(url);
+    if (!res.ok)
+      throw Object.assign(new Error(url + " " + res.statusText), { res });
+    return await res.text();
+  },
 
-    addStyle(textContent) {
-        const style = Object.assign(document.createElement('style'), { textContent });
-        const ref = document.head.getElementsByTagName('style')[0] || null;
-        document.head.insertBefore(style, ref);
-    },
+  addStyle(textContent) {
+    const style = Object.assign(document.createElement("style"), {
+      textContent,
+    });
+    const ref = document.head.getElementsByTagName("style")[0] || null;
+    document.head.insertBefore(style, ref);
+  },
 
-    log(type, ...args) {
+  log(type, ...args) {
+    console[type](...args);
+  },
 
-        console[type](...args);
-    },
-
-    /*
+  /*
     compiledCache: {
     set(key, str) {
 
@@ -53,16 +55,16 @@ const loadVueOptions = {
         return JSON.parse(source);
     }
     */
-}
+};
 
 function component(vue_url) {
-    return loadModule(vue_url, loadVueOptions)
+  return loadModule(vue_url, loadVueOptions);
 }
 function lazyComponent(vue_url) {
-    return () => loadModule(vue_url, loadVueOptions)
+  return () => loadModule(vue_url, loadVueOptions);
 }
 function asyncComponent(vue_url) {
-    return Vue.defineAsyncComponent(() => loadModule(vue_url, loadVueOptions))
+  return Vue.defineAsyncComponent(() => loadModule(vue_url, loadVueOptions));
 }
 
-export {component, lazyComponent, asyncComponent}
+export { component, lazyComponent, asyncComponent };

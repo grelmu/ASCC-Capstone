@@ -487,7 +487,6 @@ export default {
 };
 </script>
 
-
 <style scoped>
 .card {
   max-width: 100%;

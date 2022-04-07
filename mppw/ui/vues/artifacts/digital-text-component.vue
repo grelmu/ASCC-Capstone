@@ -1,6 +1,5 @@
 <template>
   <div v-if="artifact">
-    
     <o-input type="textarea" v-model="artifact.local_data.text"></o-input>
 
     <div class="mt-3 text-end">
@@ -12,9 +11,7 @@
 </template>
 
 <script>
-
 export default {
-
   data() {
     return {
       artifact: null,
@@ -34,14 +31,16 @@ export default {
       });
     },
     onSaveArtifact() {
-
       let changes = [];
-      changes.push({ op: "replace", path: "local_data", value: this.artifact.local_data });
+      changes.push({
+        op: "replace",
+        path: "local_data",
+        value: this.artifact.local_data,
+      });
 
-      return this.$root.apiPatchArtifact(this.artifactId, changes)
-        .then(() => {
-          return this.refreshArtifact();
-        });
+      return this.$root.apiPatchArtifact(this.artifactId, changes).then(() => {
+        return this.refreshArtifact();
+      });
     },
   },
   created() {
@@ -50,5 +49,4 @@ export default {
 };
 </script>
 
-<style scoped>
-</style>
+<style scoped></style>

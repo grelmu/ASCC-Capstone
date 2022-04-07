@@ -79,14 +79,16 @@ export default {
       });
     },
     onSaveArtifact() {
-
       let changes = [];
-      changes.push({ op: "replace", path: "local_data", value: this.artifact.local_data });
+      changes.push({
+        op: "replace",
+        path: "local_data",
+        value: this.artifact.local_data,
+      });
 
-      return this.$root.apiPatchArtifact(this.artifactId, changes)
-        .then(() => {
-          return this.refreshArtifact();
-        });
+      return this.$root.apiPatchArtifact(this.artifactId, changes).then(() => {
+        return this.refreshArtifact();
+      });
     },
   },
   created() {

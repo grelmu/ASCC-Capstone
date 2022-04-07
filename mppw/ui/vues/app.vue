@@ -104,7 +104,6 @@
   </div>
 </template>
 
-
 <script>
 const routes = [
   {
@@ -597,7 +596,6 @@ export default {
   },
 };
 </script>
-
 
 <style scoped>
 .feather {
