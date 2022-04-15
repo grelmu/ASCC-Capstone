@@ -289,6 +289,17 @@ export default {
         );
       });
     },
+    apiFetchDigitalArtifactJsonSchema(id) {
+      return this.apiFetch("artifacts/" + id + "/services/artifact/digital/json_schema", {
+        method: "GET",
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when retrieving json schema for artifact"
+        );
+      });
+    },
     apiUpdateArtifact(artifact) {
       return this.apiFetch("artifacts/" + artifact["id"], {
         method: "PUT",

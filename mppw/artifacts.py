@@ -187,6 +187,16 @@ def create_router(app):
         services = service_layer.artifact_services_for(artifact)
         return services.operation_parent(artifact)
 
+    @router.get("/{id}/services/artifact/digital/json_schema", response_model=typing.Optional[dict])
+    def json_schema(
+        id: str,
+        user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+        service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
+    ):
+        artifact: models.Artifact = read(id, user, service_layer.repo_layer)
+        services = service_layer.artifact_services_for(artifact)
+        return services.json_schema(artifact)
+
     class SyncUploadFile:
         def __init__(self, uf: fastapi.UploadFile):
             self.uf = uf

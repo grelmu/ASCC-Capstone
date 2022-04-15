@@ -201,8 +201,12 @@ const componentMap = {
   "urn:x-mfg:artifact:digital:file": "digital-file-component",
   "urn:x-mfg:artifact:digital:file-bucket": "digital-file-bucket-component",
   "urn:x-mfg:artifact:digital:fiducial-points":
-    "digital-fiducial-points-component",
-  default: "default-component",
+    "digital-frame-document-component",
+  "urn:x-mfg:artifact:digital:document":
+    "digital-frame-document-component",
+  "urn:x-mfg:artifact:digital:frame":
+    "digital-frame-document-component",
+  "urn:x-mfg:artifact": "default-component",
 };
 
 export default {
@@ -220,8 +224,11 @@ export default {
     "digital-file-bucket-component": RemoteVue.asyncComponent(
       "vues/artifacts/digital-file-bucket-component.vue"
     ),
-    "digital-fiducial-points-component": RemoteVue.asyncComponent(
-      "vues/artifacts/digital-fiducial-points-component.vue"
+    "digital-document-component": RemoteVue.asyncComponent(
+      "vues/artifacts/digital-document-component.vue"
+    ),
+    "digital-frame-document-component": RemoteVue.asyncComponent(
+      "vues/artifacts/digital-frame-document-component.vue"
     ),
     "default-component": RemoteVue.asyncComponent(
       "vues/artifacts/default-component.vue"
@@ -343,18 +350,22 @@ export default {
 
       return null;
     },
-    artifactComponentFor(type_urn) {
-      if (type_urn) {
-        for (let component_type_urn in componentMap) {
+    artifactComponentFor(typeUrn) {
+      if (typeUrn) {
+
+        let componentTypeUrns = Object.keys(componentMap).sort().reverse();
+        
+        for (let i = 0; i < componentTypeUrns.length; ++i) {
+          let componentTypeUrn = componentTypeUrns[i];
           if (
-            type_urn == component_type_urn ||
-            type_urn.startsWith(component_type_urn + ":")
+            typeUrn == componentTypeUrn ||
+            typeUrn.startsWith(componentTypeUrn + ":")
           ) {
-            return componentMap[component_type_urn];
+            return componentMap[componentTypeUrn];
           }
         }
       }
-      return componentMap["default"];
+      return componentMap["urn:x-mfg:artifact"];
     },
     onClickInputLink(event) {
       event.stopPropagation();

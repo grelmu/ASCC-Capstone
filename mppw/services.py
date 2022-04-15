@@ -12,6 +12,7 @@ import furl
 from mppw import logger
 
 from . import models
+from . import schemas
 from . import repositories
 
 DATABASE_BUCKET_URN_PREFIX = f"{models.DigitalArtifact.URN_PREFIX}:database-bucket"
@@ -126,20 +127,36 @@ class OperationServices:
                 (
                     ":digital:database-bucket",
                     {
-                        ":streams": [":digital:time-series"],
+                        ":streams": [
+                            ":digital:time-series",
+                        ],
                     },
                 ),
                 (
                     ":digital:file-bucket",
                     {
-                        ":streams": [":digital:time-series"],
+                        ":streams": [
+                            ":digital:time-series",
+                        ],
                     },
                 ),
-                ":digital:file",
-                ":digital:text",
+                (
+                    ":digital:file",
+                    {
+                        ":streams": [
+                            ":digital:time-series",
+                        ]
+                    },
+                ),
                 ":digital:time-series",
             ],
-            ":attachments": [":digital:file-bucket", ":digital:file", "digital:text"],
+            ":attachments": [
+                ":digital:text",
+                ":digital:document",
+                ":digital:frame",
+                ":digital:file",
+                ":digital:file-bucket",
+            ],
         }
     )
 
@@ -639,35 +656,12 @@ class DimensioningServices(OperationServices):
 
 class TensileTestServices(OperationServices):
 
-    URN_PREFIX = f"{models.Operation.URN_PREFIX}:characterize:tensiletest"
+    URN_PREFIX = f"{models.Operation.URN_PREFIX}:characterize:tensile-test"
     DEFAULT_NAME = "Tensile Test Operation"
     DEFAULT_DESCRIPTION = "A test of tensile stress response"
 
     ATTACHMENT_KINDS = AttachmentKind.make(
-        {
-            ":input-parts": [
-                (
-                    ":material:part",
-                    {
-                        ":part-geometry": [
-                            ":digital:astm.d638.dimensions",
-                        ],
-                        ":measurements": [
-                            ":digital:astm.d638.stressstrain",
-                            ":digital:astm.d638.yieldstrength",
-                            ":digital:astm.d638.elasticmod",
-                        ],
-                        ":images": [
-                            ":digital:file",
-                        ],
-                        ":notes": [
-                            ":digital-file",
-                            ":digital:text",
-                        ],
-                    },
-                ),
-            ],
-        }
+        schemas.load_operation_attachment_schema(URN_PREFIX)
     )
 
     def __init__(self, repo_layer):
@@ -694,6 +688,9 @@ class ArtifactServices:
         self, artifact: models.AnyArtifact
     ) -> Optional[models.Operation]:
         return (list(self.operation_parents(artifact)) or [None])[0]
+
+    def json_schema(self, artifact: models.AnyArtifact):
+        return schemas.load_digital_artifact_json_schema(artifact.type_urn)
 
 
 class FileServices(ArtifactServices):
