@@ -47,6 +47,16 @@ Navigate in a browser to `http://localhost:8000/version` to see the API working.
 
 > NOTE that by using FastAPI, we automatically also have a full API listing available at `http://localhost/docs` which is very useful for exploration and testing.
 
+## Run unit and API tests
+
+Once the MPPW development stack is running, automated tests can be run to validate the codebase and API.  Tests are written using pytest:
+
+```sh
+$ poetry run pytest
+```
+
+> TODO: Split into unit tests (that don't require a running API) and API integration tests (that do require a running API)?
+
 ## Deploy production stack
 
 The production deploy is near-identical except for using the packaged `mppw` code versus mapping in the local filesystem `mppw`.  To deploy, run: 
