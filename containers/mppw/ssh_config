@@ -1,2 +1,2 @@
-Host gitlab.composites.umaine.edu
+Host *
   StrictHostKeyChecking no
