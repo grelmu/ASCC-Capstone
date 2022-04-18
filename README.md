@@ -17,20 +17,26 @@ For more details installing these basics on WSL, see ['README_WSL.md`](./README_
 
 ## Quickstart
 
+First, add your source control SSH key to the SSH agent - Docker and git (depending on your configuration) will require the key to run checkouts:
+
+```sh
+$ ssh-add <path-to-source-control-ssh-key>
+```
+
 Git submodules are used - ensure these are properly checked-out:
 
 ```sh
 $ git submodule update --init --recursive
 ```
 
-First install all python prerequisites:
+Next install all python prerequisites:
 
 ```sh
 $ cd <dir>
 $ poetry install
 ```
 
-Next, build the containers and start the MPPW (dev) stack:
+Finally, build the containers and start the MPPW (dev) stack:
 
 ```sh
 $ poetry run mppw-docker build
