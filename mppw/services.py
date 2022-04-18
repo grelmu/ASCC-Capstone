@@ -732,7 +732,9 @@ class FileBucketServices(ArtifactServices):
             bucket_id, scheme
         )
 
-        return self.repo_layer.artifacts.update(artifact)
+        if not self.repo_layer.artifacts.update(artifact):
+            return None
+        return artifact
 
     def upload(self, artifact: models.DigitalArtifact, path: str, file):
         return self.repo_layer.buckets.add_file_to_bucket(artifact.url_data, path, file)
