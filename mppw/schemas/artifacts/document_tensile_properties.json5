@@ -1,0 +1,78 @@
+{
+  $schema: "https://json-schema.org/draft/2020-12/schema",
+  type: "object",
+  properties: {
+    modulus: {
+      title: "Modulus",
+      type: "object",
+      properties: {
+        value: {
+          type: "string",
+          title: "Value",
+        },
+        units: {
+          type: "string",
+          title: "Units",
+        },
+        distribution: {
+          type: "object",
+          title: "Distribution",
+          properties: {
+            min: {
+              type: "string",
+              title: "Min",
+            },
+            max: {
+              type: "string",
+              title: "Max",
+            },
+            stddev: {
+              type: "string",
+              title: "StdDev",
+            },
+            cov: {
+              type: "string",
+              title: "COV",
+            },
+          },
+        },
+      },
+    },
+    ultimate_strength: {
+      title: "Ultimate Strength",
+      type: "object",
+      properties: {
+        value: {
+          type: "string",
+          title: "Value",
+        },
+        units: {
+          type: "string",
+          title: "Units",
+        },
+        distribution: {
+          type: "object",
+          title: "Distribution",
+          properties: {
+            min: {
+              type: "string",
+              title: "Min",
+            },
+            max: {
+              type: "string",
+              title: "Max",
+            },
+            stddev: {
+              type: "string",
+              title: "StdDev",
+            },
+            cov: {
+              type: "string",
+              title: "COV",
+            },
+          },
+        },
+      },
+    },
+  },
+}

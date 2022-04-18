@@ -1,0 +1,39 @@
+{
+  ":sample": [
+    [
+      ":material:sample",
+      {
+        ":specimens": [
+          [
+            ":material:part",
+            {
+              ":test-dimensions": [":digital:document:named-dimensions"],
+              ":test-measurements": [
+                ":digital:frame:force-displacement",
+              ],
+              ":images": [":digital:file"],
+              ":notes": [":digital:file", ":digital:text"],
+              ":tested-specimen": [":material:part"],
+              ":computed-properties": [
+                [
+                  ":digital:document:tensile-properties",
+                  {
+                    ":notes": [":digital:file", ":digital:text"],
+                  },
+                ],
+              ],
+            },
+          ],
+        ],
+        ":computed-properties": [
+          [
+            ":digital:document:tensile-properties",
+            {
+              ":notes": [":digital:file", ":digital:text"],
+            },
+          ],
+        ],
+      },
+    ],
+  ],
+}
