@@ -330,6 +330,23 @@ export default {
         );
       });
     },
+    // TODO: MAKE REAL    
+    apiFetchPointcloud(id, data) {
+      // return this.apiFetch("artifacts/" + id + "/services/point-cloud/cloudfile", {
+      return this.apiFetch("artifacts/" + id, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when retrieving json schema for artifact"
+        );
+      });
+    },
     apiFetchAttachedArtifacts(opId, artifactPath) {
       return this.apiFetch(
         "operations/" +
