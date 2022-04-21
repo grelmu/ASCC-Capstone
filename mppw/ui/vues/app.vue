@@ -330,15 +330,22 @@ export default {
         );
       });
     },
-    // TODO: MAKE REAL    
     apiFetchPointcloud(id, data) {
-      // return this.apiFetch("artifacts/" + id + "/services/point-cloud/cloudfile", {
-      return this.apiFetch("artifacts/" + id, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
+      // Build query URL by encoding all existing props of 'data' obj
+      let fetchUrl = `artifacts/${id}/services/point-cloud/points?` +
+      Object.keys(data).map(key => {
+        if (key != 'id' && data[key]) {
+          return key + '=' + encodeURIComponent(data[key])
+        }
+      }).join("&"); // TODO: fix '&&&&' issue...
+
+      return this.apiFetch(
+        fetchUrl,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
       }).then((response) => {
         if (response.status == 200) return response.json();
         this.throwApiResponseError(

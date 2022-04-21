@@ -39,7 +39,8 @@
               <o-input v-model="artifact.local_data.id"></o-input>
             </o-field>
             <o-field label="space_bounds">
-              <o-input v-model="artifact.local_data.space_bounds"></o-input>
+              <o-input placeholder="[[x1, y1, z1], [x2, y2, z2]]"
+                v-model="artifact.local_data.space_bounds"></o-input>
             </o-field>
             <o-field label="time_bounds">
               <o-input v-model="artifact.local_data.time_bounds"></o-input>
@@ -105,8 +106,10 @@ export default {
 
       console.log(this.artifact.local_data);
 
-      return this.$root.apiFetchPointcloud(this.artifactId, this.local_data).then((result) => {
-        this.artifact.response = result;
+      return this.$root.apiFetchPointcloud(
+        this.artifactId,
+        this.artifact.local_data).then((result) => {
+          this.artifact.response = result;
       });
     },
   },
