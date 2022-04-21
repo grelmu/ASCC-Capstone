@@ -1,6 +1,6 @@
 <template>
   <div v-if="artifact">
-    <h1>Point-cloud component works!</h1>
+    <p>Point-cloud component works!</p>
     <!-- {{ artifact }}raw JSON -->
 
     <section>
@@ -17,12 +17,12 @@
         </template>
         <div class="card-content" style="width: 100%;">
           <div class="content" style="padding: 20px;">
-            {{ artifact }}
+            <pre>{{ JSON.stringify(artifact, null, 2) }}</pre>
           </div>
         </div>
       </o-collapse>
 
-      <o-collapse :open="false" class="card" animation="slide" padding-botton="5px" style="margin-bottom: 5px;">
+      <o-collapse :open="false" class="card col-12" animation="slide" padding-botton="5px" style="margin-bottom: 5px;">
         <template #trigger="props">
           <div class="card-header" role="button" style="height: 40px;">
             <p class="card-header-title">
@@ -33,7 +33,7 @@
             </a>
           </div>
         </template>
-        <div class="card-content" style="width: 100%;">
+        <div class="card-content col-6">
           <div class="content" style="padding: 20px;">
             <o-field label="id">
               <o-input v-model="artifact.local_data.id"></o-input>
@@ -56,7 +56,10 @@
           </div>
         </div>
 
-        {{ artifact.response }}
+        <div class="col-6">
+          <pre class="col-12">{{ JSON.stringify(artifact.response, null, 2) }}</pre>
+        </div>
+
       </o-collapse>
     </section>
    
