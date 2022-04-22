@@ -2,36 +2,16 @@
   <div v-if="artifact">
     <!--
       TODO: 
-      - Remove JSON in top accordion?
       - Improve date/time (use a picker)
         - Maybe combo of calendar, clock, and text field (for milliseconds)
         - Have a button that duplicates the min time so they don't have to
           re-specify the date/hour for the upper bound?
       - Improve input for space bounds
-      - Style fixes for JSON overflow
       - Paginate the results using JS?? 
         - Better yet, paginate at the API layer
     -->
 
     <section>
-      <o-collapse :open="false" class="card" animation="slide" style="margin-bottom: 5px;">
-        <template #trigger="props">
-          <div class="card-header" role="button" style="height: 40px;">
-            <p class="card-header-title">
-              JSON
-            </p>
-            <a class="card-header-icon">
-              <o-icon :icon="props.open ? 'caret-up' : 'caret-down'"> </o-icon>
-            </a>
-          </div>
-        </template>
-        <div class="card-content" style="width: 100%;">
-          <div class="content" style="padding: 20px;">
-            <pre>{{ JSON.stringify(artifact, null, 2) }}</pre>
-          </div>
-        </div>
-      </o-collapse>
-
       <o-collapse :open="false" class="card col-12" animation="slide" padding-botton="5px" style="margin-bottom: 5px;">
         <template #trigger="props">
           <div class="card-header" role="button" style="height: 40px;">
@@ -78,7 +58,7 @@
           </div>
         </div>
 
-        <div class="col-6">
+        <div class="col-6 border rounded pcl-res-container">
           <pre class="col-12">{{ JSON.stringify(artifact.response, null, 2) }}</pre>
         </div>
 
@@ -155,5 +135,14 @@ export default {
   color: initial;
   background-color: white;
   margin-left: 5px;
+}
+.pcl-res-container {
+  max-height: 400px;
+  overflow: hidden;
+  margin: 10px 0px 0px 0px;
+}
+.pcl-res-container pre {
+  margin-right: 10px;
+  height: 100%;
 }
 </style>
