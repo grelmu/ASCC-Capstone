@@ -3,7 +3,6 @@
     <!--
       TODO: 
       - Improve date/time (use a picker)
-        - Maybe combo of calendar, clock, and text field (for milliseconds)
         - Have a button that duplicates the min time so they don't have to
           re-specify the date/hour for the upper bound?
       - Improve input for space bounds
@@ -33,10 +32,19 @@
               <o-input placeholder="[[x1, y1, z1], [x2, y2, z2]]"
                 v-model="artifact.local_data.space_bounds"></o-input>
             </o-field>
-            <o-field label="time_bounds">
+            <o-field label="time_bounds_start">
               <!-- e.g.: ["2022-02-04T16:02:47.633000", "2022-02-04T16:02:47.90"] -->
-              <o-input placeholder="[ start_time , end_time ]"
-                v-model="artifact.local_data.time_bounds"></o-input>
+              <!-- TODO: fix Zulu time issue for ISO strings-->
+              <o-datetimepicker
+                rounded placeholder="Click to select..." :timepicker="{ enableSeconds, hourFormat }"
+                icon="calendar" v-model="timeBoundsStart">
+              </o-datetimepicker>
+            </o-field>
+            <o-field label="time_bounds_end">
+              <o-datetimepicker
+                rounded placeholder="Click to select..." :timepicker="{ enableSeconds, hourFormat }"
+                icon="calendar" v-model="timeBoundsEnd">
+              </o-datetimepicker>
             </o-field>
             <o-field label="coerce_dt_bounds">
               <o-checkbox v-model="artifact.local_data.coerce_dt_bounds">True</o-checkbox>
@@ -73,6 +81,11 @@ export default {
   data() {
     return {
       artifact: null,
+      enableSeconds: true,
+      hourFormat: '24',
+      locale: undefined,
+      timeBoundsStart: null,
+      timeBoundsEnd: null,
     };
   },
   props: {
@@ -82,6 +95,8 @@ export default {
   methods: {
     refreshArtifact() {
       this.artifact = null;
+      this.timeBoundsStart = new Date();
+      this.timeBoundsEnd = new Date();
       return this.$root.apiFetchArtifact(this.artifactId).then((artifact) => {
         console.log(artifact);
         this.artifact = artifact;
@@ -95,6 +110,14 @@ export default {
       });
     },
     getPointCloud() {
+      /*
+      TODO: the resulting string is in Zulu time, which is +6 hrs ahead of 
+      Chicago and +5 from New York. Need to make the UI reflect this
+      or intelligently handle timezone here. Currently, the user has to 
+      manually account for timezone difference when structuring their query*/
+      this.artifact.local_data.time_bounds = JSON.stringify(
+        [this.timeBoundsStart.toISOString(),this.timeBoundsEnd.toISOString()]
+      );
       let changes = [];
       changes.push({
         op: "replace",
