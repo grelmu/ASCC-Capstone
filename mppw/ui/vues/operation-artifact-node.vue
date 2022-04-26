@@ -47,7 +47,9 @@
                   </div>
                 </div>
               </div>
-              <div class="fw-light">{{ artifact["id"] }}</div>
+              <router-link :to="'/artifacts/' + artifact['id']" class="fw-light"
+                >{{ artifact["id"] }}
+              </router-link>
             </div>
             <a class="card-header-icon">
               <o-icon
@@ -202,12 +204,9 @@ const componentMap = {
   "urn:x-mfg:artifact:digital:file-bucket": "digital-file-bucket-component",
   "urn:x-mfg:artifact:digital:fiducial-points":
     "digital-frame-document-component",
-  "urn:x-mfg:artifact:digital:document":
-    "digital-frame-document-component",
-  "urn:x-mfg:artifact:digital:frame":
-    "digital-frame-document-component",
-  "urn:x-mfg:artifact:digital:point-cloud":
-    "digital-point-cloud-component",
+  "urn:x-mfg:artifact:digital:point-cloud": "digital-point-cloud-component",
+  "urn:x-mfg:artifact:digital:document": "digital-frame-document-component",
+  "urn:x-mfg:artifact:digital:frame": "digital-frame-document-component",
   "urn:x-mfg:artifact": "default-component",
 };
 
@@ -228,9 +227,6 @@ export default {
     ),
     "digital-file-bucket-component": RemoteVue.asyncComponent(
       "vues/artifacts/digital-file-bucket-component.vue"
-    ),
-    "digital-document-component": RemoteVue.asyncComponent(
-      "vues/artifacts/digital-document-component.vue"
     ),
     "digital-frame-document-component": RemoteVue.asyncComponent(
       "vues/artifacts/digital-frame-document-component.vue"
@@ -357,9 +353,8 @@ export default {
     },
     artifactComponentFor(typeUrn) {
       if (typeUrn) {
-
         let componentTypeUrns = Object.keys(componentMap).sort().reverse();
-        
+
         for (let i = 0; i < componentTypeUrns.length; ++i) {
           let componentTypeUrn = componentTypeUrns[i];
           if (

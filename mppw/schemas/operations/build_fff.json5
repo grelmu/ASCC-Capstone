@@ -1,0 +1,64 @@
+{
+  type_urn: "urn:x-mfg:operation:fff",
+  name: "FFF Manufacture",
+  description: "FFF or FDM manufacturing operation",
+  parent_urns: ["urn:x-mfg:operation:default"],
+  attachments: {
+    ":toolpath": [":digital:file"],
+    ":input-materials": [":material:batch"],
+    ":output-parts": [
+      [
+        ":material:part",
+        {
+          ":part-geometry": [
+            ":digital:fiducial-points",
+            ":digital:point-cloud",
+            ":digital:mesh",
+          ],
+          ":images": [":digital:file"],
+        },
+      ],
+    ],
+    ":toolpath-cloud": [":digital:point-cloud"],
+    ":thermal-cloud": [":digital:point-cloud"],
+  },
+  provenance: {
+    steps: [
+      {
+        from_artifacts: [":input-materials.*", ":toolpath.*"],
+        to_artifacts: [
+          ":output-parts.*",
+          ":toolpath-cloud.*",
+          ":thermal-cloud.*",
+          ":operator-notes.*",
+          ":process-data.*",
+          ":attachments.*",
+        ],
+      },
+      {
+        name: ":measurements",
+        context: ":output-parts.*",
+        from_artifacts: ["."],
+        to_artifacts: [".:part-geometry.*", ".:images.*"],
+      },
+    ],
+
+    relations: [
+      {
+        name: "material_transform",
+        from_kind: ":input-materials",
+        to_kind: ":output-parts",
+      },
+      {
+        name: "measurement",
+        from_kind: ":output-parts",
+        to_kind: ":toolpath-cloud",
+      },
+      {
+        name: "measurement",
+        from_kind: ":output-parts",
+        to_kind: ":thermal-cloud",
+      },
+    ],
+  },
+}

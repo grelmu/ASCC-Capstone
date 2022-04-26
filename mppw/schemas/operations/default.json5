@@ -1,0 +1,36 @@
+{
+  type_urn: "urn:x-mfg:operation:default",
+  name: "Generic Manufacturing Operation",
+  description: "Manufacturing operation with data attachments",
+  attachments: {
+    ":operator-notes": [":digital:file", ":digital:text"],
+    ":process-data": [
+      [
+        ":digital:database-bucket",
+        {
+          ":streams": [":digital:time-series"],
+        },
+      ],
+      [
+        ":digital:file-bucket",
+        {
+          ":streams": [":digital:time-series"],
+        },
+      ],
+      [
+        ":digital:file",
+        {
+          ":streams": [":digital:time-series"],
+        },
+      ],
+      ":digital:time-series",
+    ],
+    ":attachments": [
+      ":digital:text",
+      ":digital:document",
+      ":digital:frame",
+      ":digital:file",
+      ":digital:file-bucket",
+    ],
+  },
+}

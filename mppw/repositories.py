@@ -470,8 +470,31 @@ class OperationRepository(MongoDBRepository):
         self,
         input_artifact_id: str = None,
         output_artifact_id: str = None,
+        artifact_id: str = None,
         project_ids: List[str] = None,
     ):
+
+        if artifact_id is not None:
+            return map(
+                lambda doc: doc_to_model(doc, models.Operation),
+                list(
+                    self.collection.find(
+                        self._query_doc_for(
+                            project_ids=project_ids,
+                            input_artifact_id=artifact_id,
+                        )
+                    )
+                )
+                + list(
+                    self.collection.find(
+                        self._query_doc_for(
+                            project_ids=project_ids,
+                            output_artifact_id=artifact_id,
+                        )
+                    )
+                ),
+            )
+
         return map(
             lambda doc: doc_to_model(doc, models.Operation),
             list(

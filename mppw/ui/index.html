@@ -42,6 +42,7 @@
     <script src="https://cdn.plot.ly/plotly-basic-latest.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pivottable/2.22.0/plotly_renderers.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/screenfull.js/5.1.0/screenfull.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.4.4/d3.min.js"></script>
 
     <!-- Polyfill for importmap on all browsers -->
     <script
@@ -69,9 +70,11 @@
       import * as Oruga from "oruga";
       import JsonSchemaFormComponent from "@lljj/vue3-form-element";
       import * as ElementPlus from "element-plus";
+      import ForceGraph from "./assets/js/d3-force-graph-module.js";
 
       window["JsonSchemaFormComponent"] = JsonSchemaFormComponent;
       window["RemoteVue"] = RemoteVue;
+      window["ForceGraph"] = ForceGraph;
 
       RemoteVue.component("vues/app.vue").then((root) => {
         const router = VueRouter.createRouter({

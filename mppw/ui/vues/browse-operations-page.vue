@@ -49,8 +49,8 @@
           >
             <option
               v-for="opType in opTypes || []"
-              :key="opType.urn_prefix"
-              :value="opType.urn_prefix"
+              :key="opType.type_urn"
+              :value="opType.type_urn"
             >
               {{ opType.name }}
             </option>
@@ -125,32 +125,7 @@ export default {
     };
   },
   methods: {
-    apiFetchProjects() {
-      return this.$root
-        .apiFetch("projects/", {
-          method: "GET",
-        })
-        .then((response) => {
-          if (response.status == 200) return response.json();
-          this.$root.throwApiResponseError(
-            response,
-            "Unknown response when querying for projects"
-          );
-        });
-    },
-    apiFetchOpTypes() {
-      return this.$root
-        .apiFetch("operation-services/types/", {
-          method: "GET",
-        })
-        .then((response) => {
-          if (response.status == 200) return response.json();
-          this.$root.throwApiResponseError(
-            response,
-            "Unknown response when querying for serviced operation types"
-          );
-        });
-    },
+    // TODO: Move to $root app.vue
     apiCreateProject(project) {
       return this.$root
         .apiFetch("projects/", {
@@ -215,17 +190,18 @@ export default {
           );
         });
     },
+    // TODO END move to $root app.vue
     refreshProjects() {
       this.projects = null;
       this.projectId = null;
-      return this.apiFetchProjects().then((projects) => {
+      return this.$root.apiFetchProjects().then((projects) => {
         this.projects = projects;
       });
     },
     refreshOpTypes() {
       this.opTypes = null;
       this.newOpTypeUrn = null;
-      return this.apiFetchOpTypes().then((opTypes) => {
+      return this.$root.apiFetchOpTypes().then((opTypes) => {
         this.opTypes = opTypes;
       });
     },

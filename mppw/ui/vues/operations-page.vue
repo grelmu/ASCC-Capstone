@@ -13,7 +13,7 @@
       :artifactNode="artifactsRoot"
       :attachmentKind="{
         kind_urn: null,
-        types: [{ type_urn: null, child_kinds: attachmentKinds }],
+        types: [attachmentKinds],
       }"
     ></operation-artifact-node>
   </div>
@@ -49,7 +49,72 @@ export default {
       this.artifactGraph = null;
       this.artifactOpenIndexes = null;
       return this.$root
-        .apiFetchArtifactsRoot(this.opId)
+        .apiFetchOperationArtifacts(this.opId)
+        .then((attachments) => {
+          // TODO: Make sure this is now necessary
+          let kindPathFor = function (attachment) {
+            return attachment["kind_path"].join(".");
+          };
+
+          let artifactPathFor = function (attachment) {
+            return (
+              attachment["kind_path"].join(".") +
+              (attachment["artifact_id"] != null
+                ? "." + attachment["artifact_id"]
+                : "")
+            );
+          };
+
+          let parentArtifactPathFor = function (attachment) {
+            if (attachment["kind_path"].length < 1) return null;
+            return attachment["kind_path"]
+              .slice(0, attachment["kind_path"].length - 1)
+              .join(".");
+          };
+
+          attachments.sort((a, b) =>
+            artifactPathFor(a).localeCompare(artifactPathFor(b))
+          );
+
+          let parentKindNodes = {};
+          let parentArtifactNodes = {};
+
+          for (let i = 0; i < attachments.length; ++i) {
+            let attachment = attachments[i];
+
+            let kindPath = kindPathFor(attachment);
+            let kindNode = parentKindNodes[kindPath];
+            if (kindNode == null) {
+              kindNode = {
+                kind_urn: kindPath,
+                artifacts: [],
+              };
+
+              parentKindNodes[kindPath] = kindNode;
+
+              let parentArtifactPath = parentArtifactPathFor(attachment);
+
+              if (parentArtifactPath != null) {
+                let parentArtifactNode =
+                  parentArtifactNodes[parentArtifactPath];
+                parentArtifactNode.attachments.push(kindNode);
+              }
+            }
+
+            let artifactNode = {
+              artifact_id: attachment["artifact_id"],
+              is_input: attachment["attachment_mode"] == "input",
+              attachments: [],
+            };
+
+            let artifactPath = artifactPathFor(attachment);
+            parentArtifactNodes[artifactPath] = artifactNode;
+            kindNode.artifacts.push(artifactNode);
+          }
+
+          console.log(parentArtifactNodes[""]);
+          return parentArtifactNodes[""];
+        })
         .then((artifactsRoot) => {
           this.artifactsRoot = artifactsRoot;
         });
@@ -57,7 +122,11 @@ export default {
     refreshAttachmentKinds() {
       this.attachmentKinds = null;
       return this.$root
-        .apiFetchAttachmentKinds(this.op.type_urn)
+        .apiFetchOperationType(this.op.type_urn)
+        .then((schema) => {
+          console.log(schema.attachments);
+          return schema.attachments;
+        })
         .then((kinds) => {
           this.attachmentKinds = kinds;
         });

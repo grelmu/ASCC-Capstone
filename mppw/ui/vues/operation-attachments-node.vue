@@ -224,24 +224,47 @@ export default {
     refreshAttachments() {
       this.attachmentNodes = null;
 
+      console.log(this.attachmentKinds);
+      console.log(this.artifactPath);
+
       return this.$root
-        .apiFetchAttachedArtifacts(this.opId, this.artifactPath)
-        .then((artifactNode) => {
-          this.attachmentNodes = artifactNode["attachments"];
+        .apiFetchOperationArtifacts(this.opId, {
+          parent_artifact_path: this.artifactPath,
+        })
+        .then((artifactNodes) => {
+          // Group into attachment nodes by attachment kind
+          let attachmentNodes = {};
+
+          for (let i = 0; i < artifactNodes.length; ++i) {
+            let artifactNode = artifactNodes[i];
+            let kindUrn = this.kindPathToUrn(artifactNode["kind_path"]);
+            let attachmentNode = attachmentNodes[kindUrn];
+            if (!attachmentNode) {
+              attachmentNodes[kindUrn] = attachmentNode = {
+                kind_urn: kindUrn,
+                artifacts: [artifactNode],
+              };
+            }
+          }
+
+          this.attachmentNodes = Object.values(attachmentNodes);
+
+          // Add empty attachment nodes for any attachment kinds we're missing
           for (let i = 0; i < this.attachmentKinds.length; ++i) {
             let attachmentKind = this.attachmentKinds[i];
             if (this.findSimilarAttachmentNode(attachmentKind.kind_urn) == null)
               this.attachmentNodes.push({
                 kind_urn: attachmentKind.kind_urn,
-                attachments: [],
+                artifacts: [],
               });
           }
 
+          // Sort all the attachments
           this.sortAttachments();
         });
     },
 
-    splitKind(kindUrn) {
+    splitKindKey(kindUrn) {
       let splitAt = kindUrn.lastIndexOf(":");
       if (splitAt == 0) splitAt = -1;
       if (splitAt < 0) return [kindUrn, null];
@@ -251,6 +274,10 @@ export default {
       ];
     },
 
+    kindPathToUrn(kindPath) {
+      return kindPath.length > 0 ? kindPath[kindPath.length - 1] : "";
+    },
+
     sortAttachments() {
       let kindIndices = {};
       for (let i = 0; i < this.attachmentKinds.length; ++i) {
@@ -258,11 +285,11 @@ export default {
       }
 
       this.attachmentNodes.sort((a, b) => {
-        let splitA = this.splitKind(a.kind_urn);
+        let splitA = this.splitKindKey(a.kind_urn);
         let kindA = splitA[0];
         let keyA = splitA[1];
 
-        let splitB = this.splitKind(b.kind_urn);
+        let splitB = this.splitKindKey(b.kind_urn);
         let kindB = splitB[0];
         let keyB = splitB[1];
 
@@ -286,8 +313,11 @@ export default {
 
     findSimilarAttachmentNode(kindUrn) {
       for (let i = 0; i < this.attachmentNodes.length; ++i) {
-        let nextKindUrn = this.attachmentNodes[i]["kind_urn"];
-        if (nextKindUrn == kindUrn || kindUrn.startsWith(nextKindUrn + ":"))
+        let attachmentKindUrn = this.attachmentNodes[i].kind_urn;
+        if (
+          attachmentKindUrn == kindUrn ||
+          kindUrn.startsWith(attachmentKindUrn + ":")
+        )
           return this.attachmentNodes[i];
       }
       return null;

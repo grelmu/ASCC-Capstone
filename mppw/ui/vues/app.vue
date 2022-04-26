@@ -115,6 +115,10 @@ const routes = [
     path: "/operations/:id",
     component: RemoteVue.lazyComponent("vues/operations-page.vue"),
   },
+  {
+    path: "/artifacts/:id",
+    component: RemoteVue.lazyComponent("vues/artifacts-page.vue"),
+  },
 ];
 
 const initRoutes = function (app) {
@@ -176,6 +180,15 @@ export default {
     apiUrl(input) {
       return location.origin + "/api/" + input;
     },
+    apiQueryFromParams(params) {
+      if (!params) return "";
+      let paramArr = [];
+      for (let key in params) {
+        paramArr.push(key + "=" + encodeURIComponent(params[key]));
+      }
+      if (paramArr.length == 0) return "";
+      return "?" + paramArr.join("&");
+    },
     apiFetch(input, init, token) {
       input = this.apiUrl(input);
       init.headers = init.headers || {};
@@ -234,6 +247,67 @@ export default {
           response,
           "Unknown response when logging out",
           true
+        );
+      });
+    },
+    apiFetchProjects() {
+      return this.apiFetch("projects/", {
+        method: "GET",
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when querying for projects"
+        );
+      });
+    },
+    apiFetchOpTypes() {
+      return this.apiFetch("schema/operations/", {
+        method: "GET",
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when querying for operation types"
+        );
+      });
+    },
+    apiFetchArtifactTypes() {
+      return this.apiFetch("schema/artifacts/", {
+        method: "GET",
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when querying for artifact types"
+        );
+      });
+    },
+    apiFetchOperationType(type_urn) {
+      return this.apiFetch(
+        "schema/operations/by_type?type_urn=" + encodeURIComponent(type_urn),
+        {
+          method: "GET",
+        }
+      ).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when querying for operation type"
+        );
+      });
+    },
+    apiFetchArtifactType(type_urn) {
+      return this.apiFetch(
+        "schema/artifacts/by_type?type_urn=" + encodeURIComponent(type_urn),
+        {
+          method: "GET",
+        }
+      ).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when querying for artifact type"
         );
       });
     },
@@ -300,6 +374,23 @@ export default {
         this.throwApiResponseError(
           response,
           "Unknown response when retrieving json schema for artifact"
+        );
+      });
+    },
+    apiFetchArtifactProvenance(id, strategy) {
+      return this.apiFetch(
+        "artifacts/" +
+          id +
+          "/services/artifact/provenance" +
+          this.apiQueryFromParams({ strategy }),
+        {
+          method: "GET",
+        }
+      ).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when retrieving artifact provenance"
         );
       });
     },
@@ -377,7 +468,7 @@ export default {
       return this.apiFetch(
         "operations/" +
           opId +
-          "/artifacts?artifact_path=" +
+          "/artifacts/?artifact_path=" +
           encodeURIComponent(artifactPath.join(".")),
         {
           method: "GET",
@@ -509,33 +600,6 @@ export default {
         return graph;
       });
     },
-    apiFetchAttachmentKinds(type_urn) {
-      return this.apiFetch(
-        "operation-services/" +
-          type_urn.replace("urn:x-mfg:operation:", "") +
-          "/attachment-kinds",
-        {
-          method: "GET",
-        }
-      ).then((response) => {
-        if (response.status == 200) return response.json();
-        this.throwApiResponseError(
-          response,
-          "Unknown response when querying for serviced operation attachment kinds"
-        );
-      });
-    },
-    apiFetchArtifactsRoot(id) {
-      return this.apiFetch("operations/" + id + "/artifacts", {
-        method: "GET",
-      }).then((response) => {
-        if (response.status == 200) return response.json();
-        this.throwApiResponseError(
-          response,
-          "Unknown response when querying artifacts root"
-        );
-      });
-    },
     apiAttachArtifact(opId, artifactPath, kindUrn, artifactId, isInput) {
       let attachment = {
         kind_urn: kindUrn,
@@ -555,6 +619,23 @@ export default {
         this.throwApiResponseError(
           response,
           "Unknown response when creating attachment"
+        );
+      });
+    },
+    apiFetchOperationArtifacts(id, queryParams) {
+      return this.apiFetch(
+        "operations/" +
+          id +
+          "/artifacts/" +
+          this.apiQueryFromParams(queryParams),
+        {
+          method: "GET",
+        }
+      ).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when querying operation artifacts"
         );
       });
     },

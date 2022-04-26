@@ -1,0 +1,35 @@
+{
+  type_urn: "urn:x-mfg:operation:prepare:waterjetcut",
+  name: "Waterjet Cutting Operation",
+  description: "Machining operation using a waterjet cutter",
+  parent_urns: ["urn:x-mfg:operation:prepare:machining"],
+  attachments: {
+    ":toolpath": [":digital:file"],
+  },
+  provenance: {
+    steps: [
+      {
+        context: ":input-parts.*",
+        from_artifacts: [".", ":toolpath.*"],
+        to_artifacts: [
+          ".:output-parts.*",
+          ":operator-notes.*",
+          ":process-data.*",
+          ":attachments.*",
+        ],
+      },
+      {
+        name: ":measurements",
+        context: ":input-parts.*",
+        from_artifacts: ["."],
+        to_artifacts: [".:part-geometry.*", ".:images.*", ".:notes.*"],
+      },
+      {
+        name: ":measurements",
+        context: ":input-parts.*.:output-parts.*",
+        from_artifacts: ["."],
+        to_artifacts: [".:part-geometry.*", ".:images.*", ".:notes.*"],
+      },
+    ],
+  },
+}
