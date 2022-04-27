@@ -1,15 +1,5 @@
 <template>
   <div v-if="artifact">
-    <!--
-      TODO: 
-      - Improve date/time (use a picker)
-        - Have a button that duplicates the min time so they don't have to
-          re-specify the date/hour for the upper bound?
-      - Improve input for space bounds
-      - Paginate the results using JS?? 
-        - Better yet, paginate at the API layer
-    -->
-
     <section>
       <o-collapse :open="false" class="card col-12" animation="slide" padding-botton="5px" style="margin-bottom: 5px;">
         <template #trigger="props">
@@ -28,13 +18,22 @@
               <o-input v-model="artifact.local_data.id"></o-input>
             </o-field>
             <o-field label="space_bounds">
+              <!--
+                TODO:
+                  Change placeholder text to show upper/lower bounds
+                  once it's added to the API endpoint
+              -->
               <!-- e.g.: [[-100000, -100000, -100000], [100000, 100000, 100000]] -->
               <o-input placeholder="[[x1, y1, z1], [x2, y2, z2]]"
                 v-model="artifact.local_data.space_bounds"></o-input>
             </o-field>
             <o-field label="time_bounds_start">
+              <!--
+                TODO:
+                  Change placeholder text to show upper/lower bounds
+                  once it's added to the API endpoint
+              -->
               <!-- e.g.: ["2022-02-04T16:02:47.633000", "2022-02-04T16:02:47.90"] -->
-              <!-- TODO: fix Zulu time issue for ISO strings-->
               <o-datetimepicker
                 rounded placeholder="Click to select..." :timepicker="{ enableSeconds, hourFormat }"
                 icon="calendar" v-model="timeBoundsStart">
@@ -67,6 +66,10 @@
         </div>
 
         <div class="col-6 border rounded pcl-res-container">
+          <!--
+            TODO: 
+              Paginate the results for large data (once API supports this)
+          -->
           <pre class="col-12">{{ JSON.stringify(artifact.response, null, 2) }}</pre>
         </div>
 
@@ -111,13 +114,16 @@ export default {
     },
     getPointCloud() {
       /*
-      TODO: the resulting string is in Zulu time, which is +6 hrs ahead of 
-      Chicago and +5 from New York. Need to make the UI reflect this
-      or intelligently handle timezone here. Currently, the user has to 
-      manually account for timezone difference when structuring their query*/
+      toISOString() results in Zulu time, which is +5 from New York.
+      We reapply the timezone offset between the user's timezone and Zulu 
+      so that what the user enters is what is queried on the backend.
+      */
       this.artifact.local_data.time_bounds = JSON.stringify(
-        [this.timeBoundsStart.toISOString(),this.timeBoundsEnd.toISOString()]
-      );
+        [
+          new Date(this.timeBoundsStart.getTime() - (this.timeBoundsStart.getTimezoneOffset() * 60 * 1000)).toISOString(),
+          new Date(this.timeBoundsEnd.getTime() - (this.timeBoundsEnd.getTimezoneOffset() * 60 * 1000)).toISOString()
+        ]
+    );
       let changes = [];
       changes.push({
         op: "replace",
@@ -133,9 +139,13 @@ export default {
           this.artifact.response = result;
       });
     },
+    /**
+     * This function blobs the JSON response and downloads it as a file.
+     * 
+     * Args
+     *    aft: the artifact.response JSON object to be blobbed
+     */
     downloadPointCloud(aft) {
-      // "aft" - artifact.response JSON object
-
       // Stringify and format with 2 spaces for indentation
       const data = JSON.stringify(aft, null, 2);
       const blob = new Blob([data], {type: 'application/json'});
