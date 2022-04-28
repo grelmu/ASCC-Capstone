@@ -14,9 +14,6 @@
         </template>
         <div class="card-content col-6">
           <div class="content" style="padding: 20px;">
-            <o-field label="id">
-              <o-input v-model="artifact.local_data.id"></o-input>
-            </o-field>
             <o-field label="space_bounds">
               <!--
                 TODO:
