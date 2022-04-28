@@ -22,7 +22,7 @@
               -->
               <!-- e.g.: [[-100000, -100000, -100000], [100000, 100000, 100000]] -->
               <o-input placeholder="[[x1, y1, z1], [x2, y2, z2]]"
-                v-model="artifact.local_data.space_bounds"></o-input>
+                v-model="formData.space_bounds"></o-input>
             </o-field>
             <o-field label="time_bounds_start">
               <!--
@@ -42,19 +42,16 @@
                 icon="calendar" v-model="timeBoundsEnd">
               </o-datetimepicker>
             </o-field>
-            <o-field label="coerce_dt_bounds">
-              <o-checkbox v-model="artifact.local_data.coerce_dt_bounds">True</o-checkbox>
-            </o-field>
             <o-field label="format">
-              <o-input v-model="artifact.local_data.format"></o-input>
+              <o-input v-model="formData.format"></o-input>
             </o-field>
             <div class="mt-3 text-end">
             <o-button @click="getPointCloud()"
               class="text-end">
               Get Point Cloud
             </o-button>
-            <o-button v-if="Object.keys(artifact.response).length > 0"
-              @click="downloadPointCloud(artifact.response)"
+            <o-button v-if="Object.keys(response).length > 0"
+              @click="downloadPointCloud(response)"
               class="text-end btn-outline-secondary">
                 Download Point Cloud
             </o-button>
@@ -67,7 +64,7 @@
             TODO: 
               Paginate the results for large data (once API supports this)
           -->
-          <pre class="col-12">{{ JSON.stringify(artifact.response, null, 2) }}</pre>
+          <pre class="col-12">{{ JSON.stringify(response, null, 2) }}</pre>
         </div>
 
       </o-collapse>
@@ -82,10 +79,18 @@ export default {
     return {
       artifact: null,
       enableSeconds: true,
+      formData: {
+        'id': '',
+        'space_bounds': '',
+        'time_bounds': '',
+        'coerce_dt_bounds': false,
+        'format': 'pcb'
+      },
       hourFormat: '24',
       locale: undefined,
       timeBoundsStart: null,
       timeBoundsEnd: null,
+      response: null
     };
   },
   props: {
@@ -100,13 +105,8 @@ export default {
       return this.$root.apiFetchArtifact(this.artifactId).then((artifact) => {
         console.log(artifact);
         this.artifact = artifact;
-        this.artifact.response ||= {};
-        this.artifact.local_data ||= {};
-        this.artifact.local_data.id = this.artifactId;
-        this.artifact.local_data.space_bounds = "";
-        this.artifact.local_data.time_bounds = "";
-        this.artifact.local_data.coerce_dt_bounds = false;
-        this.artifact.local_data.format = "pcb";
+        this.formData.id = this.artifactId;
+        this.response ||= {};
       });
     },
     getPointCloud() {
@@ -115,25 +115,17 @@ export default {
       We reapply the timezone offset between the user's timezone and Zulu 
       so that what the user enters is what is queried on the backend.
       */
-      this.artifact.local_data.time_bounds = JSON.stringify(
+      this.formData.time_bounds = JSON.stringify(
         [
           new Date(this.timeBoundsStart.getTime() - (this.timeBoundsStart.getTimezoneOffset() * 60 * 1000)).toISOString(),
           new Date(this.timeBoundsEnd.getTime() - (this.timeBoundsEnd.getTimezoneOffset() * 60 * 1000)).toISOString()
         ]
     );
-      let changes = [];
-      changes.push({
-        op: "replace",
-        path: "local_data",
-        value: this.artifact.local_data,
-      });
-
-      console.log(this.artifact.local_data);
 
       return this.$root.apiFetchPointcloud(
         this.artifactId,
-        this.artifact.local_data).then((result) => {
-          this.artifact.response = result;
+        this.formData).then((result) => {
+          this.response = result;
       });
     },
     /**
