@@ -80,7 +80,6 @@ export default {
       artifact: null,
       enableSeconds: true,
       formData: {
-        'id': '',
         'space_bounds': '',
         'time_bounds': '',
         'coerce_dt_bounds': false,
@@ -105,7 +104,6 @@ export default {
       return this.$root.apiFetchArtifact(this.artifactId).then((artifact) => {
         console.log(artifact);
         this.artifact = artifact;
-        this.formData.id = this.artifactId;
         this.response ||= {};
       });
     },

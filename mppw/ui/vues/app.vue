@@ -334,10 +334,8 @@ export default {
       // Build query URL by encoding all existing props of 'data' obj
       let fetchUrl = `artifacts/${id}/services/point-cloud/points?` +
       Object.keys(data).map(key => {
-        if (key != 'id' && data[key]) {
           return key + '=' + encodeURIComponent(data[key])
-        }
-      }).join("&"); // TODO: fix '&&&&' issue...
+      }).join("&");
 
       return this.apiFetch(
         fetchUrl,
