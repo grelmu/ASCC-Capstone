@@ -1,7 +1,7 @@
 <template>
   <div v-if="artifact">
     <section>
-      <o-collapse :open="false" class="card col-12" animation="slide" padding-botton="5px" style="margin-bottom: 5px;">
+      <o-collapse :open="true" class="card col-12" animation="slide" padding-botton="5px" style="margin-bottom: 5px;">
         <template #trigger="props">
           <div class="card-header" role="button" style="height: 40px;">
             <p class="card-header-title">
