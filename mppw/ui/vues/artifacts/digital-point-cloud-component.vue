@@ -42,9 +42,6 @@
                 icon="calendar" v-model="timeBoundsEnd">
               </o-datetimepicker>
             </o-field>
-            <o-field label="format">
-              <o-input v-model="formData.format"></o-input>
-            </o-field>
             <div class="mt-3 text-end">
             <o-button @click="getPointCloud()"
               class="text-end">
@@ -83,7 +80,6 @@ export default {
         'space_bounds': '',
         'time_bounds': '',
         'coerce_dt_bounds': false,
-        'format': 'pcb'
       },
       hourFormat: '24',
       locale: undefined,
