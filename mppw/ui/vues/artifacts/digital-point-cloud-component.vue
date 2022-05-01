@@ -79,7 +79,7 @@ export default {
       formData: {
         'space_bounds': '',
         'time_bounds': '',
-        'coerce_dt_bounds': false,
+        'coerce_dt_bounds': true,
       },
       hourFormat: '24',
       locale: undefined,
@@ -98,10 +98,27 @@ export default {
       this.timeBoundsStart = new Date();
       this.timeBoundsEnd = new Date();
       return this.$root.apiFetchArtifact(this.artifactId).then((artifact) => {
-        console.log(artifact);
         this.artifact = artifact;
         this.response ||= {};
+        this.getBoundLimits();
       });
+    },
+    getBoundLimits() {
+        this.$root.apiFetchPointCloudBounds(this.artifactId).then((bounds) => {
+
+          // This api returns the time and space bounds combined like this:
+          //      [ [x1,y1,z1,t1], [x2,y2,z2,t2] ]
+
+          let time_bounds = [bounds[0].pop(), bounds[1].pop()];
+
+          // These two bind to the inputs and expect a Date object
+          this.timeBoundsStart = new Date(time_bounds[0]);
+          this.timeBoundsEnd = new Date(time_bounds[1]);
+
+          this.formData.time_bounds = JSON.stringify(time_bounds);
+          this.formData.space_bounds = JSON.stringify(bounds);
+          
+        });
     },
     getPointCloud() {
       /*

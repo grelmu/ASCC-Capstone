@@ -820,6 +820,35 @@ class PointCloudServices(ArtifactServices):
             query[dt_field] = {"$gte": time_bounds[0], "$lt": time_bounds[1]}
         return query
 
+    def get_bounds(self, cloud_artifact: models.DigitalArtifact):
+
+        if not cloud_artifact.url_data:
+            raise UnknownPointCloudTypeException("No URL found for point cloud.")
+
+        cloud_furl = furl.furl(cloud_artifact.url_data)
+        if cloud_furl.scheme != "mongodb+dbvox":
+            raise UnknownPointCloudTypeException(
+                f"Unknown point cloud type for {cloud_furl.url}"
+            )
+
+        else:
+            import pymongo
+
+            dbvox_furl = furl.furl(cloud_furl.url)
+            base_furl = furl.furl(dbvox_furl)
+            base_furl.scheme = "mongodb"
+            base_furl.path = base_furl.path.segments[0]
+
+            base_url = self.repo_layer.storage_layer.resolve_local_storage_url_host(
+                base_furl.url
+            )
+
+            client = pymongo.MongoClient(base_url)
+            collection = client[dbvox_furl.path.segments[0]][dbvox_furl.path.segments[1]]
+
+            meta = collection.find_one({"_id": None})
+            return meta['xyzt_bounds']
+
     def sample_mongodb_dbvox(self, dbvox_url, space_bounds, time_bounds):
 
         import pymongo

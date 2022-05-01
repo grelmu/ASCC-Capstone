@@ -330,6 +330,17 @@ export default {
         );
       });
     },
+    apiFetchPointCloudBounds(id) {
+      return this.apiFetch(`artifacts/${id}/services/point-cloud/bounds`, {
+        method: "GET",
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when retrieving json bounds for artifact"
+        );
+      });
+    },
     apiFetchPointcloud(id, data) {
       // Build query URL by encoding all existing props of 'data' obj
       let fetchUrl = `artifacts/${id}/services/point-cloud/points?` +
