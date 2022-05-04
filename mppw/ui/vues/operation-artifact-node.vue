@@ -206,6 +206,8 @@ const componentMap = {
     "digital-frame-document-component",
   "urn:x-mfg:artifact:digital:frame":
     "digital-frame-document-component",
+  "urn:x-mfg:artifact:digital:point-cloud":
+    "digital-point-cloud-component",
   "urn:x-mfg:artifact": "default-component",
 };
 
@@ -215,6 +217,9 @@ export default {
       "vues/operation-attachments-node.vue"
     ),
     // Artifact components
+    "digital-point-cloud-component": RemoteVue.asyncComponent(
+      "vues/artifacts/digital-point-cloud-component.vue"
+    ),
     "digital-text-component": RemoteVue.asyncComponent(
       "vues/artifacts/digital-text-component.vue"
     ),
