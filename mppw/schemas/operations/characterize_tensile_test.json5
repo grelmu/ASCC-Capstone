@@ -7,13 +7,37 @@
           [
             ":material:part",
             {
-              ":test-dimensions": [":digital:document:named-dimensions"],
-              ":test-measurements": [
-                ":digital:frame:force-displacement",
+              ":test-dimensions": [
+                [
+                  ":digital:document:named-dimensions",
+                  {
+                    ":notes": [":digital:file", ":digital:text"],
+                  },
+                ],
               ],
-              ":images": [":digital:file"],
-              ":notes": [":digital:file", ":digital:text"],
-              ":tested-specimen": [":material:part"],
+              ":test-measurements": [
+                [
+                  ":digital:frame:force-displacement",
+                  {
+                    ":images": [":digital:file"],
+                    ":notes": [":digital:file", ":digital:text"],
+                  },
+                ],
+              ],
+              ":output-parts": [
+                [
+                  ":material:part",
+                  {
+                    ":part-geometry": [
+                      ":digital:fiducial-points",
+                      ":digital:point-cloud",
+                      ":digital:mesh",
+                    ],
+                    ":images": [":digital:file"],
+                    ":notes": [":digital-file", ":digital:text"],
+                  },
+                ],
+              ],
               ":computed-properties": [
                 [
                   ":digital:document:tensile-properties",

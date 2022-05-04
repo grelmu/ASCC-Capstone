@@ -44,5 +44,51 @@
         },
       },
     },
+    strain: {
+      title: "Strain",
+      type: "object",
+      properties: {
+        column_name: {
+          type: "string",
+          title: "Column Name",
+        },
+        units: {
+          type: "string",
+          title: "Units",
+        },
+      },
+    },
+    transverse_strain: {
+      title: "Transverse Strain",
+      type: "object",
+      properties: {
+        column_name: {
+          type: "string",
+          title: "Column Name",
+        },
+        units: {
+          type: "string",
+          title: "Units",
+        },
+      },
+    },
+    chord_points: {
+      title: "Modulus Chord Points",
+      type: "array",
+      items: {
+        type: "object",
+        title: "",
+        properties: {
+          x: {
+            type: "number",
+            title: "X",
+          },
+          y: {
+            type: "number",
+            title: "Y",
+          },
+        },
+      },
+    },
   },
 }

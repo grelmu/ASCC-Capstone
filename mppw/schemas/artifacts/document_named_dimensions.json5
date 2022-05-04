@@ -4,21 +4,32 @@
   properties: {
     dimensions: {
       title: "Dimensions",
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          label: {
-            type: "string",
-            title: "Name",
-          },
-          value: {
-            type: "number",
-            title: "Measurement",
-          },
-          unit: {
-            type: "string",
-            title: "Unit",
+      type: "object",
+      properties: {
+        orientation: {
+          type: "string",
+          title: "Orientation",
+        },
+        measurements: {
+          type: "array",
+          title: "Measurements",
+          items: {
+            type: "object",
+            title: "",
+            properties: {
+              label: {
+                type: "string",
+                title: "Name",
+              },
+              value: {
+                type: "number",
+                title: "Value",
+              },
+              unit: {
+                type: "string",
+                title: "Unit",
+              },
+            },
           },
         },
       },
