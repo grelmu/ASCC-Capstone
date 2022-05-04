@@ -383,6 +383,23 @@ def create_router(app):
 
         return list(point_cursor)
 
+    @router.get("/{id}/services/point-cloud/bounds")
+    def point_cloud_bounds(
+        id: str,
+        user: security.ScopedUser = Security(
+            request_user(app), scopes=[PROVENANCE_SCOPE]
+        ),
+        service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
+    ):
+    
+        artifact: models.Artifact = read(id, user, service_layer.repo_layer)
+
+        meta = service_layer.get_artifact_service(
+            services.PointCloudServices, artifact
+        ).get_bounds(artifact)
+
+        return meta
+
     @router.get("/{id}/services/point-cloud/cloudfile")
     def point_cloud_cloudfile(
         id: str,

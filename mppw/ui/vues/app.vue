@@ -290,9 +290,12 @@ export default {
       });
     },
     apiFetchDigitalArtifactJsonSchema(id) {
-      return this.apiFetch("artifacts/" + id + "/services/artifact/digital/json_schema", {
-        method: "GET",
-      }).then((response) => {
+      return this.apiFetch(
+        "artifacts/" + id + "/services/artifact/digital/json_schema",
+        {
+          method: "GET",
+        }
+      ).then((response) => {
         if (response.status == 200) return response.json();
         this.throwApiResponseError(
           response,
@@ -327,6 +330,46 @@ export default {
         this.throwApiResponseError(
           response,
           "Unknown response when patching artifact"
+        );
+      });
+    },
+    apiFetchPointCloudBounds(id) {
+      return this.apiFetch(`artifacts/${id}/services/point-cloud/bounds`, {
+        method: "GET",
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when retrieving json bounds for artifact"
+        );
+      });
+    },
+    apiFetchPointcloudUrl(id, data) {
+      // Build query URL by encoding all existing props of 'data' obj
+      let fetchUrl =
+        `artifacts/${id}/services/point-cloud/points?` +
+        Object.keys(data)
+          .map((key) => {
+            return key + "=" + encodeURIComponent(data[key]);
+          })
+          .join("&");
+
+      return fetchUrl;
+    },
+    apiFetchPointcloud(id, data) {
+      // Build query URL by encoding all existing props of 'data' obj
+      let fetchUrl = this.apiFetchPointcloudUrl(id, data);
+
+      return this.apiFetch(fetchUrl, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when retrieving json schema for artifact"
         );
       });
     },
