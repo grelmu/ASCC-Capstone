@@ -33,23 +33,24 @@
               <!-- e.g.: ["2022-02-04T16:02:47.633000", "2022-02-04T16:02:47.90"] -->
               <o-datetimepicker
                 rounded placeholder="Click to select..." :timepicker="{ enableSeconds, hourFormat }"
-                icon="calendar" v-model="timeBoundsStart">
+                icon="calendar" v-model="timeBoundsStart" @update:modelValue="normalizeTimeBounds">
               </o-datetimepicker>
             </o-field>
             <o-field label="time_bounds_end">
               <o-datetimepicker
                 rounded placeholder="Click to select..." :timepicker="{ enableSeconds, hourFormat }"
-                icon="calendar" v-model="timeBoundsEnd">
+                icon="calendar" v-model="timeBoundsEnd" @update:modelValue="normalizeTimeBounds">
               </o-datetimepicker>
             </o-field>
             <div class="mt-3 text-end">
             <o-button @click="getPointCloud()"
               class="text-end">
               Get Point Cloud
-            </o-button>
-            <o-button v-if="Object.keys(response).length > 0"
-              @click="downloadPointCloud(response)"
-              class="text-end btn-outline-secondary">
+            </o-button><br/>
+            <o-button
+              @click="downloadPointCloud()"
+              class="text-end"
+              variant="info">
                 Download Point Cloud
             </o-button>
             </div>
@@ -120,19 +121,21 @@ export default {
           
         });
     },
-    getPointCloud() {
+    normalizeTimeBounds() {
       /*
-      toISOString() results in Zulu time, which is +5 from New York.
-      We reapply the timezone offset between the user's timezone and Zulu 
-      so that what the user enters is what is queried on the backend.
+        toISOString() results in Zulu time, which is +5 from New York.
+        We reapply the timezone offset between the user's timezone and Zulu 
+        so that what the user enters is what is queried on the backend.
       */
       this.formData.time_bounds = JSON.stringify(
         [
           new Date(this.timeBoundsStart.getTime() - (this.timeBoundsStart.getTimezoneOffset() * 60 * 1000)).toISOString(),
           new Date(this.timeBoundsEnd.getTime() - (this.timeBoundsEnd.getTimezoneOffset() * 60 * 1000)).toISOString()
         ]
-    );
-
+      );
+    },
+    getPointCloud() {
+      
       return this.$root.apiFetchPointcloud(
         this.artifactId,
         this.formData).then((result) => {
@@ -140,20 +143,14 @@ export default {
       });
     },
     /**
-     * This function blobs the JSON response and downloads it as a file.
-     * 
-     * Args
-     *    aft: the artifact.response JSON object to be blobbed
+     * This function redirects to a download link to the points specified by the query
      */
-    downloadPointCloud(aft) {
-      // Stringify and format with 2 spaces for indentation
-      const data = JSON.stringify(aft, null, 2);
-      const blob = new Blob([data], {type: 'application/json'});
-      // Create an anchor tag, append the blob, and then click it to
-      // start the download
+    downloadPointCloud() {
+
+      // Create an anchor tag and then click it to start the download
       let a = document.createElement('a');
       a.download = "point_cloud.json";
-      a.href = window.URL.createObjectURL(blob);
+      a.href = this.$root.apiUrl(this.$root.apiFetchPointcloudUrl(this.artifactId, this.formData));
       a.click();
     }
   },
