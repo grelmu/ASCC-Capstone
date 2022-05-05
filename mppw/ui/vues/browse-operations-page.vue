@@ -68,18 +68,22 @@
         <o-button @click="onNewOpSubmit()">Submit</o-button>
       </o-modal>
 
-      <o-table :loading="opsLoading" :data="opsRows || []">
+      <!-- TODO: searching and API pagination -->
+      <o-table :loading="opsLoading" :data="opsRows || []" :paginated="isPaginated"
+        :debounce-search="1000"
+        :current-page.sync="currentPage" :per-page="perPage"
+        >
         <o-table-column field="id" label="ID" v-slot="props">
           <router-link :to="'/operations/' + props.row.id">
             {{ props.row.id }}
           </router-link>
         </o-table-column>
 
-        <o-table-column field="name" label="Name" v-slot="props">
+        <o-table-column field="name" label="Name" sortable v-slot="props">
           {{ props.row.name }}
         </o-table-column>
 
-        <o-table-column field="status" label="Status" v-slot="props">
+        <o-table-column field="status" label="Status" sortable v-slot="props">
           {{ props.row.status }}
         </o-table-column>
 
@@ -88,6 +92,7 @@
           label="Start"
           position="centered"
           v-slot="props"
+          sortable
         >
           {{ new Date(props.row.start_at).toLocaleDateString() }}
         </o-table-column>
@@ -97,6 +102,7 @@
           label="End"
           position="centered"
           v-slot="props"
+          sortable
         >
           {{ new Date(props.row.end_at).toLocaleDateString() }}
         </o-table-column>
@@ -119,6 +125,9 @@ export default {
 
       opsLoading: false,
       opsRows: null,
+      isPaginated: true,
+      perPage: 2,
+      currentPage: 1,
 
       isCreatingNewOp: false,
       newOp: {},
