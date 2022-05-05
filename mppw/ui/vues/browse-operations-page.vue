@@ -68,45 +68,31 @@
         <o-button @click="onNewOpSubmit()">Submit</o-button>
       </o-modal>
 
-      <!-- TODO: searching and API pagination -->
-      <o-table :loading="opsLoading" :data="opsRows || []" :paginated="isPaginated"
-        :debounce-search="1000"
-        :current-page.sync="currentPage" :per-page="perPage"
-        >
-        <o-table-column field="id" label="ID" v-slot="props">
-          <router-link :to="'/operations/' + props.row.id">
-            {{ props.row.id }}
-          </router-link>
-        </o-table-column>
+      <!-- TODO: searching and pagination via API -->
+      <section>
+        <o-table :loading="opsLoading" :data="opsRows || []" :paginated="isPaginated"
+        :current.sync="currentPage"
+        :debounce-search="750" :per-page="perPage">
+          <template v-for="column in opsColumns" :key="column.id">
+            <o-table-column v-bind="column" sortable>
+              <template v-slot="props">
+                <span v-if="column.field == 'id'">
+                  <router-link :to="'/operations/' + props.row.id">
+                    {{ props.row.id }}
+                  </router-link>
+                </span>
+                <span v-else-if="column.field == 'start_at' || column.field == 'end_at'">
+                  {{ new Date(props.row[column.field]).toLocaleDateString() }}
+                </span>
+                <span v-else>
+                  {{ props.row[column.field] }}
+                </span>
+              </template>
+            </o-table-column>
+          </template>
+        </o-table>
+      </section>
 
-        <o-table-column field="name" label="Name" sortable v-slot="props">
-          {{ props.row.name }}
-        </o-table-column>
-
-        <o-table-column field="status" label="Status" sortable v-slot="props">
-          {{ props.row.status }}
-        </o-table-column>
-
-        <o-table-column
-          field="start_at"
-          label="Start"
-          position="centered"
-          v-slot="props"
-          sortable
-        >
-          {{ new Date(props.row.start_at).toLocaleDateString() }}
-        </o-table-column>
-
-        <o-table-column
-          field="end_at"
-          label="End"
-          position="centered"
-          v-slot="props"
-          sortable
-        >
-          {{ new Date(props.row.end_at).toLocaleDateString() }}
-        </o-table-column>
-      </o-table>
     </div>
   </div>
 </template>
@@ -126,8 +112,32 @@ export default {
       opsLoading: false,
       opsRows: null,
       isPaginated: true,
-      perPage: 2,
+      perPage: 10,
       currentPage: 1,
+      opsColumns: [
+        {
+          field: 'id',
+          label: 'ID'
+        },
+        {
+          field: 'name',
+          label: 'Name',
+          searchable: true
+        },
+        {
+          field: 'status',
+          label: 'Status',
+          searchable: true
+        },
+        {
+          field: 'start_at',
+          label: 'Start',
+        },
+        {
+          field: 'end_at',
+          label: 'End',
+        }
+      ],
 
       isCreatingNewOp: false,
       newOp: {},
