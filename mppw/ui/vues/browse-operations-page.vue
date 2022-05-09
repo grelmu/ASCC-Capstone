@@ -71,8 +71,8 @@
       <!-- TODO: searching and pagination via API -->
       <section>
         <o-table :loading="opsLoading" :data="opsRows || []" :paginated="isPaginated"
-        :current.sync="currentPage"
-        :debounce-search="750" :per-page="perPage">
+        :current.sync="parameters.page_num"
+        :debounce-search="750" :per-page="parameters.page_size" @page-change="onPageChange">
           <template v-for="column in opsColumns" :key="column.id">
             <o-table-column v-bind="column" sortable>
               <template v-slot="props">
@@ -112,8 +112,6 @@ export default {
       opsLoading: false,
       opsRows: null,
       isPaginated: true,
-      perPage: 10,
-      currentPage: 1,
       opsColumns: [
         {
           field: 'id',
@@ -141,6 +139,12 @@ export default {
 
       isCreatingNewOp: false,
       newOp: {},
+      parameters: {
+        name: "",
+        status: "draft",
+        page_num: 1,
+        page_size: 10
+      }
     };
   },
   methods: {
@@ -187,9 +191,14 @@ export default {
           );
         });
     },
-    apiFetchProjectOps(project_id) {
+    apiFetchProjectOps(project_id, parameters={}) {
+      let fetchUrl = `operations/?project_ids=${project_id}&` +
+      Object.keys(parameters).map(key => {
+          return key + '=' + encodeURIComponent(parameters[key])
+      }).join("&");
+
       return this.$root
-        .apiFetch("operations/?project_ids=" + this.projectId, {
+        .apiFetch(fetchUrl, {
           method: "GET",
         })
         .then((response) => {
@@ -297,6 +306,16 @@ export default {
           this.resetOpsTable();
           this.loadOpsTable();
         });
+    },
+    onPageChange(page){
+      // Debug items below
+      //
+      // this.opsLoading = true;
+      // return this.apiFetchProjectOps(this.projectId, this.parameters).then((ops) => {
+      //   console.log(ops);
+      //   this.opsRows = ops;
+      //   this.opsLoading = false;
+      // });
     },
   },
 

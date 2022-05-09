@@ -73,8 +73,10 @@ def create_router(app):
         project_ids: List[str] = fastapi.Query(None),
         name: str = fastapi.Query(None),
         active: bool = fastapi.Query(True),
+        status: str = fastapi.Query(None),
         fulltext_query: str = fastapi.Query(None),
-        limit: int = fastapi.Query(None),
+        page_size: int = fastapi.Query(None),
+        page_num: int = fastapi.Query(None),
         user: security.ScopedUser = Security(
             request_user(app), scopes=[PROVENANCE_SCOPE]
         ),
@@ -90,12 +92,17 @@ def create_router(app):
             project_ids=project_ids,
             name=name,
             active=active,
+            status=status,
             fulltext_query=fulltext_query,
         )
 
         # TODO: Pagination
-        if limit is not None:
-            result = itertools.islice(result, limit)
+        # alternative method is to do this during the find() call
+        #   using .find(...).skip(...).limit(...)
+        if page_size is not None and page_num is not None:
+            start = page_size * (page_num - 1)
+            stop = page_size * page_num
+            result = itertools.islice(result, start, stop)
 
         return list(result)
 

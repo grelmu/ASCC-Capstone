@@ -380,6 +380,7 @@ class OperationRepository(MongoDBRepository):
         id: str = None,
         project_ids: List[str] = None,
         name: Optional[str] = None,
+        status: Optional[str] = None,
         active: Optional[bool] = None,
         input_artifact_id: Optional[str] = None,
         output_artifact_id: Optional[str] = None,
@@ -391,7 +392,10 @@ class OperationRepository(MongoDBRepository):
         if project_ids is not None:
             query_doc["project"] = {"$in": list(map(coerce_doc_id, project_ids))}
         if name is not None:
-            query_doc["name"] = name
+            # Using a regex to match any names with $name in the string
+            query_doc["name"] = {"$regex": name, "$options": "i"}
+        if status is not None:
+            query_doc["status"] = status
         if active is not None:
             query_doc["active"] = {"$ne": False} if active else False
         if input_artifact_id is not None:
@@ -431,6 +435,7 @@ class OperationRepository(MongoDBRepository):
         project_ids: List[str] = None,
         name: Optional[str] = None,
         active: Optional[bool] = None,
+        status: Optional[str] = None,
         fulltext_query: str = None,
     ):
         if fulltext_query is None:
@@ -439,14 +444,14 @@ class OperationRepository(MongoDBRepository):
                 list(
                     self.collection.find(
                         self._query_doc_for(
-                            id=id, project_ids=project_ids, name=name, active=active
+                            id=id, project_ids=project_ids, name=name, active=active, status=status
                         )
                     )
                 ),
             )
         else:
             query_doc = self._query_doc_for(
-                id=id, project_ids=project_ids, name=name, active=active
+                id=id, project_ids=project_ids, name=name, active=active, status=status
             )
             return map(
                 lambda doc: doc_to_model(doc, models.Operation),
