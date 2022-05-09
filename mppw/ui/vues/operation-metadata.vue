@@ -64,13 +64,6 @@ export default {
       this.edit = false;
       return this.apiPutOp(this.metadata['id'],this.metadata);
     },
-    
-    status(message) {
-      this.metadata['status'] = message;
-      this.edit = true;
-      return null;
-    },
-
   },
   created() {
     return true;
