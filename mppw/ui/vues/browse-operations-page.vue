@@ -193,7 +193,7 @@ export default {
     apiFetchProjectOps(project_id, parameters={}) {
       let fetchUrl = `operations/?project_ids=${project_id}&` +
       Object.keys(parameters).map(key => {
-          return key + '=' + encodeURIComponent(parameters[key])
+        return parameters[key] ? key + '=' + encodeURIComponent(parameters[key]) : null;
       }).join("&");
 
       return this.$root
@@ -317,8 +317,9 @@ export default {
       // });
     },
     onFilter(parameters){
-      parameters.page_num = this.currentPage
-      parameters.page_size = this.perPage
+      console.log(parameters);
+      parameters.page_num = this.currentPage;
+      parameters.page_size = this.perPage;
       this.opsLoading = true;
       return this.apiFetchProjectOps(this.projectId, parameters).then((ops) => {
         this.opsRows = ops;
