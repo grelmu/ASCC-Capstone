@@ -70,9 +70,12 @@
 
       <!-- TODO: searching and pagination via API -->
       <section>
-        <o-table :loading="opsLoading" :data="opsRows || []" :paginated="isPaginated"
-        :current.sync="parameters.page_num"
-        :debounce-search="750" :per-page="parameters.page_size" @page-change="onPageChange">
+        <o-table :loading="opsLoading" :data="opsRows || []" 
+        :current.sync="currentPage"
+        :debounce-search="750" :per-page="perPage"   
+        :paginated="isPaginated"
+        backend-filtering @filters-change="onFilter">
+        <!-- backend-pagination @page-change="onPageChange" :total="total"> -->
           <template v-for="column in opsColumns" :key="column.id">
             <o-table-column v-bind="column" sortable>
               <template v-slot="props">
@@ -112,6 +115,8 @@ export default {
       opsLoading: false,
       opsRows: null,
       isPaginated: true,
+      perPage: 10,
+      currentPage: 1,
       opsColumns: [
         {
           field: 'id',
@@ -139,12 +144,6 @@ export default {
 
       isCreatingNewOp: false,
       newOp: {},
-      parameters: {
-        name: "",
-        status: "draft",
-        page_num: 1,
-        page_size: 10
-      }
     };
   },
   methods: {
@@ -317,6 +316,16 @@ export default {
       //   this.opsLoading = false;
       // });
     },
+    onFilter(parameters){
+      parameters.page_num = this.currentPage
+      parameters.page_size = this.perPage
+      this.opsLoading = true;
+      return this.apiFetchProjectOps(this.projectId, parameters).then((ops) => {
+        this.opsRows = ops;
+        this.opsLoading = false;
+        console.log(ops);
+      });
+    }
   },
 
   mounted() {
