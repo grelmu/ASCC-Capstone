@@ -1,14 +1,14 @@
 <template>
   <section v-if="metadata">
     <h1>{{metadata['name']}}</h1>
-    <o-field grouped group-multiline label="Status and Tags">
-      <o-field>
-        <o-switch v-model="metadata['active']"  v-on:change="edit=true" >Active</o-switch>
-      </o-field><o-field>
+    <o-field label="Tags">
         <o-inputitems v-model="metadata['tags']" icon="tag" placeholder="Add tag"  v-on:add="edit=true" v-on:remove="edit=true" ></o-inputitems>
-      </o-field><o-field>
-        <o-input v-model="metadata['status']" placeholder="Status"  v-on:change="edit=true" ></o-input>
-      </o-field>
+    </o-field>
+    <o-field label="Status">
+      <o-select placeholder="Select a status" v-model="metadata['status']" v-on:change="edit=true">
+        <option value="draft">draft</option>
+        <option value="published">published</option>
+      </o-select>
     </o-field>
     <o-field label="Description">
       <o-input maxlength="500" type="textarea" v-model="metadata['description']"  v-on:change="edit=true" ></o-input>
@@ -16,14 +16,8 @@
     <o-field label="System Name">
       <o-input type="text" v-model="metadata['system_name']"  v-on:change="edit=true" ></o-input>
     </o-field>
-    <o-field label="System ID">
-      <o-input type="text" v-model="metadata['system_id']"  v-on:change="edit=true" ></o-input>
-    </o-field>
     <o-field label="Operator Names">
       <o-inputitems v-model="metadata['human_operator_names']" icon="person" placeholder="Add an operator"  v-on:add="edit=true" v-on:remove="edit=true" ></o-inputitems>
-    </o-field>
-    <o-field label="Operator IDs">
-      <o-inputitems v-model="metadata['human_operator_ids']" icon="tag" placeholder="Add ID"  v-on:add="edit=true" v-on:remove="edit=true" ></o-inputitems>
     </o-field>
     <o-field label="Start Date & Time">
       <o-input v-model="metadata['start_at']" icon="clock" type="datetime-local"  v-on:change="edit=true" ></o-input>
@@ -70,6 +64,13 @@ export default {
       this.edit = false;
       return this.apiPutOp(this.metadata['id'],this.metadata);
     },
+    
+    status(message) {
+      this.metadata['status'] = message;
+      this.edit = true;
+      return null;
+    },
+
   },
   created() {
     return true;
