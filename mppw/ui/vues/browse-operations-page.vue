@@ -81,7 +81,7 @@
               <template v-slot="props">
                 <span v-if="column.field == 'id'">
                   <router-link :to="'/operations/' + props.row.id">
-                    {{ props.row.id }}
+                    View Operation
                   </router-link>
                 </span>
                 <span v-else-if="column.field == 'start_at' || column.field == 'end_at'">
