@@ -123,7 +123,7 @@ export default {
       opsColumns: [
         {
           field: 'id',
-          label: 'ID'
+          label: 'Link'
         },
         {
           field: 'name',
