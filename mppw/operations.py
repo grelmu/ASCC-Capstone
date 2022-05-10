@@ -100,10 +100,10 @@ def create_router(app):
         return list(result)
 
     # class PaginatedOperations(pydantic.BaseModel):
-    #         results: List[models.Operation]
-    #         total: int
+    #     results: List[models.Operation]
+    #     total: int
 
-    # @router.get("/", response_model=PaginatedOperations)
+    # @router.get("/paged/", response_model=PaginatedOperations)
     @router.get("/paged/")
     def paged_query(
         project_ids: List[str] = fastapi.Query(None),
@@ -143,10 +143,7 @@ def create_router(app):
             stop = page_size * page_num
             result = list(itertools.islice(result, start, stop))
 
-        return {
-            'results': result,
-            'total': total
-            }
+        return { 'results': result, 'total': total }
 
     @router.put("/{id}", response_model=bool)
     def update(
