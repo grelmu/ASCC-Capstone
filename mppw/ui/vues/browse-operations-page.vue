@@ -74,6 +74,7 @@
         :current.sync="parameters.page_num"
         :debounce-search="750" :per-page="parameters.page_size"   
         :paginated="isPaginated"
+        backend-sorting @sort="onSort"
         backend-filtering @filters-change="onFilter"
         backend-pagination @page-change="onPageChange" :total="total">
           <template v-for="column in opsColumns" :key="column.id">
@@ -85,7 +86,9 @@
                   </router-link>
                 </span>
                 <span v-else-if="column.field == 'start_at' || column.field == 'end_at'">
+                  <span v-if="props.row[column.field] != null">
                   {{ new Date(props.row[column.field]).toLocaleDateString() }}
+                  </span>
                 </span>
                 <span v-else>
                   {{ props.row[column.field] }}
@@ -343,6 +346,16 @@ export default {
         this.parameters[key] = parameters[key];
       });
       this.opsLoading = true;
+      return this.apiFetchProjectOpsPaged(this.projectId, this.parameters).then((ops) => {
+        this.opsRows = ops.results;
+        this.total = ops.total;
+        this.opsLoading = false;
+        console.log(ops);
+      });
+    },
+    onSort(field, dir, event){
+      this.parameters.sort_col = field;
+      this.parameters.sort_dir = dir;
       return this.apiFetchProjectOpsPaged(this.projectId, this.parameters).then((ops) => {
         this.opsRows = ops.results;
         this.total = ops.total;

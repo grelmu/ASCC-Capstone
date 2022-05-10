@@ -113,6 +113,8 @@ def create_router(app):
         fulltext_query: str = fastapi.Query(None),
         page_size: int = fastapi.Query(None),
         page_num: int = fastapi.Query(None),
+        sort_col: str = fastapi.Query(None),
+        sort_dir: str = fastapi.Query(None),
         user: security.ScopedUser = Security(
             request_user(app), scopes=[PROVENANCE_SCOPE]
         ),
@@ -135,6 +137,11 @@ def create_router(app):
         result = list(result)
         total = len(result)
 
+
+        if sort_col is not None and sort_dir is not None:
+            reverse = (sort_dir == 'desc') 
+            result.sort(key=lambda x: (getattr(x, sort_col) is None, sortFunct(getattr(x, sort_col))), reverse=reverse)
+
         # TODO: Pagination
         # alternative method is to do this during the find() call
         #   using .find(...).skip(...).limit(...)
@@ -144,6 +151,12 @@ def create_router(app):
             result = list(itertools.islice(result, start, stop))
 
         return { 'results': result, 'total': total }
+        
+    def sortFunct(item):
+        if type(item) == str:
+            return item.lower()
+        else: 
+            return item
 
     @router.put("/{id}", response_model=bool)
     def update(
