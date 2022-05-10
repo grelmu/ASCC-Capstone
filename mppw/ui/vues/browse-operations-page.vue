@@ -77,7 +77,7 @@
         backend-filtering @filters-change="onFilter"
         backend-pagination @page-change="onPageChange" :total="total">
           <template v-for="column in opsColumns" :key="column.id">
-            <o-table-column v-bind="column" sortable>
+            <o-table-column v-bind="column">
               <template v-slot="props">
                 <span v-if="column.field == 'id'">
                   <router-link :to="'/operations/' + props.row.id">
@@ -123,25 +123,30 @@ export default {
       opsColumns: [
         {
           field: 'id',
-          label: 'ID'
+          label: 'ID',
+          sortable: false,
         },
         {
           field: 'name',
           label: 'Name',
-          searchable: true
+          searchable: true,
+          sortable: true,
         },
         {
           field: 'status',
           label: 'Status',
-          searchable: true
+          searchable: true,
+          sortable: true,
         },
         {
           field: 'start_at',
           label: 'Start',
+          sortable: true,
         },
         {
           field: 'end_at',
           label: 'End',
+          sortable: true,
         }
       ],
 
