@@ -198,8 +198,21 @@ export default {
           );
         });
     },
-    apiFetchProjectOps(project_id, parameters={}) {
-      let fetchUrl = `operations/?project_ids=${project_id}&` +
+    apiFetchProjectOps(project_id) {
+      return this.$root
+        .apiFetch("operations/?project_ids=" + this.projectId, {
+          method: "GET",
+        })
+        .then((response) => {
+          if (response.status == 200) return response.json();
+          this.$root.throwApiResponseError(
+            response,
+            "Unknown response when querying for project operations"
+          );
+        });
+    },
+    apiFetchProjectOpsPaged(project_id, parameters={}) {
+      let fetchUrl = `operations/paged/?project_ids=${project_id}&` +
       Object.keys(parameters).map(key => {
         return parameters[key] ? key + '=' + encodeURIComponent(parameters[key]) : null;
       }).join("&");
@@ -273,7 +286,7 @@ export default {
 
     loadOpsTable() {
       this.opsLoading = true;
-      return this.apiFetchProjectOps(this.projectId).then((ops) => {
+      return this.apiFetchProjectOpsPaged(this.projectId).then((ops) => {
         this.opsRows = ops.results;
         this.total = ops.total;
         this.opsLoading = false;
@@ -318,7 +331,7 @@ export default {
     onPageChange(page){
       this.opsLoading = true;
       this.parameters.page_num = page;
-      return this.apiFetchProjectOps(this.projectId, this.parameters).then((ops) => {
+      return this.apiFetchProjectOpsPaged(this.projectId, this.parameters).then((ops) => {
         console.log(ops);
         this.opsRows = ops.results;
         this.total = ops.total;
@@ -330,7 +343,7 @@ export default {
         this.parameters[key] = parameters[key];
       });
       this.opsLoading = true;
-      return this.apiFetchProjectOps(this.projectId, this.parameters).then((ops) => {
+      return this.apiFetchProjectOpsPaged(this.projectId, this.parameters).then((ops) => {
         this.opsRows = ops.results;
         this.total = ops.total;
         this.opsLoading = false;

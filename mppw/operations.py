@@ -68,13 +68,44 @@ def create_router(app):
 
         return result
 
+    @router.get("/", response_model=List[models.Operation])
+    def query(
+        project_ids: List[str] = fastapi.Query(None),
+        name: str = fastapi.Query(None),
+        active: bool = fastapi.Query(True),
+        fulltext_query: str = fastapi.Query(None),
+        limit: int = fastapi.Query(None),
+        user: security.ScopedUser = Security(
+            request_user(app), scopes=[PROVENANCE_SCOPE]
+        ),
+        repo_layer=Depends(request_repo_layer(app)),
+    ):
+
+        if project_ids is None:
+            project_ids = projects.project_claims_for_user(user)
+
+        projects.check_project_claims_for_user(user, project_ids)
+
+        result = repo_layer.operations.query(
+            project_ids=project_ids,
+            name=name,
+            active=active,
+            fulltext_query=fulltext_query,
+        )
+
+        # TODO: Pagination
+        if limit is not None:
+            result = itertools.islice(result, limit)
+
+        return list(result)
+
     # class PaginatedOperations(pydantic.BaseModel):
     #         results: List[models.Operation]
     #         total: int
 
     # @router.get("/", response_model=PaginatedOperations)
-    @router.get("/")
-    def query(
+    @router.get("/paged/")
+    def paged_query(
         project_ids: List[str] = fastapi.Query(None),
         name: str = fastapi.Query(None),
         active: bool = fastapi.Query(True),
