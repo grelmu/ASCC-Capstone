@@ -68,7 +68,12 @@ def create_router(app):
 
         return result
 
-    @router.get("/", response_model=List[models.Operation])
+    # class PaginatedOperations(pydantic.BaseModel):
+    #         results: List[models.Operation]
+    #         total: int
+
+    # @router.get("/", response_model=PaginatedOperations)
+    @router.get("/")
     def query(
         project_ids: List[str] = fastapi.Query(None),
         name: str = fastapi.Query(None),
@@ -96,15 +101,21 @@ def create_router(app):
             fulltext_query=fulltext_query,
         )
 
+        result = list(result)
+        total = len(result)
+
         # TODO: Pagination
         # alternative method is to do this during the find() call
         #   using .find(...).skip(...).limit(...)
         if page_size is not None and page_num is not None:
             start = page_size * (page_num - 1)
             stop = page_size * page_num
-            result = itertools.islice(result, start, stop)
+            result = list(itertools.islice(result, start, stop))
 
-        return list(result)
+        return {
+            'results': result,
+            'total': total
+            }
 
     @router.put("/{id}", response_model=bool)
     def update(

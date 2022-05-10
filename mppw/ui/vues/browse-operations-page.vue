@@ -71,11 +71,11 @@
       <!-- TODO: searching and pagination via API -->
       <section>
         <o-table :loading="opsLoading" :data="opsRows || []" 
-        :current.sync="currentPage"
-        :debounce-search="750" :per-page="perPage"   
+        :current.sync="parameters.page_num"
+        :debounce-search="750" :per-page="parameters.page_size"   
         :paginated="isPaginated"
-        backend-filtering @filters-change="onFilter">
-        <!-- backend-pagination @page-change="onPageChange" :total="total"> -->
+        backend-filtering @filters-change="onFilter"
+        backend-pagination @page-change="onPageChange" :total="total">
           <template v-for="column in opsColumns" :key="column.id">
             <o-table-column v-bind="column" sortable>
               <template v-slot="props">
@@ -115,8 +115,11 @@ export default {
       opsLoading: false,
       opsRows: null,
       isPaginated: true,
-      perPage: 10,
-      currentPage: 1,
+      parameters: {
+        page_size: 10,
+        page_num: 1,
+      },
+      total: 1000,
       opsColumns: [
         {
           field: 'id',
@@ -266,7 +269,8 @@ export default {
     loadOpsTable() {
       this.opsLoading = true;
       return this.apiFetchProjectOps(this.projectId).then((ops) => {
-        this.opsRows = ops;
+        this.opsRows = ops.results;
+        this.total = ops.total;
         this.opsLoading = false;
       });
     },
@@ -307,22 +311,23 @@ export default {
         });
     },
     onPageChange(page){
-      // Debug items below
-      //
-      // this.opsLoading = true;
-      // return this.apiFetchProjectOps(this.projectId, this.parameters).then((ops) => {
-      //   console.log(ops);
-      //   this.opsRows = ops;
-      //   this.opsLoading = false;
-      // });
+      this.opsLoading = true;
+      this.parameters.page_num = page;
+      return this.apiFetchProjectOps(this.projectId, this.parameters).then((ops) => {
+        console.log(ops);
+        this.opsRows = ops.results;
+        this.total = ops.total;
+        this.opsLoading = false;
+      });
     },
     onFilter(parameters){
-      console.log(parameters);
-      parameters.page_num = this.currentPage;
-      parameters.page_size = this.perPage;
+      Object.keys(parameters).map(key => {
+        this.parameters[key] = parameters[key];
+      });
       this.opsLoading = true;
-      return this.apiFetchProjectOps(this.projectId, parameters).then((ops) => {
-        this.opsRows = ops;
+      return this.apiFetchProjectOps(this.projectId, this.parameters).then((ops) => {
+        this.opsRows = ops.results;
+        this.total = ops.total;
         this.opsLoading = false;
         console.log(ops);
       });
