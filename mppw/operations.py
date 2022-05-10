@@ -137,26 +137,19 @@ def create_router(app):
         result = list(result)
         total = len(result)
 
-
         if sort_col is not None and sort_dir is not None:
-            reverse = (sort_dir == 'desc') 
-            result.sort(key=lambda x: (getattr(x, sort_col) is None, sortFunct(getattr(x, sort_col))), reverse=reverse)
+            result.sort(
+                key=lambda x: (
+                    getattr(x, sort_col) is None, 
+                    getattr(x, sort_col).lower() if type(getattr(x, sort_col)) == str else getattr(x, sort_col)),
+                reverse = (sort_dir == 'desc'))
 
-        # TODO: Pagination
-        # alternative method is to do this during the find() call
-        #   using .find(...).skip(...).limit(...)
         if page_size is not None and page_num is not None:
             start = page_size * (page_num - 1)
             stop = page_size * page_num
             result = list(itertools.islice(result, start, stop))
 
         return { 'results': result, 'total': total }
-        
-    def sortFunct(item):
-        if type(item) == str:
-            return item.lower()
-        else: 
-            return item
 
     @router.put("/{id}", response_model=bool)
     def update(
