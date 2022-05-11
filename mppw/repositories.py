@@ -540,11 +540,14 @@ class BucketFile(models.DocModel):
     size_bytes: int
     md5: Optional[Any]
 
+class CollectionStats(models.BaseJsonModel):
+    name: str
+    size_bytes: int
 
-class DatabaseBucketStats(models.DocModel):
-    collections: int
-    totalSize: int
-    collection_list: Optional[Any]
+class DatabaseBucketStats(models.BaseJsonModel):
+    name: str
+    size_bytes: int
+    collections: List[CollectionStats]
 
 
 def gridfs_bucket_data_gen(grid_out):
@@ -661,7 +664,8 @@ class BucketRepository:
     #
 
      ### TEST function to add collection in the Database ########
-    
+     ### Only for test purpose. Needs to be deleted
+    '''
     def add_random_components(self,db_object):
         collection1=db_object['names']
         collection2=db_object['age']
@@ -680,7 +684,7 @@ class BucketRepository:
         x = collection1.insert_many(mylist)
         y = collection2.insert_many(mylist1)       
         print("List of collection are",db_object.list_collection_names() )
-
+'''
 
     def get_mongodb_db_bucket_stats(self, bucket_url):
 
@@ -689,14 +693,13 @@ class BucketRepository:
         )
         client = pymongo.MongoClient(resolved_bucket_url)
         db:pymongo.database.Database = client.get_default_database()
-       # self.add_random_components(db)
-        #Selecting the keys to display in stats
+        #Selecting the items to display as statistics
         interested_stats = ['collections','totalSize','collection_list']
         #Getting the stats data from the db object
         stats=db.command("dbstats")
         #Adding collection names list to the stats dictionary
         stats['collection_list']=db.list_collection_names()
-        #Creating a dictionary of specific interested stats
+        #Creating a dictionary of the interested stats data
         stats=dict(zip(interested_stats,[stats[k] for k in interested_stats]))
         return stats
 

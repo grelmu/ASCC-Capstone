@@ -704,12 +704,6 @@ class FileServices(ArtifactServices):
     def download(self, artifact: models.DigitalArtifact):
         return self.repo_layer.buckets.get_file_by_url(artifact.url_data)
 
-'''
-class DatabaseBucketStats(pydantic.BaseModel):
-    collections: int
-    size_bytes: int
-
-'''
 
 
 class DatabaseBucketServices(ArtifactServices):
@@ -727,9 +721,6 @@ class DatabaseBucketServices(ArtifactServices):
         return artifact
     
     def ls_stats(self, artifact: models.DigitalArtifact):
-        #collections=self.repo_layer.buckets.get_db_stats(artifact.url_data)['collections']
-        #size_bytes=self.repo_layer.buckets.get_db_stats(artifact.url_data)['totalSize']
-        #return DatabaseBucketStats(collections=collections,size_bytes=size_bytes)
         return self.repo_layer.buckets.get_db_stats(artifact.url_data)
     
 
