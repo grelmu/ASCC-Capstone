@@ -308,6 +308,24 @@ def create_router(app):
         )
         return list(service.ls(artifact, path))
 
+
+    @router.post("/{id}/services/database-bucket/stats" , response_model=repositories.DatabaseBucketStats)
+
+    def database_bucket(
+        id: str,
+        user: security.ScopedUser = Security(
+            request_user(app), scopes=[PROVENANCE_SCOPE]
+        ),
+        service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
+    ):
+
+        artifact: models.Artifact = read(id, user, service_layer.repo_layer)
+
+        service: services.DatabaseBucketServices = service_layer.artifact_service(
+            artifact.type_urn
+        )
+        return service.ls_stats(artifact)
+
     class RenamePaths(pydantic.BaseModel):
         path: str
         new_path: str
