@@ -15,6 +15,7 @@ from .services import request_service_layer
 from . import security
 from .security import request_user, PROVENANCE_SCOPE
 from . import projects
+from . import endpoints
 
 
 class NewArtifactTransform(models.ArtifactTransform):
@@ -113,6 +114,34 @@ def create_router(app):
 
         modified = repo_layer.operations.update(
             operation, project_ids=projects.project_claims_for_user(current_user)
+        )
+
+        if not modified:
+            raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
+
+        return True
+        
+    @router.patch("/{id}", response_model=bool)
+    def patch(
+        id: str,
+        changes: List[endpoints.Change],
+        current_user: models.User = Security(
+            request_user(app), scopes=[PROVENANCE_SCOPE]
+        ),
+        repo_layer=Depends(request_repo_layer(app)),
+    ):
+        def update_fn(metadata: models.Operation):
+
+            for change in changes:
+                if change.op == "replace":
+                    setattr(metadata, change.path, change.value)
+                elif change.op == "remove":
+                    setattr(metadata, change.path, None)
+
+            return metadata
+
+        modified = repo_layer.operations.partial_update(
+            id, update_fn, project_ids=projects.project_claims_for_user(current_user)
         )
 
         if not modified:
