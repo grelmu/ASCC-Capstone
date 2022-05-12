@@ -99,12 +99,11 @@ def create_router(app):
 
         return list(result)
 
-    # class PaginatedOperations(pydantic.BaseModel):
-    #     results: List[models.Operation]
-    #     total: int
+    class PaginatedOperations(models.BaseJsonModel):
+        results: List[models.Operation]
+        total: int
 
-    # @router.get("/paged/", response_model=PaginatedOperations)
-    @router.get("/paged/")
+    @router.get("/paged/", response_model=PaginatedOperations)
     def paged_query(
         project_ids: List[str] = fastapi.Query(None),
         name: str = fastapi.Query(None),
@@ -126,7 +125,7 @@ def create_router(app):
 
         projects.check_project_claims_for_user(user, project_ids)
 
-        result = repo_layer.operations.query(
+        results = repo_layer.operations.query(
             project_ids=project_ids,
             name=name,
             active=active,
@@ -134,11 +133,11 @@ def create_router(app):
             fulltext_query=fulltext_query,
         )
 
-        result = list(result)
-        total = len(result)
+        results = list(results)
+        total = len(results)
 
         if sort_col is not None and sort_dir is not None:
-            result.sort(
+            results.sort(
                 key=lambda x: (
                     getattr(x, sort_col) is None, 
                     getattr(x, sort_col).lower() if type(getattr(x, sort_col)) == str else getattr(x, sort_col)),
@@ -147,9 +146,9 @@ def create_router(app):
         if page_size is not None and page_num is not None:
             start = page_size * (page_num - 1)
             stop = page_size * page_num
-            result = list(itertools.islice(result, start, stop))
+            results = list(itertools.islice(results, start, stop))
 
-        return { 'results': result, 'total': total }
+        return PaginatedOperations(results = results, total=total) 
 
     @router.put("/{id}", response_model=bool)
     def update(
