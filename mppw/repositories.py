@@ -544,10 +544,14 @@ class CollectionStats(models.BaseJsonModel):
     name: str
     size_bytes: int
 
+
 class DatabaseBucketStats(models.BaseJsonModel):
-    name: str
-    size_bytes: int
-    collections: List[CollectionStats]
+    db:str
+    totalSize:int
+    collections:int
+    collection_stats:List[CollectionStats]
+
+
 
 
 def gridfs_bucket_data_gen(grid_out):
@@ -686,22 +690,37 @@ class BucketRepository:
         print("List of collection are",db_object.list_collection_names() )
 '''
 
-    def get_mongodb_db_bucket_stats(self, bucket_url):
+    #Function to return the collection name and size from the database object
+    def get_db_collection_stats(self,db_object ):
+        #list all the collections in the database object
+        collection_list=db_object.list_collection_names()
+        #Get size for each collection in the list
+        collection_size= [db_object.command("collstats",f"{collection}")["size"] for collection in collection_list]
+        #Putting the collection_list and collection size into a dictionary
+        collection_dictionary_list=[]
+        for item in range(len(collection_list)):
+            collection_dictionary_list.append({'name': collection_list[item],'size_bytes':collection_size[item]})
+        return collection_dictionary_list
+        
 
+    #Function that takes the database bucket url and returns database bucket statistics 
+    def get_mongodb_db_bucket_stats(self, bucket_url):
         resolved_bucket_url = self.storage_layer.resolve_local_storage_url_host(
             bucket_url
         )
         client = pymongo.MongoClient(resolved_bucket_url)
         db:pymongo.database.Database = client.get_default_database()
         #Selecting the items to display as statistics
-        interested_stats = ['collections','totalSize','collection_list']
+        interested_stats = ['db','collections','totalSize','collection_stats']
         #Getting the stats data from the db object
         stats=db.command("dbstats")
-        #Adding collection names list to the stats dictionary
-        stats['collection_list']=db.list_collection_names()
-        #Creating a dictionary of the interested stats data
+        #Getting the collection name and its size in bytes from the db object
+        stats['collection_stats']=self.get_db_collection_stats(db)
+        #Storing the interested_stats data into a python dictionary
         stats=dict(zip(interested_stats,[stats[k] for k in interested_stats]))
         return stats
+
+
 
 
     def get_db_stats(self, bucket_url):

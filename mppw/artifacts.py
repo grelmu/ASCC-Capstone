@@ -89,6 +89,7 @@ def create_router(app):
             )
         )
 
+
     @router.put("/{id}", response_model=bool)
     def update(
         id: str,
