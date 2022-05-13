@@ -1,17 +1,19 @@
 <template>
   <section v-if="metadata">
-    <h1>{{metadata['name']}}</h1>
-    <o-field label="Tags">
-        <o-inputitems v-model="edit['tags']" icon="tag" placeholder="Add tag"  v-on:add="checkChanges('tags')" v-on:remove="checkChanges('tags')" ></o-inputitems>
-    </o-field>
+    <h1 @click="nameEdit=true" v-if="!nameEdit">{{edit['name']}}</h1>
+    <o-input type="text" v-if="nameEdit" v-model="edit['name']" v-on:change="checkChanges('name')" size="large"></o-input>
+    <p>{{changes}}</p>
     <o-field label="Status">
       <o-select placeholder="Select a status" v-model="edit['status']" v-on:change="checkChanges('status')">
         <option value="draft">draft</option>
         <option value="published">published</option>
       </o-select>
     </o-field>
+    <o-field label="Tags">
+        <o-inputitems v-model="edit['tags']" icon="tag" placeholder="Add tag"  v-on:add="checkChanges('tags')" v-on:remove="checkChanges('tags')" ></o-inputitems>
+    </o-field>
     <o-field label="Description">
-      <o-input maxlength="500" type="textarea" v-model="edit['description']"  v-on:change="checkChanges('description')" ></o-input>
+      <o-input maxlength="200" type="text" v-model="edit['description']"  v-on:change="checkChanges('description')" ></o-input>
     </o-field>
     <o-field label="System Name">
       <o-input type="text" v-model="edit['system_name']"  v-on:change="checkChanges('system_name')" ></o-input>
@@ -35,6 +37,7 @@
 export default {
   data() {
     return {
+      nameEdit: false,
       edit: null,
       changes: [],
       submitButton: false,
@@ -56,6 +59,7 @@ export default {
     },
     onMetadataSubmit(){
       this.submitButton = false;
+      this.nameEdit = false;
       this.changes = [];
       return this.$root.apiPatchOperation(this.metadata['id'],this.changes);
     },
@@ -68,9 +72,4 @@ export default {
 </script>
 
 <style scoped>
-.text-area {
-  width: 100%;
-  position: relative;
-  padding: 0.75rem;
-}
 </style>
