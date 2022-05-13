@@ -2,7 +2,6 @@
   <section v-if="metadata">
     <h1 @click="nameEdit=true" v-if="!nameEdit">{{edit['name']}}</h1>
     <o-input type="text" v-if="nameEdit" v-model="edit['name']" v-on:change="checkChanges('name')" size="large"></o-input>
-    <p>{{changes}}</p>
     <o-field label="Status">
       <o-select placeholder="Select a status" v-model="edit['status']" v-on:change="checkChanges('status')">
         <option value="draft">draft</option>
