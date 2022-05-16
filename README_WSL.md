@@ -72,7 +72,7 @@ The only downside to this is that it's easier to lose track of what credentials 
 
 ## Install pyenv in WSL
 
-Before installing [pyenv] it is essential to install some of its dependencies. In the WSL terminal, run:
+Before pyenv can build Python versions, you must install Python build dependencies. In the WLS, run:
 
 ```sh
 $ sudo apt-get update; sudo apt-get install make build-essential libssl-dev zlib1g-dev \

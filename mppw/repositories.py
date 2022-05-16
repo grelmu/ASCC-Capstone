@@ -540,16 +540,16 @@ class BucketFile(models.DocModel):
     size_bytes: int
     md5: Optional[Any]
 
+
 class CollectionStats(models.BaseJsonModel):
     name: str
     size_bytes: int
 
 
 class DatabaseBucketStats(models.BaseJsonModel):
-    db:str
-    totalSize:int
-    collections:int
-    collection_stats:List[CollectionStats]
+    name:str
+    size_bytes:int
+    collections:List[CollectionStats]
 
 
 
@@ -667,40 +667,17 @@ class BucketRepository:
 
     #
 
-     ### TEST function to add collection in the Database ########
-     ### Only for test purpose. Needs to be deleted
-    '''
-    def add_random_components(self,db_object):
-        collection1=db_object['names']
-        collection2=db_object['age']
-        mylist = [
-            { "name": "Amy", "address": "Apple st 652"},
-            { "name": "Hannah", "address": "Mountain 21"},
-            { "name": "Michael", "address": "Valley 345"},
-            
-        ]
-        mylist1=[
-            {"age":20},
-            {"age":15},
-            {"age":30}
-        ]
-
-        x = collection1.insert_many(mylist)
-        y = collection2.insert_many(mylist1)       
-        print("List of collection are",db_object.list_collection_names() )
-'''
-
     #Function to return the collection name and size from the database object
-    def get_db_collection_stats(self,db_object ):
+    def get_mongodb_collection_stats(self,db ):
         #list all the collections in the database object
-        collection_list=db_object.list_collection_names()
+        collection_names=db.list_collection_names()
         #Get size for each collection in the list
-        collection_size= [db_object.command("collstats",f"{collection}")["size"] for collection in collection_list]
+        collection_sizes_bytes= [db.command("collstats",f"{collection}")["size"] for collection in collection_names]
         #Putting the collection_list and collection size into a dictionary
-        collection_dictionary_list=[]
-        for item in range(len(collection_list)):
-            collection_dictionary_list.append({'name': collection_list[item],'size_bytes':collection_size[item]})
-        return collection_dictionary_list
+        collection_stats=[]
+        for item in range(len(collection_names)):
+            collection_stats.append({'name': collection_names[item],'size_bytes':collection_sizes_bytes[item]})
+        return collection_stats
         
 
     #Function that takes the database bucket url and returns database bucket statistics 
@@ -710,16 +687,16 @@ class BucketRepository:
         )
         client = pymongo.MongoClient(resolved_bucket_url)
         db:pymongo.database.Database = client.get_default_database()
-        #Selecting the items to display as statistics
-        interested_stats = ['db','collections','totalSize','collection_stats']
         #Getting the stats data from the db object
         stats=db.command("dbstats")
         #Getting the collection name and its size in bytes from the db object
-        stats['collection_stats']=self.get_db_collection_stats(db)
-        #Storing the interested_stats data into a python dictionary
-        stats=dict(zip(interested_stats,[stats[k] for k in interested_stats]))
-        return stats
+        stats['collections']=self.get_mongodb_collection_stats(db)
+        #Getting the name of DB and storing it in the index "name"
+        stats['name']=stats['db']
+        #Getting the totalSize of DB and storing in the index "size_bytes"
+        stats['size_bytes']=stats['totalSize']
 
+        return stats
 
 
 
