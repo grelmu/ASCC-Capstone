@@ -705,6 +705,7 @@ class FileServices(ArtifactServices):
         return self.repo_layer.buckets.get_file_by_url(artifact.url_data)
 
 
+
 class DatabaseBucketServices(ArtifactServices):
 
     URN_PREFIX = DATABASE_BUCKET_URN_PREFIX
@@ -714,11 +715,14 @@ class DatabaseBucketServices(ArtifactServices):
         bucket_id = f"artdb-{str(artifact.id)}"
         scheme = scheme or self.repo_layer.buckets.default_db_bucket_scheme
         artifact.url_data = self.repo_layer.buckets.create_db_bucket(bucket_id, scheme)
-
+        
         if not self.repo_layer.artifacts.update(artifact):
             return None
         return artifact
-
+    
+    def ls_stats(self, artifact: models.DigitalArtifact):
+        return self.repo_layer.buckets.get_db_stats(artifact.url_data)
+    
 
 class FileBucketServices(ArtifactServices):
 

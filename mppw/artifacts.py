@@ -187,7 +187,10 @@ def create_router(app):
         services = service_layer.artifact_services_for(artifact)
         return services.operation_parent(artifact)
 
-    @router.get("/{id}/services/artifact/digital/json_schema", response_model=typing.Optional[dict])
+    @router.get(
+        "/{id}/services/artifact/digital/json_schema",
+        response_model=typing.Optional[dict],
+    )
     def json_schema(
         id: str,
         user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
@@ -308,6 +311,25 @@ def create_router(app):
         )
         return list(service.ls(artifact, path))
 
+    @router.get(
+        "/{id}/services/database-bucket/stats",
+        response_model=repositories.DatabaseBucketStats,
+    )
+    def database_bucket(
+        id: str,
+        user: security.ScopedUser = Security(
+            request_user(app), scopes=[PROVENANCE_SCOPE]
+        ),
+        service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
+    ):
+
+        artifact: models.Artifact = read(id, user, service_layer.repo_layer)
+
+        service: services.DatabaseBucketServices = service_layer.artifact_service(
+            artifact.type_urn
+        )
+        return service.ls_stats(artifact)
+
     class RenamePaths(pydantic.BaseModel):
         path: str
         new_path: str
@@ -391,7 +413,7 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-    
+
         artifact: models.Artifact = read(id, user, service_layer.repo_layer)
 
         meta = service_layer.get_artifact_service(
