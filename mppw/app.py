@@ -3,7 +3,7 @@ import types
 import fastapi
 import fastapi.staticfiles
 
-from mppw import logger
+from mppw import logger, RELEASE_NOTES
 from mppw import __version__ as __mppw_version__
 
 
@@ -49,8 +49,11 @@ def create_app(storage_layer):
     )
 
     @app.get("/version")
-    def version():
-        return {"version": __mppw_version__}
+    def version(with_release_notes=False):
+        version_info = {"version": __mppw_version__}
+        if with_release_notes:
+            version_info["release_notes"] = RELEASE_NOTES
+        return version_info
 
     #
     # Setup API

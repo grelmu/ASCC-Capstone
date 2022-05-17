@@ -1,9 +1,18 @@
 import pkg_resources
+import importlib_metadata
 
 try:
     __version__ = pkg_resources.get_distribution(__name__).version
 except:
     __version__ = None
+
+try:
+    distribution = importlib_metadata.Distribution.from_name(__name__)
+    print(distribution.locate_file("MPPW_RELEASE_NOTES.md"))
+    with open(distribution.locate_file("MPPW_RELEASE_NOTES.md"), "r") as f:
+        RELEASE_NOTES = f.read()
+except:
+    RELEASE_NOTES = None
 
 #
 # Initialize logging - logging via uvicorn is kinda messed up
