@@ -144,9 +144,6 @@ def create_router(app):
             fulltext_query=fulltext_query,
         )
 
-        results = list(results)
-        total = len(results)
-
         return PaginatedOperations(results = results, total=total) 
 
     @router.put("/{id}", response_model=bool)

@@ -482,30 +482,26 @@ class OperationRepository(MongoDBRepository):
                         )
                     )
             total = len(list(result))
-            results = map(
+            results = list(map(
                 lambda doc: doc_to_model(doc, models.Operation),
-                list(
                     self.collection.find(
                         self._query_doc_for(
                             id=id, project_ids=project_ids, name=name, active=active, status=status
                         )
-                    ).skip(skip or 0).limit(limit or 0).sort( sort_col or "$natural", sort_dir or 1 )
-                ),
-            )
+                ).skip(skip or 0).limit(limit or 0).sort( sort_col or "$natural", sort_dir or 1 ),
+            ))
             return results, total
         else:
             query_doc = self._query_doc_for(
                 id=id, project_ids=project_ids, name=name, active=active, status=status
             )
             total = len(list(result))
-            results = map(
+            results = list(map(
                 lambda doc: doc_to_model(doc, models.Operation),
-                list(
                     self.collection.aggregate(
                         self._fulltext_agg_docs_for(fulltext_query, query_doc)
-                    ).skip(skip or 0).limit(limit or 0).sort( sort_col or "$natural", sort_dir or 1 )
-                ),
-            )
+                ).skip(skip or 0).limit(limit or 0).sort( sort_col or "$natural", sort_dir or 1 ),
+            ))
             return results, total
 
     def update(self, operation: models.Operation, project_ids: List[str] = None):
