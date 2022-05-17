@@ -466,6 +466,24 @@ class OperationRepository(MongoDBRepository):
             == 1
         )
 
+    def partial_update(self, id: str, update_fn, project_ids: List[str] = None):
+        txn = self.session.start_transaction()
+        try:
+            metadata = self.query_one(id=id, project_ids=project_ids)
+            if metadata is None:
+                return False
+            metadata = update_fn(metadata)
+            if metadata is None:
+                return False
+
+            result = self.update(metadata, project_ids=project_ids)
+            self.session.commit_transaction()
+            txn = None
+            return result
+        finally:
+            if txn:
+                self.session.abort_transaction()
+
     def query_by_attached(
         self,
         input_artifact_id: str = None,

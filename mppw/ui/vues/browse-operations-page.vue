@@ -215,6 +215,7 @@ export default {
           );
         });
     },
+
     refreshProjects() {
       this.projects = null;
       this.projectId = null;
