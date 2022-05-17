@@ -125,28 +125,27 @@ def create_router(app):
 
         projects.check_project_claims_for_user(user, project_ids)
 
-        results = repo_layer.operations.query(
+        # Calculate the skip value based on page_size and page_num args
+        skip = page_size * (page_num - 1) if None not in (page_size, page_num) else None
+
+        # MongoDB's sort function expects either 1 or -1
+        #   Convert sort_dir to match
+        sort_dir = 1 if sort_dir == 'asc' else -1
+
+        results, total = repo_layer.operations.paged_query(
             project_ids=project_ids,
             name=name,
             active=active,
             status=status,
+            skip=skip,
+            limit=page_size,
+            sort_col=sort_col,
+            sort_dir=sort_dir,
             fulltext_query=fulltext_query,
         )
 
         results = list(results)
         total = len(results)
-
-        if sort_col is not None and sort_dir is not None:
-            results.sort(
-                key=lambda x: (
-                    getattr(x, sort_col) is None, 
-                    getattr(x, sort_col).lower() if type(getattr(x, sort_col)) == str else getattr(x, sort_col)),
-                reverse = (sort_dir == 'desc'))
-
-        if page_size is not None and page_num is not None:
-            start = page_size * (page_num - 1)
-            stop = page_size * page_num
-            results = list(itertools.islice(results, start, stop))
 
         return PaginatedOperations(results = results, total=total) 
 

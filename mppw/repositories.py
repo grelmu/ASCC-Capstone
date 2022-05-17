@@ -462,6 +462,52 @@ class OperationRepository(MongoDBRepository):
                 ),
             )
 
+    def paged_query(
+        self,
+        id: str = None,
+        project_ids: List[str] = None,
+        name: Optional[str] = None,
+        active: Optional[bool] = None,
+        status: Optional[str] = None,
+        skip: Optional[int] = None,
+        limit: Optional[int] = None,
+        sort_col: Optional[str] = None,
+        sort_dir: Optional[int] = None,
+        fulltext_query: str = None,
+    ):
+        if fulltext_query is None:
+            result = self.collection.find(
+                        self._query_doc_for(
+                            id=id, project_ids=project_ids, name=name, active=active, status=status
+                        )
+                    )
+            total = len(list(result))
+            results = map(
+                lambda doc: doc_to_model(doc, models.Operation),
+                list(
+                    self.collection.find(
+                        self._query_doc_for(
+                            id=id, project_ids=project_ids, name=name, active=active, status=status
+                        )
+                    ).skip(skip or 0).limit(limit or 0).sort( sort_col or "$natural", sort_dir or 1 )
+                ),
+            )
+            return results, total
+        else:
+            query_doc = self._query_doc_for(
+                id=id, project_ids=project_ids, name=name, active=active, status=status
+            )
+            total = len(list(result))
+            results = map(
+                lambda doc: doc_to_model(doc, models.Operation),
+                list(
+                    self.collection.aggregate(
+                        self._fulltext_agg_docs_for(fulltext_query, query_doc)
+                    ).skip(skip or 0).limit(limit or 0).sort( sort_col or "$natural", sort_dir or 1 )
+                ),
+            )
+            return results, total
+
     def update(self, operation: models.Operation, project_ids: List[str] = None):
         return (
             self.collection.replace_one(
