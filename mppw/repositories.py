@@ -320,6 +320,33 @@ class ArtifactRepository(MongoDBRepository):
             ),
         )
 
+
+    def paged_query(
+        self,
+        id: str = None,
+        project_ids: List[str] = None,
+        active: Optional[bool] = None,
+        skip: Optional[int] = None,
+        limit: Optional[int] = None,
+        sort_col: Optional[str] = None,
+        sort_dir: Optional[int] = None,
+    ):
+
+        results = self.collection.find(
+                self._query_doc_for(id=id, project_ids=project_ids, active=active)
+            )
+        total = len(list(results))
+
+        paged_results = results.skip(skip or 0).limit(limit or 0).sort( sort_col or "$natural", sort_dir or 1 )
+
+        formatted_results =  map(
+            lambda doc: type(self).doc_to_artifact(doc),
+            paged_results,
+        )
+
+        return formatted_results, total
+
+
     def update(self, artifact: models.Artifact, project_ids: List[str] = None):
         return (
             self.collection.replace_one(
@@ -476,33 +503,30 @@ class OperationRepository(MongoDBRepository):
         fulltext_query: str = None,
     ):
         if fulltext_query is None:
-            result = self.collection.find(
-                        self._query_doc_for(
-                            id=id, project_ids=project_ids, name=name, active=active, status=status
-                        )
+            results = self.collection.find(
+                        self._query_doc_for(id=id, project_ids=project_ids, name=name, active=active, status=status)
                     )
-            total = len(list(result))
-            results = map(
+            total = len(list(results))
+            paged_results = results.skip(skip or 0).limit(limit or 0).sort( sort_col or "$natural", sort_dir or 1 )
+            formatted_results = map(
                 lambda doc: doc_to_model(doc, models.Operation),
-                    self.collection.find(
-                        self._query_doc_for(
-                            id=id, project_ids=project_ids, name=name, active=active, status=status
-                        )
-                ).skip(skip or 0).limit(limit or 0).sort( sort_col or "$natural", sort_dir or 1 ),
+                paged_results,
             )
-            return results, total
+            return formatted_results, total
         else:
-            query_doc = self._query_doc_for(
-                id=id, project_ids=project_ids, name=name, active=active, status=status
+            results = self.collection.aggregate(
+                fulltext_query,
+                self._query_doc_for( id=id, project_ids=project_ids, name=name, active=active, status=status )
             )
-            total = len(list(result))
-            results = map(
+            total = len(list(results))
+
+            paged_results = results.skip(skip or 0).limit(limit or 0).sort( sort_col or "$natural", sort_dir or 1 ),
+
+            formatted_results = map(
                 lambda doc: doc_to_model(doc, models.Operation),
-                    self.collection.aggregate(
-                        self._fulltext_agg_docs_for(fulltext_query, query_doc)
-                ).skip(skip or 0).limit(limit or 0).sort( sort_col or "$natural", sort_dir or 1 ),
+                paged_results
             )
-            return results, total
+            return formatted_results, total
 
     def update(self, operation: models.Operation, project_ids: List[str] = None):
         return (

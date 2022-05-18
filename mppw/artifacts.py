@@ -89,6 +89,48 @@ def create_router(app):
             )
         )
 
+
+    class PaginatedArtifacts(models.BaseJsonModel):
+        results: List[models.Artifact]
+        total: int
+
+    @router.get("/paged/", response_model=PaginatedArtifacts)
+    def paged_query(
+        project_ids: List[str] = fastapi.Query(None),
+        active: bool = fastapi.Query(True),
+        page_size: int = fastapi.Query(None),
+        page_num: int = fastapi.Query(None),
+        sort_col: str = fastapi.Query(None),
+        sort_dir: str = fastapi.Query(None),
+        user: security.ScopedUser = Security(
+            request_user(app), scopes=[PROVENANCE_SCOPE]
+        ),
+        repo_layer=Depends(request_repo_layer(app)),
+    ):
+
+        if project_ids is None:
+            project_ids = projects.project_claims_for_user(user)
+
+        projects.check_project_claims_for_user(user, project_ids)
+
+        # Calculate the skip value based on page_size and page_num args
+        skip = page_size * (page_num - 1) if None not in (page_size, page_num) else None
+
+        # MongoDB's sort function expects either 1 or -1
+        #   Convert sort_dir to match
+        sort_dir = 1 if sort_dir == 'asc' else -1
+
+        results, total = repo_layer.artifacts.paged_query(
+            project_ids=project_ids,
+            active=active,
+            skip=skip,
+            limit=page_size,
+            sort_col=sort_col,
+            sort_dir=sort_dir,
+            )
+
+        return PaginatedArtifacts(results = list(results), total=total) 
+
     @router.put("/{id}", response_model=bool)
     def update(
         id: str,
