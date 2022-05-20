@@ -118,6 +118,7 @@ def create_router(app):
 
         # MongoDB's sort function expects either 1 or -1
         #   Convert sort_dir to match
+        if sort_dir is not None:
         sort_dir = 1 if sort_dir == 'asc' else -1
 
         results, total = repo_layer.artifacts.paged_query(
