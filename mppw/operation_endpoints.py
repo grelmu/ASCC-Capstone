@@ -270,7 +270,9 @@ def create_router(app):
     def frame_candidates(
         id: str,
         strategy: str,
-        attachment: models.AttachmentGraph.AttachmentNode,
+        artifact_path: str = None,
+        kind_path: str = None,
+        artifact_id: str = None,
         user: security.ScopedUser = Security(
             request_user(app), scopes=[PROVENANCE_SCOPE]
         ),
@@ -278,6 +280,13 @@ def create_router(app):
     ):
         operation: models.Operation = read(id, user, service_layer.repo_layer)
         services = service_layer.operation_services_for(operation)
+
+        if artifact_path:
+            artifact_path = artifact_path.split(".")
+            kind_path, artifact_id = artifact_path[0:-1], artifact_path[-1]
+
+        attachment = operation.attachments.find_node(kind_path=kind_path, artifact_id=artifact_id)
+
         return list(
             services.frame_candidates(
                 operation,
