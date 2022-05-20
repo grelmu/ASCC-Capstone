@@ -480,7 +480,6 @@ class OperationRepository(MongoDBRepository):
         project_ids: List[str] = None,
         name: Optional[str] = None,
         active: Optional[bool] = None,
-        status: Optional[str] = None,
         fulltext_query: str = None,
     ):
         if fulltext_query is None:
@@ -489,14 +488,14 @@ class OperationRepository(MongoDBRepository):
                 list(
                     self.collection.find(
                         self._query_doc_for(
-                            id=id, project_ids=project_ids, name=name, active=active, status=status
+                            id=id, project_ids=project_ids, name=name, active=active
                         )
                     )
                 ),
             )
         else:
             query_doc = self._query_doc_for(
-                id=id, project_ids=project_ids, name=name, active=active, status=status
+                id=id, project_ids=project_ids, name=name, active=active
             )
             return map(
                 lambda doc: doc_to_model(doc, models.Operation),
