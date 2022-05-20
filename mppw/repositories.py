@@ -537,7 +537,7 @@ class OperationRepository(MongoDBRepository):
         else:
 
             query = self._query_doc_for( id=id, project_ids=project_ids, name=name, active=active, status=status )
-            results = self.collection.aggregate(self._fulltext_agg_docs_for(fulltext_query, query, skip, limit)).next()
+            results = self.collection.aggregate(self._fulltext_agg_docs_for(fulltext_query, query, skip, limit, sort_col, sort_dir)).next()
             if (results["metadata"] == []):
                 total = 0
             else:
