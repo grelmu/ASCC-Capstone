@@ -466,6 +466,24 @@ class OperationRepository(MongoDBRepository):
             == 1
         )
 
+    def partial_update(self, id: str, update_fn, project_ids: List[str] = None):
+        txn = self.session.start_transaction()
+        try:
+            metadata = self.query_one(id=id, project_ids=project_ids)
+            if metadata is None:
+                return False
+            metadata = update_fn(metadata)
+            if metadata is None:
+                return False
+
+            result = self.update(metadata, project_ids=project_ids)
+            self.session.commit_transaction()
+            txn = None
+            return result
+        finally:
+            if txn:
+                self.session.abort_transaction()
+
     def query_by_attached(
         self,
         input_artifact_id: str = None,
@@ -562,6 +580,17 @@ class BucketFile(models.DocModel):
     content_type: Optional[str]
     size_bytes: int
     md5: Optional[Any]
+
+
+class CollectionStats(models.BaseJsonModel):
+    name: str
+    size_bytes: int
+
+
+class DatabaseBucketStats(models.BaseJsonModel):
+    name: str
+    size_bytes: int
+    collections: List[CollectionStats]
 
 
 def gridfs_bucket_data_gen(grid_out):
@@ -668,6 +697,61 @@ class BucketRepository:
         elif bucket_furl.scheme in [BucketRepository.GRIDFS_SCHEME]:
             return self.delete_gridfs_bucket(bucket_furl)
         else:
+            raise UnsupportedSchemeException(bucket_furl.url)
+
+    #
+
+    # Db bucket actions
+
+    #
+
+    # Function to return the collection name and size from the database object
+    def get_mongodb_collection_stats(self, db):
+        # list all the collections in the database object
+        collection_names = db.list_collection_names()
+        # Get size for each collection in the list
+        collection_sizes_bytes = [
+            db.command("collstats", f"{collection}")["size"]
+            for collection in collection_names
+        ]
+        # Putting the collection_list and collection size into a dictionary
+        collection_stats = []
+        for item in range(len(collection_names)):
+            collection_stats.append(
+                {
+                    "name": collection_names[item],
+                    "size_bytes": collection_sizes_bytes[item],
+                }
+            )
+        return collection_stats
+
+    # Function that takes the database bucket url and returns database bucket statistics
+    def get_mongodb_db_bucket_stats(self, bucket_url):
+        resolved_bucket_url = self.storage_layer.resolve_local_storage_url_host(
+            bucket_url
+        )
+        client = pymongo.MongoClient(resolved_bucket_url)
+        db: pymongo.database.Database = client.get_default_database()
+        # Getting the stats data from the db object
+        stats = db.command("dbstats")
+        # Getting the collection name and its size in bytes from the db object
+        stats["collections"] = self.get_mongodb_collection_stats(db)
+        # Getting the name of DB and storing it in the index "name"
+        stats["name"] = stats["db"]
+        # Getting the totalSize of DB and storing in the index "size_bytes"
+        stats["size_bytes"] = stats["totalSize"]
+
+        return stats
+
+    def get_db_stats(self, bucket_url):
+
+        bucket_furl = furl.furl(bucket_url)
+        if bucket_furl.scheme == BucketRepository.MONGODB_SCHEME:
+
+            return self.get_mongodb_db_bucket_stats(bucket_url)
+
+        else:
+
             raise UnsupportedSchemeException(bucket_furl.url)
 
     #

@@ -191,6 +191,7 @@ export default {
         });
     },
     // TODO END move to $root app.vue
+
     refreshProjects() {
       this.projects = null;
       this.projectId = null;

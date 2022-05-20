@@ -27,9 +27,10 @@ $ chmod 600 ~/.ssh/id_my_git_ssh_key
 
 SSH keys are required to have user-only file permissions - that's the last line above.
 
-In addition to adding the key, a WSL ssh-agent is required to automatically *use* the keys in a Linux system.  On most Linux distributions a (keychain) ssh-agent runs for every user by default, but in WSL this needs to be set up manually.  The right thing to do is install the keychain utility:
+In addition to adding the key, a WSL ssh-agent is required to automatically *use* the keys in a Linux system.  On most Linux distributions a (keychain) ssh-agent runs for every user by default, but in WSL this needs to be set up manually.  The right thing to do is install the keychain utility. Try updating the system before installing the keychain:
 
 ```sh
+$ sudo apt update
 $ sudo apt install keychain
 ...
 ```
@@ -70,6 +71,15 @@ ssh-add $HOME/.ssh/id_my_git_ssh_key
 The only downside to this is that it's easier to lose track of what credentials are being used for what codebase if multiple credentials are sometimes used.  Personal preference.
 
 ## Install pyenv in WSL
+
+Before pyenv can build Python versions, you must install Python build dependencies. In the WLS, run:
+
+```sh
+$ sudo apt-get update; sudo apt-get install make build-essential libssl-dev zlib1g-dev \
+libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm \
+libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
+
+```
 
 On a Windows development machine we'll want to install [pyenv](https://github.com/pyenv/pyenv-installer) in WSL (also on the Windows side, but not relevant here).  Follow Ubuntu steps [here](https://github.com/pyenv/pyenv/wiki#suggested-build-environment) to `apt-get` prerequisites and then, in the WSL terminal, run:
 

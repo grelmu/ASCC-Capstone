@@ -559,6 +559,38 @@ export default {
         }
       );
     },
+    apiPatchOperation(id,changes) {
+      return this.apiFetch("operations/" + id, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(changes),
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when patching operation"
+        );
+      });
+    },
+    apiPutOperation(id,op) {
+      return this.$root
+        .apiFetch("operations/" + id + "/", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(op),
+        })
+        .then((response) => {
+          if (response.status == 200) return response.json();
+          this.$root.throwApiResponseError(
+            response,
+            "Unknown response when saving operation"
+          );
+        });
+    },
     apiFetchArtifactGraph(operation) {
       let fetches = [];
       let graph = {};

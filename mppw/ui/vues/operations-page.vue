@@ -1,8 +1,7 @@
 <template>
   <div v-if="op">
-    <h1>{{ op.name }}</h1>
-
-    <p>{{ op }}</p>
+    <operation-metadata
+    :metadata="op"></operation-metadata>
 
     <operation-artifact-node
       v-if="opSchema"
@@ -19,10 +18,14 @@
 </template>
 
 <script>
+import OperationMetadata from './operation-metadata.vue';
 export default {
   components: {
     "operation-artifact-node": RemoteVue.asyncComponent(
       "vues/operation-artifact-node.vue"
+    ),
+    "operation-metadata": RemoteVue.asyncComponent(
+      "vues/operation-metadata.vue"
     ),
   },
 
