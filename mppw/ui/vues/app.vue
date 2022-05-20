@@ -612,12 +612,11 @@ export default {
         return graph;
       });
     },
-    apiAttachArtifact(opId, artifactPath, kindUrn, artifactId, isInput) {
+    apiAttachArtifact(opId, kindPath, artifactId, attachmentMode) {
       let attachment = {
-        kind_urn: kindUrn,
+        kind_path: kindPath,
         artifact_id: artifactId,
-        is_input: isInput || false,
-        artifact_path: artifactPath,
+        attachment_mode: attachmentMode,
       };
 
       return this.apiFetch("operations/" + opId + "/artifacts/", {
@@ -664,12 +663,11 @@ export default {
         );
       });
     },
-    apiDetachArtifact(opId, artifactPath, kindUrn, artifactId, isInput) {
+    apiDetachArtifact(opId, kindPath, artifactId, attachmentMode) {
       let attachment = {
-        kind_urn: kindUrn,
+        kind_path: kindPath,
         artifact_id: artifactId,
-        is_input: isInput,
-        artifact_path: artifactPath,
+        attachment_mode: attachmentMode,
       };
 
       return this.apiFetch("operations/" + opId + "/artifacts/", {

@@ -241,6 +241,9 @@ export default {
                 artifacts: [artifactNode],
               };
             }
+            else {
+              attachmentNode.artifacts.push(artifactNode);
+            }
           }
 
           this.attachmentNodes = Object.values(attachmentNodes);
@@ -254,9 +257,6 @@ export default {
                 artifacts: [],
               });
           }
-
-          console.log("attachment kinds", this.attachmentKinds);
-          console.log("attachment nodes", this.attachmentNodes);
 
           // Sort all the attachments
           this.sortAttachments();
@@ -416,10 +416,9 @@ export default {
       return this.$root
         .apiAttachArtifact(
           this.opId,
-          this.parentArtifactPath,
-          fullKindUrn,
+          this.parentArtifactPath.concat([fullKindUrn]),
           this.selectedCandidate["id"],
-          true
+          "input"
         )
         .then(() => {
           return this.refreshAttachments();
@@ -446,19 +445,17 @@ export default {
           let fullKindUrn =
             this.newKindUrn + (this.newKindKey ? ":" + this.newKindKey : "");
 
-          return this.$root
-            .apiInitArtifact(artifact["id"], {})
-            .then(() => {
-              return this.$root.apiAttachArtifact(
-                this.opId,
-                this.parentArtifactPath,
-                fullKindUrn,
-                artifact["id"]
-              );
-            })
-            .then(() => {
-              return this.refreshAttachments();
-            });
+          return this.$root.apiInitArtifact(artifact["id"], {}).then(() => {
+            return this.$root.apiAttachArtifact(
+              this.opId,
+              this.parentArtifactPath.concat([fullKindUrn]),
+              artifact["id"],
+              "output"
+            );
+          });
+        })
+        .then(() => {
+          return this.refreshAttachments();
         })
         .finally(() => {
           this.isAttachingArtifact = false;
@@ -473,10 +470,9 @@ export default {
       return this.$root
         .apiDetachArtifact(
           this.opId,
-          this.parentArtifactPath,
-          kindUrn,
+          this.parentArtifactPath.concat([kindUrn]),
           artifactId,
-          isInput
+          isInput ? "input" : "output"
         )
         .finally(() => {
           this.refreshAttachments();
