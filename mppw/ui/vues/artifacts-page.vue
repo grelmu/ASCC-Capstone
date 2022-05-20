@@ -16,7 +16,6 @@
 
 <script>
 export default {
-
   data() {
     return {
       artifactId: null,
@@ -116,7 +115,10 @@ export default {
 
       let nodeHrefFor = (node) => {
         if (node["artifact"]) {
-          return this.$router.resolve("/artifacts/" + node["artifact_id"]).href.replace("#", "?to=" + node["artifact_id"] + "#");
+          // NOTE that we need a unique parameter to force a reload with our current anchor-based routing
+          return this.$router
+            .resolve("/artifacts/" + node["artifact_id"])
+            .href.replace("#", "?link=" + uuidv4() + "#");
         } else {
           return this.$router.resolve("/operations/" + node["operation_id"])
             .href;
