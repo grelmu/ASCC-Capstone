@@ -402,7 +402,7 @@ class AttachmentGraph(networkx.MultiDiGraph):
                 and (attachment_mode is None or node.attachment_mode == attachment_mode)
                 and (
                     parent_artifact_path is None
-                    or node.kind_path[0 : -1] == parent_artifact_path
+                    or (node.kind_path and node.kind_path[0:-1] == parent_artifact_path)
                 )
             ):
                 yield node

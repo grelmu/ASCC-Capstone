@@ -4,22 +4,18 @@
 
     <p>{{ artifact }}</p>
 
-    <div v-if="provenance">
-      <h2>Provenance</h2>
-      <p>{{ provenance }}</p>
-    </div>
+    <h2>Provenance</h2>
 
     <div :id="graphElId"></div>
+
+    <p v-if="provenance">
+      {{ provenance }}
+    </p>
   </div>
 </template>
 
 <script>
 export default {
-  components: {
-    // "operation-artifact-node": RemoteVue.asyncComponent(
-    //   "vues/operation-artifact-node.vue"
-    // ),
-  },
 
   data() {
     return {
@@ -99,22 +95,31 @@ export default {
         );
       };
 
-      let nodeTitleFor = function (node) {
+      let nodeTitleFor = (node) => {
         if (node["artifact"]) {
-          return (
-            (node["artifact"]["name"] || node["artifact"]["type_urn"]) +
-            " (" +
-            node["artifact_id"] +
-            ")"
-          );
+          return node["artifact"]["type_urn"].replace("urn:x-mfg:artifact", "");
         } else {
           return (
-            (node["operation"]["name"] || node["operation"]["type_urn"]) +
-            node["name"] +
-            " (" +
-            node["operation_id"] +
-            ")"
+            node["operation"]["type_urn"].replace("urn:x-mfg:operation", "") +
+            (node["name"] != ":default" ? " " + node["name"] : "")
           );
+        }
+      };
+
+      let nodeTextFor = (node) => {
+        if (node["artifact"]) {
+          return node["artifact"]["name"] || node["artifact_id"];
+        } else {
+          return node["operation"]["name"] || node["operation_id"];
+        }
+      };
+
+      let nodeHrefFor = (node) => {
+        if (node["artifact"]) {
+          return this.$router.resolve("/artifacts/" + node["artifact_id"]).href.replace("#", "?to=" + node["artifact_id"] + "#");
+        } else {
+          return this.$router.resolve("/operations/" + node["operation_id"])
+            .href;
         }
       };
 
@@ -124,7 +129,10 @@ export default {
           {
             id: nodeIdFor(node),
             title: nodeTitleFor(node),
+            text: nodeTextFor(node),
+            href: nodeHrefFor(node),
             group: node["artifact_id"] ? 0 : 1,
+            highlight: node["artifact_id"] == this.artifact.id,
           },
           node
         );
@@ -134,8 +142,8 @@ export default {
       for (let i = 0; i < this.provenance["edges"].length; ++i) {
         let edge = this.provenance["edges"][i];
         let networkLink = {
-          source: nodeIdFor(edge[0]),
-          target: nodeIdFor(edge[1]),
+          source: nodeIdFor(edge["from_node"]),
+          target: nodeIdFor(edge["to_node"]),
           value: 1,
           edge,
         };
@@ -146,10 +154,17 @@ export default {
         nodeId: (d) => d.id,
         nodeGroup: (d) => d.group,
         nodeTitle: (d) => d.title,
+        nodeText: (d) => d.text,
+        nodeHref: (d) => d.href,
+        nodeHighlight: (d) => d.highlight,
         nodeRadius: 30,
-        linkStrokeWidth: (l) => Math.sqrt(l.value),
-        width: 500,
-        height: 600,
+        nodeHighlightColor: "orange",
+        nodeStroke: "#eee",
+        linkStrokeWidth: (l) => Math.sqrt(l.value) * 3,
+        width: 800,
+        height: 800,
+        colors: ["lightsteelblue", "darkseagreen"],
+        icons: ["\u{F01A6}", "\u{F072A}"],
       });
 
       graphEl.appendChild(graph);

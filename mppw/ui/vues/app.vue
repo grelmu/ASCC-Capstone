@@ -121,9 +121,6 @@ const routes = [
   },
 ];
 
-const initRoutes = function (app) {
-  router.getRoutes().forEach((route) => (route.props.app = app));
-};
 
 export default {
   routes: routes,
@@ -464,23 +461,6 @@ export default {
         );
       });
     },
-    apiFetchAttachedArtifacts(opId, artifactPath) {
-      return this.apiFetch(
-        "operations/" +
-          opId +
-          "/artifacts/?artifact_path=" +
-          encodeURIComponent(artifactPath.join(".")),
-        {
-          method: "GET",
-        }
-      ).then((response) => {
-        if (response.status == 200) return response.json();
-        this.throwApiResponseError(
-          response,
-          "Unknown response when querying attached artifact"
-        );
-      });
-    },
     apiFetchArtifactFrameCandidates(opId, artifactPath) {
       return this.apiFetch(
         "operations/" +
@@ -622,7 +602,20 @@ export default {
         );
       });
     },
-    apiFetchOperationArtifacts(id, queryParams) {
+    apiFetchAttachedArtifacts(id, queryParams) {
+      if (
+        "artifact_path" in queryParams &&
+        Array.isArray(queryParams["artifact_path"])
+      )
+        queryParams["artifact_path"] = queryParams["artifact_path"].join(".");
+
+      if (
+        "parent_artifact_path" in queryParams &&
+        Array.isArray(queryParams["parent_artifact_path"])
+      )
+        queryParams["parent_artifact_path"] =
+          queryParams["parent_artifact_path"].join(".");
+
       return this.apiFetch(
         "operations/" +
           id +
@@ -658,17 +651,6 @@ export default {
         this.throwApiResponseError(
           response,
           "Unknown response when removing attachment"
-        );
-      });
-    },
-    apiFetchArtifactsLs(opId) {
-      return this.apiFetch("operations/" + opId + "/artifacts/ls", {
-        method: "GET",
-      }).then((response) => {
-        if (response.status == 200) return response.json();
-        this.throwApiResponseError(
-          response,
-          "Unknown response when querying artifacts listing"
         );
       });
     },

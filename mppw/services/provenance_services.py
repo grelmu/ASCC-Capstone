@@ -28,9 +28,6 @@ class ProvenanceStepGraph(networkx.MultiDiGraph):
         def __hash__(self):
             return hash(self.__members())
 
-        def __repr__(self):
-            return f"{type(self).__name__}{self.__members()}"
-
     class OperationStepNode(pydantic.BaseModel):
 
         operation_id: str
@@ -48,9 +45,6 @@ class ProvenanceStepGraph(networkx.MultiDiGraph):
 
         def __hash__(self):
             return hash(self.__members())
-
-        def __repr__(self):
-            return f"{type(self).__name__}{self.__members()}"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

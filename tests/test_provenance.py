@@ -114,7 +114,7 @@ def test_basic_process_provenance(storage_layer, test_project):
 
         # Backwards from specimen
 
-        provenance = provenance_services.build_provenance(
+        provenance = provenance_services.build_artifact_provenance(
             test_process.specimen.id, strategy="ancestors"
         )
 
@@ -124,7 +124,7 @@ def test_basic_process_provenance(storage_layer, test_project):
 
         # Backwards from specimen with measurements
 
-        provenance = provenance_services.build_provenance(
+        provenance = provenance_services.build_artifact_provenance(
             test_process.specimen.id, strategy="ancestors+3"
         )
 
@@ -132,7 +132,7 @@ def test_basic_process_provenance(storage_layer, test_project):
         assert len(list(provenance.step_nodes())) == 2 + 1
         assert len(provenance.edges) == 4 + 2
 
-        provenance = provenance_services.build_provenance(
+        provenance = provenance_services.build_artifact_provenance(
             test_process.batch.id, strategy="descendants"
         )
 
@@ -144,7 +144,7 @@ def test_basic_process_provenance(storage_layer, test_project):
 
         # Forwards from wall
 
-        provenance = provenance_services.build_provenance(
+        provenance = provenance_services.build_artifact_provenance(
             test_process.wall.id, strategy="descendants"
         )
 
@@ -154,7 +154,7 @@ def test_basic_process_provenance(storage_layer, test_project):
 
         # Forwards from wall with measurements
 
-        provenance = provenance_services.build_provenance(
+        provenance = provenance_services.build_artifact_provenance(
             test_process.wall.id, strategy="descendants+3"
         )
 

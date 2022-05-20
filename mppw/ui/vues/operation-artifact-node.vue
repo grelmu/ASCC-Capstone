@@ -5,9 +5,9 @@
         <template v-slot:trigger="trigger">
           <div class="card-header" role="button">
             <router-link
-              v-if="artifactNode['is_input']"
-              :to="'/operations/' + artifactOpParent['id']"
-              :title="artifactOpParent['name']"
+              v-if="attachment['attachment_mode'] == 'input'"
+              :to="'/operations/' + parentOp['id']"
+              :title="parentOp['name']"
               target="_blank"
               @click="onClickInputLink"
               class="card-header-icon"
@@ -77,7 +77,7 @@
           <operation-attachments-node
             :projectId="projectId"
             :opId="opId"
-            :artifactPath="artifactPath"
+            :parentArtifactPath="artifactPath"
             :attachmentKinds="(artifactType || {})['child_kinds'] || []"
           ></operation-attachments-node>
         </div>
@@ -88,7 +88,7 @@
       <operation-attachments-node
         :projectId="projectId"
         :opId="opId"
-        :artifactPath="artifactPath"
+        :parentArtifactPath="artifactPath"
         :attachmentKinds="(artifactType || {})['child_kinds'] || []"
       ></operation-attachments-node>
     </div>
@@ -238,11 +238,17 @@ export default {
 
   data() {
     return {
-      artifactId: null,
-      artifact: null,
-      artifactOpParent: null,
-      artifactType: null,
+      // Derived from input artifact path
       artifactKind: null,
+      artifactId: null,
+
+      // Loaded on creation
+      artifact: null,
+      attachment: null,
+      parentOp: null,
+      artifactType: null,
+
+      // UI fields
       isCollapsed: true,
 
       isEditingMeta: false,
@@ -264,14 +270,16 @@ export default {
     projectId: String,
     opId: String,
     artifactPath: Array,
-    artifactNode: Object,
     attachmentKind: Object,
   },
 
   methods: {
     refreshArtifact() {
       this.artifact = null;
-      this.artifactOpParent = null;
+      this.attachment = null;
+      this.parentOp = null;
+      this.artifactType = null;
+
       if (this.artifactId == null) {
         this.artifactType = this.attachmentKind["types"][0];
         return Promise.resolve(null);
@@ -280,11 +288,24 @@ export default {
       return this.$root
         .apiFetchArtifact(this.artifactId)
         .then((artifact) => {
-          if (!this.artifactNode["is_input"]) return artifact;
           return this.$root
-            .apiFetchArtifactOperationParent(artifact["id"])
-            .then((opParent) => {
-              this.artifactOpParent = opParent;
+            .apiFetchAttachedArtifacts(this.opId, {
+              artifact_path: this.artifactPath,
+            })
+            .then((attachments) => {
+              this.attachment = attachments[0];
+              console.log("attachment", this.attachment);
+
+              if (this.attachment["attachment_mode"] == "output") {
+                return Promise.resolve(null);
+              } else {
+                return this.$root.apiFetchArtifactOperationParent(
+                  this.artifactId
+                );
+              }
+            })
+            .then((parentOp) => {
+              this.parentOp = parentOp;
               return artifact;
             });
         })
@@ -493,9 +514,10 @@ export default {
     },
   },
   created() {
-    this.artifactId = this.artifactNode["artifact_id"];
-    if (this.artifactPath.length > 1)
+    if (this.artifactPath.length > 1) {
+      this.artifactId = this.artifactPath[this.artifactPath.length - 1];
       this.artifactKind = this.artifactPath[this.artifactPath.length - 2];
+    }
     return this.refreshArtifact();
   },
 };

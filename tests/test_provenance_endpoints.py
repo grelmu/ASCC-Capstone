@@ -1,10 +1,11 @@
 import pytest
 
+import mppw.models
 from . import test_provenance
 
 
 def test_operation_provenance_steps_endpoint(
-    api_client, api_storage_layer, test_project
+    api_client, api_storage_layer, api_project
 ):
 
     """
@@ -12,7 +13,7 @@ def test_operation_provenance_steps_endpoint(
     """
 
     test_process = test_provenance.TestManufacturingProcess(
-        api_storage_layer, test_project
+        api_storage_layer, mppw.models.Project(**api_project)
     )
 
     steps = api_client.get_json(
@@ -41,6 +42,8 @@ def test_artifact_provenance_endpoint(api_client, api_storage_layer, test_projec
 
     assert len(provenance["nodes"]) == 3 + 2
     assert len(provenance["edges"]) == 4
+
+    print(test_process.cut.id)
 
     provenance = api_client.get_json(
         "/artifacts/"

@@ -16,11 +16,11 @@
       v-for="attachmentNode in attachmentNodes || []"
       :key="attachmentNode['kind_urn']"
     >
-      <h3 v-if="attachmentNode['artifacts']" class="mt-4">
+      <h3 v-if="attachmentNode['artifacts'].length > 0" class="mt-4">
         {{ attachmentNode["kind_urn"] }}
       </h3>
       <h3
-        v-if="!attachmentNode['artifacts']"
+        v-if="attachmentNode['artifacts'].length == 0"
         class="mt-4 text-muted fw-lighter"
       >
         {{ attachmentNode["kind_urn"] }}
@@ -36,12 +36,11 @@
               :projectId="projectId"
               :opId="opId"
               :artifactPath="
-                artifactPath.concat([
+                parentArtifactPath.concat([
                   attachmentNode['kind_urn'],
                   artifactNode['artifact_id'],
                 ])
               "
-              :artifactNode="artifactNode"
               :attachmentKind="attachmentKindFor(attachmentNode['kind_urn'])"
             ></operation-artifact-node>
           </div>
@@ -216,7 +215,7 @@ export default {
   props: {
     projectId: String,
     opId: String,
-    artifactPath: Array,
+    parentArtifactPath: Array,
     attachmentKinds: Array,
   },
 
@@ -224,12 +223,9 @@ export default {
     refreshAttachments() {
       this.attachmentNodes = null;
 
-      console.log(this.attachmentKinds);
-      console.log(this.artifactPath);
-
       return this.$root
-        .apiFetchOperationArtifacts(this.opId, {
-          parent_artifact_path: this.artifactPath,
+        .apiFetchAttachedArtifacts(this.opId, {
+          parent_artifact_path: this.parentArtifactPath,
         })
         .then((artifactNodes) => {
           // Group into attachment nodes by attachment kind
@@ -258,6 +254,9 @@ export default {
                 artifacts: [],
               });
           }
+
+          console.log("attachment kinds", this.attachmentKinds);
+          console.log("attachment nodes", this.attachmentNodes);
 
           // Sort all the attachments
           this.sortAttachments();
@@ -417,7 +416,7 @@ export default {
       return this.$root
         .apiAttachArtifact(
           this.opId,
-          this.artifactPath,
+          this.parentArtifactPath,
           fullKindUrn,
           this.selectedCandidate["id"],
           true
@@ -452,7 +451,7 @@ export default {
             .then(() => {
               return this.$root.apiAttachArtifact(
                 this.opId,
-                this.artifactPath,
+                this.parentArtifactPath,
                 fullKindUrn,
                 artifact["id"]
               );
@@ -474,7 +473,7 @@ export default {
       return this.$root
         .apiDetachArtifact(
           this.opId,
-          this.artifactPath,
+          this.parentArtifactPath,
           kindUrn,
           artifactId,
           isInput
