@@ -49,7 +49,6 @@ def create_router(app):
 
         return repo_layer.operations.create(operation)
 
-    # TODO: Paginate this or create matching paginated endpoint
     @router.get("/{id}", response_model=models.Operation)
     def read(
         id: str,
