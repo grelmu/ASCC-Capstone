@@ -449,8 +449,8 @@ def create_router(app):
 
         artifact: models.Artifact = read(id, user, service_layer.repo_layer)
 
-        meta = service_layer.get_artifact_service(
-            services.PointCloudServices, artifact
+        meta = service_layer.artifact_services_for(
+            artifact, PointCloudServices
         ).get_bounds(artifact)
 
         return meta
