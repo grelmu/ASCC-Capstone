@@ -1,8 +1,22 @@
 <template>
   <div v-if="artifact">
-    <p><b>MongoDB Read-Only URL: </b> {{artifact.url_data}} </p>
+     
+
+    <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+  <li class="nav-item">
+    <a class="nav-link active" id="pills-home-tab" data-toggle="pill" href="#pills-home" role="tab" aria-controls="pills-home" aria-selected="true">Read Only URL</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" id="pills-profile-tab" data-toggle="pill" href="#pills-profile" role="tab" aria-controls="pills-profile" aria-selected="false">Read and Write URL</a>
+  </li>
+  </ul>
+  <div class="tab-content" id="pills-tabContent">
+    <div class="tab-pane fade show active" id="pills-home" role="tabpanel" aria-labelledby="pills-home-tab"><p><b>MongoDB Read-Only URL: </b> {{artifact.url_data}} </p></div>
+    <div class="tab-pane fade" id="pills-profile" role="tabpanel" aria-labelledby="pills-profile-tab"><p><b>MongoDB Read-Write URL: </b> {{artifact.url_data}} </p></div>
+  </div>
+   
     <div>
-    <p><b>Total Size: </b> {{stats.size_bytes}}<p>
+    <p><b>Total Size: </b> {{this.shortenBytes(stats.size_bytes)}}<p>
     <br>
     <b> Collections: </b>
 
@@ -21,6 +35,7 @@
 export default {
   data() {
     return {
+      url: null,
       artifact: null,
       stats:[],
     };
@@ -58,11 +73,15 @@ export default {
       return amount + " " + units[currentUnit];
 
     },
+    
   },
   created() {
     return this.refreshArtifact(),this.getData();
   },
+   
 };
 </script>
 
-<style scoped></style>
+<style>
+
+</style>
