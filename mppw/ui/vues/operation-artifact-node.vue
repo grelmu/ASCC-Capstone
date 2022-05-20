@@ -190,7 +190,6 @@
       <o-button
         @click="onSubmitMeta()"
         class="mt-4"
-        :disabled="isDigitalArtifact() && parentFrameCandidates == null"
         >Save Changes</o-button
       >
     </o-modal>
@@ -294,7 +293,6 @@ export default {
             })
             .then((attachments) => {
               this.attachment = attachments[0];
-              console.log("attachment", this.attachment);
 
               if (this.attachment["attachment_mode"] == "output") {
                 return Promise.resolve(null);
@@ -329,10 +327,19 @@ export default {
 
       let candidatesPromise =
         this.selectedOperation != null
-          ? this.$root.apiFetchArtifactFrameCandidates(
-              this.selectedOperation.id,
-              this.artifactPath
-            )
+          ? this.$root
+              .apiFetchArtifactFrameCandidates(
+                this.selectedOperation.id,
+                this.artifactPath
+              )
+              .then((candidates) => {
+                return candidates.map((candidate) => {
+                  let attachment = candidate[0];
+                  let artifact = candidate[1];
+                  artifact["kind_urn"] = attachment["kind_path"].join(".");
+                  return artifact;
+                });
+              })
           : Promise.resolve([]);
 
       return Promise.all([currentFramePromise, candidatesPromise]).then(
