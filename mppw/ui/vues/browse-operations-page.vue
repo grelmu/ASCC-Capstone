@@ -68,7 +68,6 @@
         <o-button @click="onNewOpSubmit()">Submit</o-button>
       </o-modal>
 
-      <!-- TODO: searching and pagination via API -->
       <section>
         <o-table :loading="opsLoading" :data="opsRows || []" 
         :current.sync="parameters.page_num"
