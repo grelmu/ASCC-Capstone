@@ -184,7 +184,9 @@ class OperationServices:
         ):
             yield (
                 attachment_node,
-                self.repo_layer.artifacts.query_one(id=attachment_node.artifact_id),
+                self.repo_layer.artifacts.query_one(id=attachment_node.artifact_id)
+                if attachment_node.artifact_id is not None
+                else None,
             )
 
     def detach(
@@ -196,7 +198,7 @@ class OperationServices:
         if attachment not in operation.attachments.nodes():
             return False
 
-        operation.attachments.remove_node(attachment)
+        operation.attachments.remove_attachment_node_and_descendants(attachment)
         return self.repo_layer.operations.update(operation)
 
     #

@@ -317,7 +317,12 @@ class AttachmentGraph(networkx.MultiDiGraph):
 
             parent = parents.get(node.kind_path[:-1])
 
-            self.add_relation(parent, node, AttachmentRelation.CHILD)
+            if parent is not None:
+                self.add_relation(parent, node, AttachmentRelation.CHILD)
+            else:
+                logger.warn(
+                    f"Parent attachment not found for attachment at {node.artifact_path}, attachment is orphaned in the parent operation"
+                )
 
             parents[tuple(list(node.kind_path) + [str(node.artifact_id)])] = node
 
@@ -363,6 +368,11 @@ class AttachmentGraph(networkx.MultiDiGraph):
                 kind_path, artifact_id, attachment_mode
             )
         )
+
+    def remove_attachment_node_and_descendants(self, node: AttachmentNode):
+        for descendant_node in networkx.algorithms.descendants(self, node):
+            self.remove_node(descendant_node)
+        self.remove_node(node)
 
     def add_relation(self, node_from, node_to, relation: AttachmentRelation):
         return self.add_edge(node_from, node_to, relation)
