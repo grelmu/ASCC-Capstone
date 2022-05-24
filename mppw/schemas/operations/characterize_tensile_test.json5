@@ -80,6 +80,6 @@
     ],
   },
   services: {
-    class_qualname: "mppw.services.operations.characterize_tensile_test_services:TensileTestServices",
+    class_qualname: "mppw.services.operations.characterize_tensile_test_services:CharacterizeTensileTestServices",
   },
 }
