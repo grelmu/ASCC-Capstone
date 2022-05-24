@@ -178,11 +178,21 @@ class ProvenanceStepGraph(networkx.MultiDiGraph):
             lambda n: isinstance(n, ProvenanceStepGraph.OperationStepNode), self.nodes()
         )
 
-    def __human_str__(self):
+    def __human_str__(self, repo_layer=None):
         builder = []
         builder.append("Nodes:")
         for node in self.nodes():
             builder.append("  " + node.__repr__())
+            if repo_layer:
+
+                if isinstance(node, ProvenanceStepGraph.ArtifactNode):
+                    artifact = repo_layer.artifacts.query_one(id=node.artifact_id)
+                    builder.append("    " + f"{artifact.type_urn} {artifact.name}")
+
+                elif isinstance(node, ProvenanceStepGraph.OperationStepNode):
+                    operation = repo_layer.operations.query_one(id=node.operation_id)
+                    builder.append("    " + f"{operation.type_urn} {operation.name}")
+
         builder.append("Edges:")
         for edge in self.edges(keys=True):
             builder.append("  " + edge.__repr__())

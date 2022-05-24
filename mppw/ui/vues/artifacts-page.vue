@@ -164,7 +164,7 @@ export default {
         nodeStroke: "#eee",
         linkStrokeWidth: (l) => Math.sqrt(l.value) * 3,
         width: 800,
-        height: 800,
+        height: 1600,
         colors: ["lightsteelblue", "darkseagreen"],
         icons: ["\u{F01A6}", "\u{F072A}"],
       });

@@ -12,7 +12,7 @@ def test_operation_provenance_steps_endpoint(
     Tests that we can serialize the provenance steps via an endpoint
     """
 
-    test_process = test_provenance.TestManufacturingProcess(
+    test_process = test_provenance.TestBasicManufacturingProcess(
         api_storage_layer, mppw.models.Project(**api_project)
     )
 
@@ -26,14 +26,14 @@ def test_operation_provenance_steps_endpoint(
     assert len(steps["edges"]) == 4
 
 
-def test_artifact_provenance_endpoint(api_client, api_storage_layer, test_project):
+def test_artifact_provenance_endpoint(api_client, api_storage_layer, api_project):
 
     """
     Tests that we can serialize artifact provenance via an endpoint
     """
 
-    test_process = test_provenance.TestManufacturingProcess(
-        api_storage_layer, test_project
+    test_process = test_provenance.TestBasicManufacturingProcess(
+        api_storage_layer, mppw.models.Project(**api_project)
     )
 
     provenance = api_client.get_json(
@@ -42,8 +42,6 @@ def test_artifact_provenance_endpoint(api_client, api_storage_layer, test_projec
 
     assert len(provenance["nodes"]) == 3 + 2
     assert len(provenance["edges"]) == 4
-
-    print(test_process.cut.id)
 
     provenance = api_client.get_json(
         "/artifacts/"
@@ -62,3 +60,14 @@ def test_artifact_provenance_endpoint(api_client, api_storage_layer, test_projec
 
     assert len(provenance["nodes"]) == (3 + 2) + (1 + 1)
     assert len(provenance["edges"]) == 4 + 2
+
+
+def test_process_property_endpoints_provenance(
+    api_client, api_storage_layer, api_project
+):
+
+    test_process = test_provenance.TestProcessPropertyManufacturingProcess(
+        api_storage_layer, mppw.models.Project(**api_project)
+    )
+
+    assert True
