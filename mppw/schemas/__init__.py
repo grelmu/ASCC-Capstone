@@ -162,7 +162,7 @@ def get_operation_schema(
                 schema.attachments.child_kinds.extend(
                     parent_schema.attachments.child_kinds
                 )
-                schema.provenance.relations.extend(parent_schema.provenance.relations)
+                # TODO: Extend steps
 
         OPERATION_SCHEMAS[type_urn] = (schema, True)
 

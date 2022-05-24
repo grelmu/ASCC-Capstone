@@ -50,13 +50,13 @@
       },
       {
         name: ":dimension",
-        context: ":sample.*.:specimen.*",
+        context: ":sample.*.:specimens.*",
         from_artifacts: ["."],
         to_artifacts: [".:test-dimensions.*"],
       },
       {
         name: ":test",
-        context: ":sample.*.:specimen.*",
+        context: ":sample.*.:specimens.*",
         from_artifacts: ["."],
         to_artifacts: [
           ".:test-measurements.*",
@@ -67,15 +67,21 @@
       },
       {
         name: ":compute",
-        context: ":sample.*.:specimen.*",
+        context: ":sample.*.:specimens.*",
         from_artifacts: ["."],
-        to_artifacts: [".:computed-properties.*", ".:computed-properties.*.:notes.*",],
+        to_artifacts: [
+          ".:computed-properties.*",
+          ".:computed-properties.*.:notes.*",
+        ],
       },
       {
         name: ":compute",
         context: ":sample.*",
         from_artifacts: ["."],
-        to_artifacts: [".:computed-properties.*", ".:computed-properties.*.:notes.*",],
+        to_artifacts: [
+          ".:computed-properties.*",
+          ".:computed-properties.*.:notes.*",
+        ],
       },
     ],
   },

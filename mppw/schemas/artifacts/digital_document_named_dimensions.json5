@@ -1,33 +1,38 @@
 {
-  $schema: "https://json-schema.org/draft/2020-12/schema",
-  type: "object",
-  properties: {
-    dimensions: {
-      title: "Dimensions",
-      type: "object",
-      properties: {
-        orientation: {
-          type: "string",
-          title: "Orientation",
-        },
-        measurements: {
-          type: "array",
-          title: "Measurements",
-          items: {
-            type: "object",
-            title: "",
-            properties: {
-              label: {
-                type: "string",
-                title: "Name",
-              },
-              value: {
-                type: "number",
-                title: "Value",
-              },
-              unit: {
-                type: "string",
-                title: "Unit",
+  type_urn: "urn:x-mfg:artifact:digital:document:named-dimensions",
+  name: "Named Dimensions",
+  description: "Dimension measurements of various kinds",
+  json_schema: {
+    $schema: "https://json-schema.org/draft/2020-12/schema",
+    type: "object",
+    properties: {
+      dimensions: {
+        title: "Dimensions",
+        type: "object",
+        properties: {
+          orientation: {
+            type: "string",
+            title: "Orientation",
+          },
+          measurements: {
+            type: "array",
+            title: "Measurements",
+            items: {
+              type: "object",
+              title: "",
+              properties: {
+                label: {
+                  type: "string",
+                  title: "Name",
+                },
+                value: {
+                  type: "number",
+                  title: "Value",
+                },
+                unit: {
+                  type: "string",
+                  title: "Unit",
+                },
               },
             },
           },

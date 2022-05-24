@@ -120,7 +120,7 @@ def test_load_operation_schema():
 
     assert ":toolpath" in child_kind_urns
     assert ":attachments" in child_kind_urns
-    assert len(schema.provenance.relations) == 3
+    assert len(schema.provenance.steps) == 2
 
 
 def test_parse_artifact_schema():
