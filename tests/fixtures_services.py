@@ -21,7 +21,7 @@ class ServiceLayerContext:
     def __enter__(self):
         self.session = self.storage_layer.start_session()
         self.repo_layer = repositories.MongoDBRepositoryLayer(
-            storage_layer, self.session
+            self.storage_layer, self.session
         )
         self.service_layer = services.ServiceLayer(self.repo_layer)
         return self.service_layer
