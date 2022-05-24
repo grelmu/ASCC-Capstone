@@ -58,13 +58,5 @@
         to_artifacts: [".:part-geometry.*", ".:images.*", ".:notes.*"],
       },
     ],
-
-    relations: [
-      {
-        name: "measurement",
-        from_kind: ":input-parts.**.:output-parts",
-        to_kind: ".:part-geometry",
-      },
-    ],
   },
 }

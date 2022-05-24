@@ -57,7 +57,6 @@ AttachmentsSchema.KindNode.update_forward_refs()
 
 
 class ProvenanceSchema(pydantic.BaseModel):
-
     class Step(pydantic.BaseModel):
         name: Optional[str]
         context: Optional[str]
@@ -67,13 +66,6 @@ class ProvenanceSchema(pydantic.BaseModel):
         is_sink: bool = False
 
     steps: List[Step] = pydantic.Field(default_factory=lambda: [])
-
-    class Relation(pydantic.BaseModel):
-        name: str
-        from_kind: str
-        to_kind: str
-
-    relations: List[Relation] = pydantic.Field(default_factory=lambda: [])
 
 
 class ServicesSchema(pydantic.BaseModel):

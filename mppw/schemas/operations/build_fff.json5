@@ -42,23 +42,5 @@
         to_artifacts: [".:part-geometry.*", ".:images.*"],
       },
     ],
-
-    relations: [
-      {
-        name: "material_transform",
-        from_kind: ":input-materials",
-        to_kind: ":output-parts",
-      },
-      {
-        name: "measurement",
-        from_kind: ":output-parts",
-        to_kind: ":toolpath-cloud",
-      },
-      {
-        name: "measurement",
-        from_kind: ":output-parts",
-        to_kind: ":thermal-cloud",
-      },
-    ],
   },
 }
