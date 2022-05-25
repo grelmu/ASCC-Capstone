@@ -1,4 +1,3 @@
-from pyparsing import Char
 from .. import OperationServices
 from .. import ServiceLayer
 
