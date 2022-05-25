@@ -12,12 +12,18 @@ import dbvox
 from fff_post import mppw_api
 from mppw import storage
 
+"""
+Fixtures that allow testing against an active, local API
+"""
+
+
 @pytest.fixture
 def api_storage_layer():
     return storage.MongoDBStorageLayer(
         "mongodb://localhost:27027/mppw?authSource=admin",
         lambda: ("admin", "password"),
     )
+
 
 @pytest.fixture
 def api_client():

@@ -10,8 +10,21 @@ import re
 
 from mppw import logger
 
+"""
+Data models for the storage layer
+
+TODO: Break this up into dedicated files
+"""
+
 
 class DbId:
+
+    """
+    A DbId is a data type to transparently manage the transition between ObjectIds and str ids
+
+    During (de-)serialization, a DbId can be parsed and encoded to an ObjectId (when writing to Bson) or a str (when writing to JSON)
+    """
+
     @staticmethod
     def init(val):
         return DbId.validate(val)
@@ -78,6 +91,11 @@ class StrDbId(DbId):
 
 
 class BaseJsonModel(pydantic.BaseModel):
+
+    """
+    Model which manages serialization of types that are nontrivial in JSON (dates, ObjectIds)
+    """
+
     class Config(pydantic.BaseConfig):
         json_encoders = {
             datetime.datetime: lambda dt: dt.isoformat(),
@@ -217,12 +235,23 @@ AnyArtifact = Union[MaterialArtifact, DigitalArtifact]
 
 class ArtifactTransform(BaseJsonModel):
 
+    """
+    Currently this data model is used for storage of operation-attached artifacts
+
+    TODO: Deprecate when possible, will require a migration
+    """
+
     URN_PREFIX: ClassVar = "urn:x-mfg:transform"
 
     kind_urn: str
     input_artifacts: Optional[List[DbId]]
     output_artifacts: Optional[List[DbId]]
     parameters: Any
+
+
+#
+# Attachment Graphs for Operations
+#
 
 
 class AttachmentMode(enum.Enum):
@@ -237,6 +266,12 @@ class AttachmentRelation(enum.Enum):
 
 
 class AttachmentGraph(networkx.MultiDiGraph):
+
+    """
+    An attachment graph is a tree of attached artifacts, and can be explored via the standard
+    networkx graph operations.
+    """
+
     class AttachmentNode(BaseJsonModel):
 
         kind_path: Tuple[str, ...]
@@ -390,6 +425,10 @@ class AttachmentGraph(networkx.MultiDiGraph):
                 children.append(node_to)
         return children
 
+    #
+    # Attachment Queries
+    #
+
     def find_nodes(
         self,
         kind_path: List = None,
@@ -514,6 +553,13 @@ class Operation(DocModel):
     # The "ArtifactTransform" must be listed *first* in order for parsing to
     # pick it up correctly
     artifact_transform_graph: Union[Optional[List[ArtifactTransform]], Any]
+
+    # DRAGONS DRAGONS DRAGONS
+    # We *immediately*, after parsing, convert the ArtifactTransforms into
+    # an AttachmentGraph because attachments are way simpler to manage this
+    # way.  On the way back to JSON we re-serialize as ArtifactTransforms
+    # (until we migrate data and remove ArtifactTransform as a model, though
+    # there will always need to be a JSON representation of the graph).
 
     @property
     def attachments(self) -> AttachmentGraph:

@@ -21,6 +21,10 @@ class NoStrategyFoundException(Exception):
 
 class OperationServices:
 
+    """
+    The basic services that all operations share
+    """
+
     AttachedArtifact = Tuple[
         models.AttachmentGraph.AttachmentNode, Optional[models.AnyArtifact]
     ]

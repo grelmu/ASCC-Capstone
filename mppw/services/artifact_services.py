@@ -7,6 +7,11 @@ from .. import schemas
 
 
 class ArtifactServices:
+
+    """
+    The basic services that all artifacts share
+    """
+
     def __init__(
         self,
         service_layer,

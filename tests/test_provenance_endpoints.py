@@ -62,9 +62,13 @@ def test_artifact_provenance_endpoint(api_client, api_storage_layer, api_project
     assert len(provenance["edges"]) == 4 + 2
 
 
-def test_process_property_endpoints_provenance(
+def test_process_property_endpoints_create_provenance(
     api_client, api_storage_layer, api_project
 ):
+
+    """
+    Just builds a complex provenance to allow UI testing
+    """
 
     test_process = test_provenance.TestProcessPropertyManufacturingProcess(
         api_storage_layer, mppw.models.Project(**api_project)

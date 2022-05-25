@@ -64,6 +64,7 @@ def create_app(storage_layer):
     # Must be initialized *first*, as it also initializes request_user lookups
     app.include_router(security.create_router(app))
 
+    # TODO: Create an endpoints sub-module
     from . import schema_endpoints
 
     app.include_router(schema_endpoints.create_router(app))

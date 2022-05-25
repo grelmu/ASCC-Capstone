@@ -12,6 +12,13 @@ from .provenance_services import ProvenanceServices
 
 
 class ServiceLayer:
+
+    """
+    A ServiceLayer provides access to abstracted types of services on top of durable data storage.
+
+    Generally all (nontrivial) logical data warehouse actions should be accessible here.
+    """
+
     def __init__(self, repo_layer):
         self.repo_layer = repo_layer
 
@@ -24,6 +31,10 @@ class ServiceLayer:
     def artifact_services_for(
         self, type_urn: Union[str, models.Artifact], service_type=None
     ) -> ArtifactServices:
+
+        """
+        Given an artifact, returns the specialized services for that type of artifact
+        """
 
         if isinstance(type_urn, models.Artifact):
             type_urn = type_urn.type_urn
@@ -56,6 +67,10 @@ class ServiceLayer:
     def operation_services_for(
         self, type_urn: Union[str, models.Operation], service_type=None
     ) -> OperationServices:
+
+        """
+        Given an operation, returns the specialized services for that type of operation
+        """
 
         if isinstance(type_urn, models.Operation):
             type_urn = type_urn.type_urn

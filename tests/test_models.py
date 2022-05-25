@@ -3,6 +3,9 @@ import json
 
 from mppw import models
 
+"""
+Unit tests of the model layer
+"""
 
 def test_operation_parse_json():
 

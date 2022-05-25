@@ -9,6 +9,10 @@ class ServicesSchema(pydantic.BaseModel):
 
 class ArtifactSchema(pydantic.BaseModel):
 
+    """
+    Schema which defines artifact classes
+    """
+
     type_urn: str
     parent_urns: Optional[List[str]]
     name: Optional[str]

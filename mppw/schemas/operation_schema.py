@@ -3,6 +3,10 @@ import pydantic
 import pyjson5
 from typing import List, Union, Optional, ForwardRef
 
+#
+# Recursive attachments schemas
+#
+
 _AttachmentTypeNodeRef = ForwardRef("AttachmentsSchema.TypeNode")
 _AttachmentKindNodeRef = ForwardRef("AttachmentsSchema.KindNode")
 
@@ -19,6 +23,11 @@ class AttachmentsSchema(pydantic.BaseModel):
         )
 
     child_kinds: List[KindNode] = pydantic.Field(default_factory=lambda: [])
+
+    #
+    # Logic relating to parsing "compact" attachment definitions
+    # TODO: Consider deprecating
+    #
 
     @staticmethod
     def is_compact_schema_dict(value: dict):
@@ -74,6 +83,10 @@ class ServicesSchema(pydantic.BaseModel):
 
 
 class OperationSchema(pydantic.BaseModel):
+
+    """
+    Schema which defines operation classes
+    """
 
     type_urn: str
     parent_urns: Optional[List[str]]

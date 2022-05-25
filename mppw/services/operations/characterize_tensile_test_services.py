@@ -6,6 +6,10 @@ from ... import models
 
 class CharacterizeTensileTestServices(OperationServices):
 
+    """
+    Services for tensile test operations
+    """
+
     SAMPLE_KIND_PATH = [":sample"]
 
     def init(
@@ -13,8 +17,10 @@ class CharacterizeTensileTestServices(OperationServices):
         operation: models.Operation,
         **kwargs,
     ):
+
         super().init(operation, **kwargs)
 
+        # Tensile test operations always have a default "sample" created
         if not list(operation.attachments.find_nodes_by_path(":sample")):
 
             sample_artifact = self._init_sample_artifact(operation)

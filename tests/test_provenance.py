@@ -10,11 +10,18 @@ from mppw import schemas
 
 from .fixtures_services import ServiceLayerContext
 
+"""
+Unit tests of provenance services
+"""
+
 
 class TestBasicManufacturingProcess:
 
     """
     A basic manufacturing process used to check core provenance functionality
+
+    Builds a minimal :fff operation with input batch, output part and a
+    :waterjetcut operation with input part and output cut part.
     """
 
     def __init__(self, storage_layer, test_project: models.Project):
@@ -112,6 +119,10 @@ class TestBasicManufacturingProcess:
 
 def test_basic_process_provenance(storage_layer, test_project):
 
+    """
+    Test provenance exploration of a basic process
+    """
+
     test_process = TestBasicManufacturingProcess(storage_layer, test_project)
 
     with ServiceLayerContext(storage_layer) as service_layer:
@@ -173,7 +184,12 @@ class TestProcessPropertyManufacturingProcess:
 
     """
     A process/property manufacturing process used to check that we can explore from
-    properties back to the build processes that made the specimens
+    properties back to the build processes that made the specimens.
+
+    Creates an FFF operation with two input batches and three output parts,
+    which are then cut in three :waterjetcut operations into six specimen parts.
+    The specimens are then grouped into two :tensile-test operations into samples
+    which are then tested and computed properties added for each specimen and sample.
     """
 
     def __init__(self, storage_layer, test_project: models.Project):
@@ -470,6 +486,10 @@ class TestProcessPropertyManufacturingProcess:
 
 
 def test_process_property_provenance(storage_layer, test_project):
+
+    """
+    Tests that we can explore a full process-property provenance
+    """
 
     test_process = TestProcessPropertyManufacturingProcess(storage_layer, test_project)
 

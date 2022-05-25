@@ -5,6 +5,14 @@ from mppw import repositories
 from mppw import storage
 from mppw import services
 
+"""
+Fixtures that allow testing against a synthetic storage layer running
+on the local machine.
+
+Generally the same database can be used as the active API but the data
+won't show up in the API.
+"""
+
 
 @pytest.fixture
 def storage_layer():
@@ -13,7 +21,13 @@ def storage_layer():
         lambda: ("admin", "password"),
     )
 
+
 class ServiceLayerContext:
+
+    """
+    Testing context to allow creating session-scoped services in unit tests
+    """
+
     def __init__(self, storage_layer: storage.MongoDBStorageLayer):
         self.storage_layer = storage_layer
         self.__exit__(None, None, None)
