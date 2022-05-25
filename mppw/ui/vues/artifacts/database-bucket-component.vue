@@ -11,12 +11,12 @@
     </li>
     </ul>
     <div class="tab-content" id="pills-tabContent">
-      <div class="tab-pane fade show active" id="pills-home" role="tabpanel" aria-labelledby="pills-home-tab"><p><b>MongoDB Read-Only URL: </b> {{read_only_url}} </p></div>
-      <div class="tab-pane fade" id="pills-profile" role="tabpanel" aria-labelledby="pills-profile-tab"><p><b>MongoDB Read-Write URL: </b> {{local_url}} </p></div>
+      <div class="tab-pane fade show active" id="pills-home" role="tabpanel" aria-labelledby="pills-home-tab"><p><b>MongoDB Read-Only URL: </b> {{read_only_url}} </p> </div>
+      <div class="tab-pane fade" id="pills-profile" role="tabpanel" aria-labelledby="pills-profile-tab"><p><b>MongoDB Read-Write URL: </b> {{local_url}} </p> </div>
   </div>
    
     <div>
-    <p><b>Total Size: </b> {{this.shortenBytes(stats.size_bytes)}}<p>
+    <p><b>Total Size: </b> {{this.shortenBytes(stats.size_bytes)}}</p>
     <br>
     <b> Collections: </b>
     <ul v-for="collection in stats.collections" v-bind:key="collection.name">
@@ -48,18 +48,20 @@ export default {
         this.artifact = artifact;
         this.local_url=this.replace_mongo_local(artifact.url_data)
         this.read_only_url=this.generate_read_only_link(artifact.url_data)
+        this.getData(artifact.id)
       });
     },
-    async getData() {
+    //Function to get the stats data using the api
+    async getData(id) {
       try {
-        let response = await fetch("http://localhost:8000/api/artifacts/62740771eeedc12a68378ddc/services/database-bucket/stats");
+        let response = await fetch("http://localhost:8000/api/artifacts/"+ id +"/services/database-bucket/stats");
         this.stats = await response.json();;
       } catch (error) {
-        console.log(error);
+        console.log(error); 
       }
     },
+    // Takes amount in bytes and returns it in Mb, Gb, Tb where appropiate
     shortenBytes(amount){
-      // Takes amount in bytes and returns it in Mb, Gb, Tb where appropiate
       let units = ["Bytes", "MB", "GB", "TB", "PB"];
       let currentUnit = 0; // Points to position in ^^^
 
@@ -74,7 +76,7 @@ export default {
     },
     //This function replaces window.location instead of mongodb.mppw.local in the database URL
     replace_mongo_local(URL){
-      return URL.replaceAll('mongodb.mppw.local','window.location');
+      return URL.replaceAll('mongodb.mppw.local','window.location.origin');
     },
 
     //This function slices the user password into half to generate readonly url link 
@@ -91,7 +93,7 @@ export default {
     }
   },
   created() {
-    return this.refreshArtifact(),this.getData();
+    return this.refreshArtifact();
   },
    
 };
