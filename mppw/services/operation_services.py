@@ -182,12 +182,13 @@ class OperationServices:
             attachment_mode=attachment_mode,
             parent_artifact_path=parent_artifact_path,
         ):
-            yield (
-                attachment_node,
-                self.repo_layer.artifacts.query_one(id=attachment_node.artifact_id)
-                if attachment_node.artifact_id is not None
-                else None,
-            )
+            if attachment_node.kind_path:
+                yield (
+                    attachment_node,
+                    self.repo_layer.artifacts.query_one(id=attachment_node.artifact_id)
+                    if attachment_node.artifact_id is not None
+                    else None,
+                )
 
     def detach(
         self,

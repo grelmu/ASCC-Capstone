@@ -120,7 +120,7 @@ def create_router(app):
             raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
 
         return True
-        
+
     @router.patch("/{id}", response_model=bool)
     def patch(
         id: str,
@@ -141,7 +141,9 @@ def create_router(app):
             return metadata
 
         modified = repo_layer.operations.partial_update(
-            id, update_fn, project_ids=project_endpoints.project_claims_for_user(current_user)
+            id,
+            update_fn,
+            project_ids=project_endpoints.project_claims_for_user(current_user),
         )
 
         if not modified:
@@ -263,6 +265,26 @@ def create_router(app):
 
         return True
 
+    #
+    # Artifact candidate helper queries - pulls back artifact nodes *and* artifact data
+    #
+
+    @router.get(
+        "/{id}/artifacts/all",
+        response_model=List[services.OperationServices.AttachedArtifact],
+    )
+    def all_artifacts(
+        id: str,
+        user: security.ScopedUser = Security(
+            request_user(app), scopes=[PROVENANCE_SCOPE]
+        ),
+        service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
+    ):
+        operation: models.Operation = read(id, user, service_layer.repo_layer)
+        services = service_layer.operation_services_for(operation)
+
+        return list(services.get_attached_artifacts(operation))
+
     @router.get(
         "/{id}/artifacts/frame_candidates",
         response_model=List[services.OperationServices.AttachedArtifact],
@@ -285,7 +307,9 @@ def create_router(app):
             artifact_path = artifact_path.split(".")
             kind_path, artifact_id = artifact_path[0:-1], artifact_path[-1]
 
-        attachment = operation.attachments.find_node(kind_path=kind_path, artifact_id=artifact_id)
+        attachment = operation.attachments.find_node(
+            kind_path=kind_path, artifact_id=artifact_id
+        )
 
         return list(
             services.frame_candidates(

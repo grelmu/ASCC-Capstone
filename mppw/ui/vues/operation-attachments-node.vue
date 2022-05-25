@@ -46,14 +46,12 @@
           </div>
           <div class="col-auto my-auto">
             <o-icon
-              :icon="artifactNode['is_input'] ? 'link-off' : 'trash-can'"
-              @click="
-                onDetachArtifact(
-                  attachmentNode['kind_urn'],
-                  artifactNode['artifact_id'],
-                  artifactNode['is_input']
-                )
+              :icon="
+                artifactNode['attachment_mode'] == 'input'
+                  ? 'link-off'
+                  : 'trash-can'
               "
+              @click="onDetachArtifact(artifactNode)"
               style="color: red"
             ></o-icon>
           </div>
@@ -240,8 +238,7 @@ export default {
                 kind_urn: kindUrn,
                 artifacts: [artifactNode],
               };
-            }
-            else {
+            } else {
               attachmentNode.artifacts.push(artifactNode);
             }
           }
@@ -391,11 +388,18 @@ export default {
       this.selectedCandidate = null;
 
       return this.$root
-        .apiFetchArtifactsLs(this.selectedOperation.id)
+        .apiFetchAllArtifactCandidates(this.selectedOperation.id)
         .then((listing) => {
+          // TODO: Refactor this hackery back into the API and UI above
+          listing = listing.map((item) => {
+            item[1].kind_urn = item[0].kind_path.join(".");
+            return item[1];
+          });
+
           let typeUrns = this.newKind.types.map(
             (t) => "urn:x-mfg:artifact" + t["type_urn"]
           );
+
           this.selectedOperationCandidates = listing.filter(
             (c) => typeUrns.indexOf(c.type_urn) >= 0
           );
@@ -461,18 +465,22 @@ export default {
           this.isAttachingArtifact = false;
         });
     },
-    onDetachArtifact(kindUrn, artifactId, isInput) {
+    onDetachArtifact(artifactNode) {
       if (
-        !confirm("Are you sure you want to detach a " + kindUrn + " artifact?")
+        !confirm(
+          "Are you sure you want to detach a " +
+            artifactNode.kind_path[artifactNode.kind_path.length - 1] +
+            " artifact?"
+        )
       )
         return;
 
       return this.$root
         .apiDetachArtifact(
           this.opId,
-          this.parentArtifactPath.concat([kindUrn]),
-          artifactId,
-          isInput ? "input" : "output"
+          artifactNode["kind_path"],
+          artifactNode["artifact_id"],
+          artifactNode["attachment_mode"]
         )
         .finally(() => {
           this.refreshAttachments();

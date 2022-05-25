@@ -121,7 +121,6 @@ const routes = [
   },
 ];
 
-
 export default {
   routes: routes,
 
@@ -461,23 +460,6 @@ export default {
         );
       });
     },
-    apiFetchArtifactFrameCandidates(opId, artifactPath) {
-      return this.apiFetch(
-        "operations/" +
-          opId +
-          "/artifacts/frame_candidates?strategy=operation_local&artifact_path=" +
-          encodeURIComponent(artifactPath.join(".")),
-        {
-          method: "GET",
-        }
-      ).then((response) => {
-        if (response.status == 200) return response.json();
-        this.throwApiResponseError(
-          response,
-          "Unknown response when querying frame candidates"
-        );
-      });
-    },
     apiFetchFileBucketListing(id) {
       return this.apiFetch("artifacts/" + id + "/services/file-bucket/ls", {
         method: "POST",
@@ -559,7 +541,7 @@ export default {
         }
       );
     },
-    apiPatchOperation(id,changes) {
+    apiPatchOperation(id, changes) {
       return this.apiFetch("operations/" + id, {
         method: "PATCH",
         headers: {
@@ -574,7 +556,7 @@ export default {
         );
       });
     },
-    apiPutOperation(id,op) {
+    apiPutOperation(id, op) {
       return this.$root
         .apiFetch("operations/" + id + "/", {
           method: "PUT",
@@ -681,6 +663,34 @@ export default {
         this.throwApiResponseError(
           response,
           "Unknown response when removing attachment"
+        );
+      });
+    },
+    apiFetchAllArtifactCandidates(opId) {
+      return this.apiFetch("operations/" + opId + "/artifacts/all", {
+        method: "GET",
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when querying all artifact candidates"
+        );
+      });
+    },
+    apiFetchArtifactFrameCandidates(opId, artifactPath) {
+      return this.apiFetch(
+        "operations/" +
+          opId +
+          "/artifacts/frame_candidates?strategy=operation_local&artifact_path=" +
+          encodeURIComponent(artifactPath.join(".")),
+        {
+          method: "GET",
+        }
+      ).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when querying frame candidates"
         );
       });
     },
