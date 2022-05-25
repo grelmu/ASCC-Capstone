@@ -68,39 +68,36 @@
         <o-button @click="onNewOpSubmit()">Submit</o-button>
       </o-modal>
 
-      <o-table :loading="opsLoading" :data="opsRows || []">
-        <o-table-column field="id" label="ID" v-slot="props">
-          <router-link :to="'/operations/' + props.row.id">
-            {{ props.row.id }}
-          </router-link>
-        </o-table-column>
+      <section>
+        <o-table :loading="opsLoading" :data="opsRows || []" 
+        :current.sync="parameters.page_num"
+        :debounce-search="750" :per-page="parameters.page_size"   
+        :paginated="isPaginated"
+        backend-sorting @sort="onSort"
+        backend-filtering @filters-change="onFilter"
+        backend-pagination @page-change="onPageChange" :total="total">
+          <template v-for="column in opsColumns" :key="column.id">
+            <o-table-column v-bind="column">
+              <template v-slot="props">
+                <span v-if="column.field == 'id'">
+                  <router-link :to="'/operations/' + props.row.id">
+                    View Operation
+                  </router-link>
+                </span>
+                <span v-else-if="column.field == 'start_at' || column.field == 'end_at'">
+                  <span v-if="props.row[column.field] != null">
+                  {{ new Date(props.row[column.field]).toLocaleDateString() }}
+                  </span>
+                </span>
+                <span v-else>
+                  {{ props.row[column.field] }}
+                </span>
+              </template>
+            </o-table-column>
+          </template>
+        </o-table>
+      </section>
 
-        <o-table-column field="name" label="Name" v-slot="props">
-          {{ props.row.name }}
-        </o-table-column>
-
-        <o-table-column field="status" label="Status" v-slot="props">
-          {{ props.row.status }}
-        </o-table-column>
-
-        <o-table-column
-          field="start_at"
-          label="Start"
-          position="centered"
-          v-slot="props"
-        >
-          {{ new Date(props.row.start_at).toLocaleDateString() }}
-        </o-table-column>
-
-        <o-table-column
-          field="end_at"
-          label="End"
-          position="centered"
-          v-slot="props"
-        >
-          {{ new Date(props.row.end_at).toLocaleDateString() }}
-        </o-table-column>
-      </o-table>
     </div>
   </div>
 </template>
@@ -119,6 +116,41 @@ export default {
 
       opsLoading: false,
       opsRows: null,
+      isPaginated: true,
+      parameters: {
+        page_size: 10,
+        page_num: 1,
+      },
+      total: 1000,
+      opsColumns: [
+        {
+          field: 'id',
+          label: 'Link',
+          sortable: false,
+        },
+        {
+          field: 'name',
+          label: 'Name',
+          searchable: true,
+          sortable: true,
+        },
+        {
+          field: 'status',
+          label: 'Status',
+          searchable: true,
+          sortable: true,
+        },
+        {
+          field: 'start_at',
+          label: 'Start',
+          sortable: true,
+        },
+        {
+          field: 'end_at',
+          label: 'End',
+          sortable: true,
+        }
+      ],
 
       isCreatingNewOp: false,
       newOp: {},
@@ -146,6 +178,24 @@ export default {
     apiFetchProjectOps(project_id) {
       return this.$root
         .apiFetch("operations/?project_ids=" + this.projectId, {
+          method: "GET",
+        })
+        .then((response) => {
+          if (response.status == 200) return response.json();
+          this.$root.throwApiResponseError(
+            response,
+            "Unknown response when querying for project operations"
+          );
+        });
+    },
+    apiFetchProjectOpsPaged(project_id, parameters={}) {
+      let fetchUrl = `operations/paged/?project_ids=${project_id}&` +
+      Object.keys(parameters).map(key => {
+        return parameters[key] ? key + '=' + encodeURIComponent(parameters[key]) : null;
+      }).join("&");
+
+      return this.$root
+        .apiFetch(fetchUrl, {
           method: "GET",
         })
         .then((response) => {
@@ -215,8 +265,9 @@ export default {
 
     loadOpsTable() {
       this.opsLoading = true;
-      return this.apiFetchProjectOps(this.projectId).then((ops) => {
-        this.opsRows = ops;
+      return this.apiFetchProjectOpsPaged(this.projectId).then((ops) => {
+        this.opsRows = ops.results;
+        this.total = ops.total;
         this.opsLoading = false;
       });
     },
@@ -256,6 +307,38 @@ export default {
           this.loadOpsTable();
         });
     },
+    onPageChange(page){
+      this.opsLoading = true;
+      this.parameters.page_num = page;
+      return this.apiFetchProjectOpsPaged(this.projectId, this.parameters).then((ops) => {
+        console.log(ops);
+        this.opsRows = ops.results;
+        this.total = ops.total;
+        this.opsLoading = false;
+      });
+    },
+    onFilter(parameters){
+      Object.keys(parameters).map(key => {
+        this.parameters[key] = parameters[key];
+      });
+      this.opsLoading = true;
+      return this.apiFetchProjectOpsPaged(this.projectId, this.parameters).then((ops) => {
+        this.opsRows = ops.results;
+        this.total = ops.total;
+        this.opsLoading = false;
+        console.log(ops);
+      });
+    },
+    onSort(field, dir, event){
+      this.parameters.sort_col = field;
+      this.parameters.sort_dir = dir;
+      return this.apiFetchProjectOpsPaged(this.projectId, this.parameters).then((ops) => {
+        this.opsRows = ops.results;
+        this.total = ops.total;
+        this.opsLoading = false;
+        console.log(ops);
+      });
+    }
   },
 
   mounted() {
