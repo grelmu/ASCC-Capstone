@@ -407,6 +407,19 @@ export default {
         );
       });
     },
+    //Function to get the stats data using the api
+    apiFetchDatabaseBucketStats(id) {
+      return this.apiFetch(
+        "artifacts/" + id + "/services/database-bucket/stats",
+        { method: "GET" }
+      ).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when querying database bucket stats"
+        );
+      });
+    },
     apiFetchFileBucketListing(id) {
       return this.apiFetch("artifacts/" + id + "/services/file-bucket/ls", {
         method: "POST",
@@ -488,7 +501,7 @@ export default {
         }
       );
     },
-    apiPatchOperation(id,changes) {
+    apiPatchOperation(id, changes) {
       return this.apiFetch("operations/" + id, {
         method: "PATCH",
         headers: {
@@ -503,7 +516,7 @@ export default {
         );
       });
     },
-    apiPutOperation(id,op) {
+    apiPutOperation(id, op) {
       return this.$root
         .apiFetch("operations/" + id + "/", {
           method: "PUT",
