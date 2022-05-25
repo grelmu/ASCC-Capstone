@@ -5,9 +5,9 @@
         <template v-slot:trigger="trigger">
           <div class="card-header" role="button">
             <router-link
-              v-if="artifactNode['is_input']"
-              :to="'/operations/' + artifactOpParent['id']"
-              :title="artifactOpParent['name']"
+              v-if="attachment['attachment_mode'] == 'input'"
+              :to="'/operations/' + parentOp['id']"
+              :title="parentOp['name']"
               target="_blank"
               @click="onClickInputLink"
               class="card-header-icon"
@@ -47,7 +47,9 @@
                   </div>
                 </div>
               </div>
-              <div class="fw-light">{{ artifact["id"] }}</div>
+              <router-link :to="'/artifacts/' + artifact['id']" class="fw-light"
+                >{{ artifact["id"] }}
+              </router-link>
             </div>
             <a class="card-header-icon">
               <o-icon
@@ -75,7 +77,7 @@
           <operation-attachments-node
             :projectId="projectId"
             :opId="opId"
-            :artifactPath="artifactPath"
+            :parentArtifactPath="artifactPath"
             :attachmentKinds="(artifactType || {})['child_kinds'] || []"
           ></operation-attachments-node>
         </div>
@@ -86,7 +88,7 @@
       <operation-attachments-node
         :projectId="projectId"
         :opId="opId"
-        :artifactPath="artifactPath"
+        :parentArtifactPath="artifactPath"
         :attachmentKinds="(artifactType || {})['child_kinds'] || []"
       ></operation-attachments-node>
     </div>
@@ -188,7 +190,6 @@
       <o-button
         @click="onSubmitMeta()"
         class="mt-4"
-        :disabled="isDigitalArtifact() && parentFrameCandidates == null"
         >Save Changes</o-button
       >
     </o-modal>
@@ -202,12 +203,9 @@ const componentMap = {
   "urn:x-mfg:artifact:digital:file-bucket": "digital-file-bucket-component",
   "urn:x-mfg:artifact:digital:fiducial-points":
     "digital-frame-document-component",
-  "urn:x-mfg:artifact:digital:document":
-    "digital-frame-document-component",
-  "urn:x-mfg:artifact:digital:frame":
-    "digital-frame-document-component",
-  "urn:x-mfg:artifact:digital:point-cloud":
-    "digital-point-cloud-component",
+  "urn:x-mfg:artifact:digital:point-cloud": "digital-point-cloud-component",
+  "urn:x-mfg:artifact:digital:document": "digital-frame-document-component",
+  "urn:x-mfg:artifact:digital:frame": "digital-frame-document-component",
   "urn:x-mfg:artifact": "default-component",
 };
 
@@ -229,9 +227,6 @@ export default {
     "digital-file-bucket-component": RemoteVue.asyncComponent(
       "vues/artifacts/digital-file-bucket-component.vue"
     ),
-    "digital-document-component": RemoteVue.asyncComponent(
-      "vues/artifacts/digital-document-component.vue"
-    ),
     "digital-frame-document-component": RemoteVue.asyncComponent(
       "vues/artifacts/digital-frame-document-component.vue"
     ),
@@ -242,11 +237,17 @@ export default {
 
   data() {
     return {
-      artifactId: null,
-      artifact: null,
-      artifactOpParent: null,
-      artifactType: null,
+      // Derived from input artifact path
       artifactKind: null,
+      artifactId: null,
+
+      // Loaded on creation
+      artifact: null,
+      attachment: null,
+      parentOp: null,
+      artifactType: null,
+
+      // UI fields
       isCollapsed: true,
 
       isEditingMeta: false,
@@ -268,14 +269,16 @@ export default {
     projectId: String,
     opId: String,
     artifactPath: Array,
-    artifactNode: Object,
     attachmentKind: Object,
   },
 
   methods: {
     refreshArtifact() {
       this.artifact = null;
-      this.artifactOpParent = null;
+      this.attachment = null;
+      this.parentOp = null;
+      this.artifactType = null;
+
       if (this.artifactId == null) {
         this.artifactType = this.attachmentKind["types"][0];
         return Promise.resolve(null);
@@ -284,11 +287,23 @@ export default {
       return this.$root
         .apiFetchArtifact(this.artifactId)
         .then((artifact) => {
-          if (!this.artifactNode["is_input"]) return artifact;
           return this.$root
-            .apiFetchArtifactOperationParent(artifact["id"])
-            .then((opParent) => {
-              this.artifactOpParent = opParent;
+            .apiFetchAttachedArtifacts(this.opId, {
+              artifact_path: this.artifactPath,
+            })
+            .then((attachments) => {
+              this.attachment = attachments[0];
+
+              if (this.attachment["attachment_mode"] == "output") {
+                return Promise.resolve(null);
+              } else {
+                return this.$root.apiFetchArtifactOperationParent(
+                  this.artifactId
+                );
+              }
+            })
+            .then((parentOp) => {
+              this.parentOp = parentOp;
               return artifact;
             });
         })
@@ -312,10 +327,19 @@ export default {
 
       let candidatesPromise =
         this.selectedOperation != null
-          ? this.$root.apiFetchArtifactFrameCandidates(
-              this.selectedOperation.id,
-              this.artifactPath
-            )
+          ? this.$root
+              .apiFetchArtifactFrameCandidates(
+                this.selectedOperation.id,
+                this.artifactPath
+              )
+              .then((candidates) => {
+                return candidates.map((candidate) => {
+                  let attachment = candidate[0];
+                  let artifact = candidate[1];
+                  artifact["kind_urn"] = attachment["kind_path"].join(".");
+                  return artifact;
+                });
+              })
           : Promise.resolve([]);
 
       return Promise.all([currentFramePromise, candidatesPromise]).then(
@@ -357,9 +381,8 @@ export default {
     },
     artifactComponentFor(typeUrn) {
       if (typeUrn) {
-
         let componentTypeUrns = Object.keys(componentMap).sort().reverse();
-        
+
         for (let i = 0; i < componentTypeUrns.length; ++i) {
           let componentTypeUrn = componentTypeUrns[i];
           if (
@@ -498,9 +521,10 @@ export default {
     },
   },
   created() {
-    this.artifactId = this.artifactNode["artifact_id"];
-    if (this.artifactPath.length > 1)
+    if (this.artifactPath.length > 1) {
+      this.artifactId = this.artifactPath[this.artifactPath.length - 1];
       this.artifactKind = this.artifactPath[this.artifactPath.length - 2];
+    }
     return this.refreshArtifact();
   },
 };

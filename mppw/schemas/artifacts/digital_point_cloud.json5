@@ -1,0 +1,8 @@
+{
+  type_urn: "urn:x-mfg:artifact:digital:point-cloud",
+  name: "Point Cloud",
+  description: "A 3D+t point cloud containing indexed point information",
+  services: {
+    class_qualname: "mppw.services.artifacts.digital_point_cloud_services:PointCloudServices",
+  },
+}

@@ -27,6 +27,7 @@ numpy = "1.21"
 # END for pcl
 pyjson5 = "^1.6.1"
 importlib-metadata = "^4.11.3"
+networkx = "^2.8.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"

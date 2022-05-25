@@ -1,6 +1,6 @@
 <template>
   <section v-if="metadata">
-    <h1 @click="nameEdit = true" v-if="!nameEdit">{{ edit["name"] }}</h1>
+    <h1 @click="nameEdit = true" v-if="!nameEdit">{{ edit["name"] || "(no name)" }}</h1>
     <o-input
       type="text"
       v-if="nameEdit"

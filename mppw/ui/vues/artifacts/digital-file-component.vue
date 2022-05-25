@@ -1,6 +1,6 @@
 <template>
-  <div v-if="artifact && opAttachments">
-    <div class="mt-3 row">
+  <div v-if="artifact">
+    <div class="mt-3 row" v-if="opAttachments">
       <div class="col-md-auto">
         <o-radio
           v-model="storageType"
@@ -136,6 +136,7 @@ export default {
         });
     },
     isOpAttachmentsUrl(url) {
+      if (!this.opAttachments) return false;
       let attachmentsUrl = this.opAttachments["url_data"];
       if (!attachmentsUrl.endsWith("/")) attachmentsUrl += "/";
       return url.startsWith(attachmentsUrl);

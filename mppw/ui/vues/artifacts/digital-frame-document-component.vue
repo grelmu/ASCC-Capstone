@@ -152,13 +152,12 @@ export default {
     },
     isFrameDocumentArtifact() {
       return (
-        this.artifact.type_urn.indexOf(
-          "urn:x-mfg:artifact:digital:frame"
-        ) == 0
+        this.artifact.type_urn.indexOf("urn:x-mfg:artifact:digital:frame") == 0
       );
     },
     rebuildExplorer() {
       // Rebuild explorer
+      if (!this.isFrameDocumentArtifact()) return;
       $("#pivottable-" + this.$.uid).empty();
       $("#pivottable-" + this.$.uid).append(
         '<div id="pivottable-ui-' + this.$.uid + '"></div>'

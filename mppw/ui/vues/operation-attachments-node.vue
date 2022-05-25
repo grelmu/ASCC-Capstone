@@ -16,11 +16,11 @@
       v-for="attachmentNode in attachmentNodes || []"
       :key="attachmentNode['kind_urn']"
     >
-      <h3 v-if="attachmentNode['artifacts']" class="mt-4">
+      <h3 v-if="attachmentNode['artifacts'].length > 0" class="mt-4">
         {{ attachmentNode["kind_urn"] }}
       </h3>
       <h3
-        v-if="!attachmentNode['artifacts']"
+        v-if="attachmentNode['artifacts'].length == 0"
         class="mt-4 text-muted fw-lighter"
       >
         {{ attachmentNode["kind_urn"] }}
@@ -36,25 +36,22 @@
               :projectId="projectId"
               :opId="opId"
               :artifactPath="
-                artifactPath.concat([
+                parentArtifactPath.concat([
                   attachmentNode['kind_urn'],
                   artifactNode['artifact_id'],
                 ])
               "
-              :artifactNode="artifactNode"
               :attachmentKind="attachmentKindFor(attachmentNode['kind_urn'])"
             ></operation-artifact-node>
           </div>
           <div class="col-auto my-auto">
             <o-icon
-              :icon="artifactNode['is_input'] ? 'link-off' : 'trash-can'"
-              @click="
-                onDetachArtifact(
-                  attachmentNode['kind_urn'],
-                  artifactNode['artifact_id'],
-                  artifactNode['is_input']
-                )
+              :icon="
+                artifactNode['attachment_mode'] == 'input'
+                  ? 'link-off'
+                  : 'trash-can'
               "
+              @click="onDetachArtifact(artifactNode)"
               style="color: red"
             ></o-icon>
           </div>
@@ -216,7 +213,7 @@ export default {
   props: {
     projectId: String,
     opId: String,
-    artifactPath: Array,
+    parentArtifactPath: Array,
     attachmentKinds: Array,
   },
 
@@ -225,23 +222,45 @@ export default {
       this.attachmentNodes = null;
 
       return this.$root
-        .apiFetchAttachedArtifacts(this.opId, this.artifactPath)
-        .then((artifactNode) => {
-          this.attachmentNodes = artifactNode["attachments"];
+        .apiFetchAttachedArtifacts(this.opId, {
+          parent_artifact_path: this.parentArtifactPath,
+        })
+        .then((artifactNodes) => {
+          // Group into attachment nodes by attachment kind
+          let attachmentNodes = {};
+
+          for (let i = 0; i < artifactNodes.length; ++i) {
+            let artifactNode = artifactNodes[i];
+            let kindUrn = this.kindPathToUrn(artifactNode["kind_path"]);
+            let attachmentNode = attachmentNodes[kindUrn];
+            if (!attachmentNode) {
+              attachmentNodes[kindUrn] = attachmentNode = {
+                kind_urn: kindUrn,
+                artifacts: [artifactNode],
+              };
+            } else {
+              attachmentNode.artifacts.push(artifactNode);
+            }
+          }
+
+          this.attachmentNodes = Object.values(attachmentNodes);
+
+          // Add empty attachment nodes for any attachment kinds we're missing
           for (let i = 0; i < this.attachmentKinds.length; ++i) {
             let attachmentKind = this.attachmentKinds[i];
             if (this.findSimilarAttachmentNode(attachmentKind.kind_urn) == null)
               this.attachmentNodes.push({
                 kind_urn: attachmentKind.kind_urn,
-                attachments: [],
+                artifacts: [],
               });
           }
 
+          // Sort all the attachments
           this.sortAttachments();
         });
     },
 
-    splitKind(kindUrn) {
+    splitKindKey(kindUrn) {
       let splitAt = kindUrn.lastIndexOf(":");
       if (splitAt == 0) splitAt = -1;
       if (splitAt < 0) return [kindUrn, null];
@@ -251,6 +270,10 @@ export default {
       ];
     },
 
+    kindPathToUrn(kindPath) {
+      return kindPath.length > 0 ? kindPath[kindPath.length - 1] : "";
+    },
+
     sortAttachments() {
       let kindIndices = {};
       for (let i = 0; i < this.attachmentKinds.length; ++i) {
@@ -258,11 +281,11 @@ export default {
       }
 
       this.attachmentNodes.sort((a, b) => {
-        let splitA = this.splitKind(a.kind_urn);
+        let splitA = this.splitKindKey(a.kind_urn);
         let kindA = splitA[0];
         let keyA = splitA[1];
 
-        let splitB = this.splitKind(b.kind_urn);
+        let splitB = this.splitKindKey(b.kind_urn);
         let kindB = splitB[0];
         let keyB = splitB[1];
 
@@ -286,8 +309,11 @@ export default {
 
     findSimilarAttachmentNode(kindUrn) {
       for (let i = 0; i < this.attachmentNodes.length; ++i) {
-        let nextKindUrn = this.attachmentNodes[i]["kind_urn"];
-        if (nextKindUrn == kindUrn || kindUrn.startsWith(nextKindUrn + ":"))
+        let attachmentKindUrn = this.attachmentNodes[i].kind_urn;
+        if (
+          attachmentKindUrn == kindUrn ||
+          kindUrn.startsWith(attachmentKindUrn + ":")
+        )
           return this.attachmentNodes[i];
       }
       return null;
@@ -362,11 +388,18 @@ export default {
       this.selectedCandidate = null;
 
       return this.$root
-        .apiFetchArtifactsLs(this.selectedOperation.id)
+        .apiFetchAllArtifactCandidates(this.selectedOperation.id)
         .then((listing) => {
+          // TODO: Refactor this hackery back into the API and UI above
+          listing = listing.map((item) => {
+            item[1].kind_urn = item[0].kind_path.join(".");
+            return item[1];
+          });
+
           let typeUrns = this.newKind.types.map(
             (t) => "urn:x-mfg:artifact" + t["type_urn"]
           );
+
           this.selectedOperationCandidates = listing.filter(
             (c) => typeUrns.indexOf(c.type_urn) >= 0
           );
@@ -387,10 +420,9 @@ export default {
       return this.$root
         .apiAttachArtifact(
           this.opId,
-          this.artifactPath,
-          fullKindUrn,
+          this.parentArtifactPath.concat([fullKindUrn]),
           this.selectedCandidate["id"],
-          true
+          "input"
         )
         .then(() => {
           return this.refreshAttachments();
@@ -417,37 +449,38 @@ export default {
           let fullKindUrn =
             this.newKindUrn + (this.newKindKey ? ":" + this.newKindKey : "");
 
-          return this.$root
-            .apiInitArtifact(artifact["id"], {})
-            .then(() => {
-              return this.$root.apiAttachArtifact(
-                this.opId,
-                this.artifactPath,
-                fullKindUrn,
-                artifact["id"]
-              );
-            })
-            .then(() => {
-              return this.refreshAttachments();
-            });
+          return this.$root.apiInitArtifact(artifact["id"], {}).then(() => {
+            return this.$root.apiAttachArtifact(
+              this.opId,
+              this.parentArtifactPath.concat([fullKindUrn]),
+              artifact["id"],
+              "output"
+            );
+          });
+        })
+        .then(() => {
+          return this.refreshAttachments();
         })
         .finally(() => {
           this.isAttachingArtifact = false;
         });
     },
-    onDetachArtifact(kindUrn, artifactId, isInput) {
+    onDetachArtifact(artifactNode) {
       if (
-        !confirm("Are you sure you want to detach a " + kindUrn + " artifact?")
+        !confirm(
+          "Are you sure you want to detach a " +
+            artifactNode.kind_path[artifactNode.kind_path.length - 1] +
+            " artifact?"
+        )
       )
         return;
 
       return this.$root
         .apiDetachArtifact(
           this.opId,
-          this.artifactPath,
-          kindUrn,
-          artifactId,
-          isInput
+          artifactNode["kind_path"],
+          artifactNode["artifact_id"],
+          artifactNode["attachment_mode"]
         )
         .finally(() => {
           this.refreshAttachments();

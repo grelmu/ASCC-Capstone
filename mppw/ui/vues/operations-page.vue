@@ -4,15 +4,14 @@
     :metadata="op"></operation-metadata>
 
     <operation-artifact-node
-      v-if="artifactsRoot && attachmentKinds"
+      v-if="opSchema"
       class="mb-5"
       :projectId="op.project"
       :opId="opId"
       :artifactPath="[]"
-      :artifactNode="artifactsRoot"
       :attachmentKind="{
         kind_urn: null,
-        types: [{ type_urn: null, child_kinds: attachmentKinds }],
+        types: [opSchema.attachments],
       }"
     ></operation-artifact-node>
   </div>
@@ -32,74 +31,31 @@ export default {
 
   data() {
     return {
+      // Loaded from path
       opId: null,
-      op: null,
 
-      artifactsRoot: null,
-      attachmentKinds: null,
+      op: null,
+      opSchema: null,
     };
   },
 
   methods: {
     refreshOperation() {
       this.op = null;
+      this.opSchema = null;
       return this.$root.apiFetchOperation(this.opId).then((op) => {
-        this.op = op;
-        return this.refreshArtifactGraph();
+        return this.$root.apiFetchOperationType(op.type_urn).then((schema) => {
+          this.op = op;
+          this.opSchema = schema;
+        });
       });
-    },
-    refreshArtifactGraph() {
-      this.artifactGraph = null;
-      this.artifactOpenIndexes = null;
-      return this.$root
-        .apiFetchArtifactsRoot(this.opId)
-        .then((artifactsRoot) => {
-          this.artifactsRoot = artifactsRoot;
-        });
-    },
-    refreshAttachmentKinds() {
-      this.attachmentKinds = null;
-      return this.$root
-        .apiFetchAttachmentKinds(this.op.type_urn)
-        .then((kinds) => {
-          this.attachmentKinds = kinds;
-        });
     },
   },
   created() {
     this.opId = this.$route.params.id;
-    this.refreshOperation().then(() => {
-      return this.refreshAttachmentKinds();
-    });
+    return this.refreshOperation();
   },
 };
 </script>
 
-<style scoped>
-.card {
-  max-width: 100%;
-  position: relative;
-}
-.card-header {
-  align-items: stretch;
-  display: flex;
-}
-.card-header-title {
-  align-items: center;
-  display: flex;
-  flex-grow: 1;
-  padding: 0.75rem;
-  margin: 0;
-}
-.card-header-icon {
-  align-items: center;
-  cursor: pointer;
-  display: flex;
-  padding: 0.75rem;
-  justify-content: center;
-}
-.card-content {
-  padding: 1.5rem;
-  width: 100%;
-}
-</style>
+<style scoped></style>
