@@ -36,7 +36,7 @@ export default {
     refreshProvenance() {
       this.provenance = null;
       return this.$root
-        .apiFetchArtifactProvenance(this.artifactId, "ancestors+3")
+        .apiFetchArtifactProvenance(this.artifactId, "ancestors")
         .then((provenance) => {
           this.provenance = provenance;
         })
