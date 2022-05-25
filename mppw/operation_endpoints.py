@@ -120,9 +120,9 @@ def create_router(app):
     ):
 
         if project_ids is None:
-            project_ids = projects.project_claims_for_user(user)
+            project_ids = project_endpoints.project_claims_for_user(user)
 
-        projects.check_project_claims_for_user(user, project_ids)
+        project_endpoints.check_project_claims_for_user(user, project_ids)
 
         # Calculate the skip value based on page_size and page_num args
         skip = page_size * (page_num - 1) if None not in (page_size, page_num) else None
