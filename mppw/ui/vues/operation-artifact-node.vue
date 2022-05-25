@@ -187,11 +187,7 @@
         </o-field>
       </div>
 
-      <o-button
-        @click="onSubmitMeta()"
-        class="mt-4"
-        >Save Changes</o-button
-      >
+      <o-button @click="onSubmitMeta()" class="mt-4">Save Changes</o-button>
     </o-modal>
   </div>
 </template>
@@ -201,6 +197,8 @@ const componentMap = {
   "urn:x-mfg:artifact:digital:text": "digital-text-component",
   "urn:x-mfg:artifact:digital:file": "digital-file-component",
   "urn:x-mfg:artifact:digital:file-bucket": "digital-file-bucket-component",
+  "urn:x-mfg:artifact:digital:database-bucket":
+    "digital-database-bucket-component",
   "urn:x-mfg:artifact:digital:fiducial-points":
     "digital-frame-document-component",
   "urn:x-mfg:artifact:digital:point-cloud": "digital-point-cloud-component",
@@ -229,6 +227,9 @@ export default {
     ),
     "digital-frame-document-component": RemoteVue.asyncComponent(
       "vues/artifacts/digital-frame-document-component.vue"
+    ),
+    "digital-database-bucket-component": RemoteVue.asyncComponent(
+      "vues/artifacts/database-bucket-component.vue"
     ),
     "default-component": RemoteVue.asyncComponent(
       "vues/artifacts/default-component.vue"
