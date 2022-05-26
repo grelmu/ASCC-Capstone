@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mppw"
-version = "0.2.0"
+version = "0.3.0"
 description = ""
 authors = ["ASCC <ascc@maine.edu>"]
 include = ["MPPW_RELEASE_NOTES.md"]
