@@ -94,9 +94,16 @@
                 </o-select>
               </template>
               <template v-slot="props">
-                <span v-if="column.field == 'id'">
+                <span v-if="column.field == 'type_urn'">
+                  <span class="o-icon">
+                    <i class="mdi mdi-24px" 
+                      :class="getIconFromTypeName(props.row.type_urn)" 
+                      :title='props.row.type_urn.replace("urn:x-mfg:operation:","")' ></i>
+                  </span>
+                </span>
+                <span v-else-if="column.field == 'name'">
                   <router-link :to="'/operations/' + props.row.id">
-                    View Operation
+                    {{props.row.name}}
                   </router-link>
                 </span>
                 <span v-else-if="column.field == 'start_at' || column.field == 'end_at'">
@@ -139,9 +146,10 @@ export default {
       total: 1000,
       opsColumns: [
         {
-          field: 'id',
-          label: 'Link',
-          sortable: false,
+          field: 'status',
+          label: 'Status',
+          searchable: true,
+          sortable: true,
         },
         {
           field: 'name',
@@ -153,14 +161,8 @@ export default {
           field: 'type_urn',
           label: 'Type',
           sortable: true,
-          position: 'centered',
-          searchable: true
-        },
-        {
-          field: 'status',
-          label: 'Status',
           searchable: true,
-          sortable: true,
+          position: 'centered',
         },
         {
           field: 'start_at',
@@ -262,8 +264,22 @@ export default {
           );
         });
     },
-    // TODO END move to $root app.vue
-
+    getIconFromTypeName(type_urn){
+      switch (type_urn.replace("urn:x-mfg:operation:",'')) {
+        case "fff":
+          return "mdi-printer-3d"
+        case "prepare:waterjetcut":
+          return "mdi-water-pump";
+        case "prepare:machining":
+          return "mdi-hammer-wrench";
+        case "characterize:dimensioning":
+          return "mdi-ruler";
+        case "characterize:tensile-test":
+          return "mdi-weight-lifter";
+        default:
+          return "mdi-help-rhombus";
+      }
+    },
     refreshProjects() {
       this.projects = null;
       this.projectId = null;
