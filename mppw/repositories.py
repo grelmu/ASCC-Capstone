@@ -320,7 +320,6 @@ class ArtifactRepository(MongoDBRepository):
             ),
         )
 
-
     def paged_query(
         self,
         id: str = None,
@@ -333,17 +332,23 @@ class ArtifactRepository(MongoDBRepository):
     ):
 
         results = self.collection.find(
-                self._query_doc_for(id=id, project_ids=project_ids, active=active)
-            )
+            self._query_doc_for(id=id, project_ids=project_ids, active=active)
+        )
         total = len(list(results.clone()))
 
-        results = results.skip(skip or 0).limit(limit or 0).sort( sort_col or "$natural", sort_dir or 1 )
+        results = (
+            results.skip(skip or 0)
+            .limit(limit or 0)
+            .sort(sort_col or "$natural", sort_dir or 1)
+        )
 
-        return map(
-            lambda doc: type(self).doc_to_artifact(doc),
-            results,
-        ), total
-
+        return (
+            map(
+                lambda doc: type(self).doc_to_artifact(doc),
+                results,
+            ),
+            total,
+        )
 
     def update(self, artifact: models.Artifact, project_ids: List[str] = None):
         return (
@@ -437,7 +442,16 @@ class OperationRepository(MongoDBRepository):
             }
         return query_doc
 
-    def _fulltext_agg_docs_for(self, fulltext_query, query_doc, skip = None, limit = None, sort_col = None, sort_dir = None):
+    def _fulltext_agg_docs_for(
+        self,
+        fulltext_query,
+        query_doc,
+        skip=None,
+        limit=None,
+        sort_col=None,
+        sort_dir=None,
+        count=False,
+    ):
         agg_docs = [
             {"$match": {"$text": {"$search": fulltext_query}}},
             {"$sort": {"score": {"$meta": "textScore"}, "_id": 1}},
@@ -449,23 +463,22 @@ class OperationRepository(MongoDBRepository):
 
         # How should this work with {"score": {"$meta": "textScore"}, "_id": 1}?
         if sort_col is not None:
-            agg_docs.append({"$sort": {
-                                sort_col or "$natural": sort_dir or 1
-                            }})
+            agg_docs.append({"$sort": {sort_col or "$natural": sort_dir or 1}})
 
         # Note this means you cannot supply only a limit/skip and have it work ,
         #    Also strangely you cannot pass 0 to skip or limit here, even though
         #    0 is the default value for those in mongo.
         if None not in (skip, limit):
-            agg_docs.append({"$facet": {
-                                "metadata": [ { "$count": "total" }  ],
-                                "data": [{ "$skip": skip }, { "$limit": limit }]
-                            }})
-        else:
-            agg_docs.append({"$facet": {
-                                "metadata": [ { "$count": "total" }  ],
-                                "data": []
-                            }})
+            agg_docs.append(
+                {
+                    "$facet": {
+                        "metadata": [{"$count": "total"}],
+                        "data": [{"$skip": skip}, {"$limit": limit}],
+                    }
+                }
+            )
+        elif count:
+            agg_docs.append({"$facet": {"metadata": [{"$count": "total"}], "data": []}})
 
         return agg_docs
 
@@ -523,31 +536,47 @@ class OperationRepository(MongoDBRepository):
         if fulltext_query is None:
 
             results = self.collection.find(
-                        self._query_doc_for(id=id, project_ids=project_ids, name=name, active=active, status=status)
-                    )
+                self._query_doc_for(
+                    id=id,
+                    project_ids=project_ids,
+                    name=name,
+                    active=active,
+                    status=status,
+                )
+            )
             total = len(list(results.clone()))
 
-            results = results.skip(skip or 0).limit(limit or 0).sort( sort_col or "$natural", sort_dir or 1 )
+            results = (
+                results.skip(skip or 0)
+                .limit(limit or 0)
+                .sort(sort_col or "$natural", sort_dir or 1)
+            )
 
-            return map(
-                lambda doc: doc_to_model(doc, models.Operation),
-                results,
-            ), total
+            return (
+                map(
+                    lambda doc: doc_to_model(doc, models.Operation),
+                    results,
+                ),
+                total,
+            )
 
         else:
 
-            query = self._query_doc_for( id=id, project_ids=project_ids, name=name, active=active, status=status )
-            results = self.collection.aggregate(self._fulltext_agg_docs_for(fulltext_query, query, skip, limit, sort_col, sort_dir)).next()
-            if (results["metadata"] == []):
+            query = self._query_doc_for(
+                id=id, project_ids=project_ids, name=name, active=active, status=status
+            )
+            results = self.collection.aggregate(
+                self._fulltext_agg_docs_for(
+                    fulltext_query, query, skip, limit, sort_col, sort_dir, count=True
+                )
+            ).next()
+            if results["metadata"] == []:
                 total = 0
             else:
-                total = results['metadata'][0]['total']
-            results = results['data']
+                total = results["metadata"][0]["total"]
+            results = results["data"]
 
-            return map(
-                lambda doc: doc_to_model(doc, models.Operation),
-                results
-            ), total
+            return map(lambda doc: doc_to_model(doc, models.Operation), results), total
 
     def update(self, operation: models.Operation, project_ids: List[str] = None):
         return (
