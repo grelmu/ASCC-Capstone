@@ -78,7 +78,7 @@ export default {
     },
     // Takes amount in bytes and returns it in Mb, Gb, Tb where appropiate
     shortenBytes(amount) {
-      let units = ["Bytes", "MB", "GB", "TB", "PB"];
+      let units = ["Bytes", "KB", "MB", "GB", "TB", "PB"];
       let currentUnit = 0; // Points to position in ^^^
 
       while (amount >= 1000 && currentUnit < 4) {
@@ -91,7 +91,9 @@ export default {
     },
     //This function replaces window.location instead of mongodb.mppw.local in the database URL
     replace_mongo_local(URL) {
-      return URL.replaceAll("mongodb.mppw.local", window.location.hostname);
+      let replaced = URL.replaceAll("mongodb.mppw.local", window.location.hostname);
+      let dbName = URL.substr(URL.lastIndexOf("/") + 1)
+      return replaced + "?authSource=" + dbName;
     },
 
     //This function slices the user password into half to generate readonly url link
