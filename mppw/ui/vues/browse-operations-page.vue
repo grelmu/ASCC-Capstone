@@ -78,6 +78,21 @@
         backend-pagination @page-change="onPageChange" :total="total">
           <template v-for="column in opsColumns" :key="column.id">
             <o-table-column v-bind="column">
+              <template v-if="column.field == 'type_urn'" v-slot:searchable="props">
+                <o-select @update:modelValue='val => props.filters.type_urn = val'>
+                  <option :value="null">Select an operation type</option>
+                  <option
+                    v-for="opType in opTypes || []"
+                    :key="opType.type_urn"
+                    :value="opType.type_urn"
+                    stye="align-items: flex-start;
+                          display: flex;
+                          text-align: left;"
+                  >
+                    {{ opType.name }}
+                  </option>
+                </o-select>
+              </template>
               <template v-slot="props">
                 <span v-if="column.field == 'id'">
                   <router-link :to="'/operations/' + props.row.id">
@@ -133,6 +148,13 @@ export default {
           label: 'Name',
           searchable: true,
           sortable: true,
+        },
+        {
+          field: 'type_urn',
+          label: 'Type',
+          sortable: true,
+          position: 'centered',
+          searchable: true
         },
         {
           field: 'status',

@@ -426,6 +426,7 @@ class OperationRepository(MongoDBRepository):
         project_ids: List[str] = None,
         name: Optional[str] = None,
         status: Optional[str] = None,
+        type_urn: Optional[str] = None,
         active: Optional[bool] = None,
         input_artifact_id: Optional[str] = None,
         output_artifact_id: Optional[str] = None,
@@ -441,6 +442,8 @@ class OperationRepository(MongoDBRepository):
             query_doc["name"] = {"$regex": name, "$options": "i"}
         if status is not None:
             query_doc["status"] = status
+        if type_urn is not None:
+            query_doc["type_urn"] = type_urn
         if active is not None:
             query_doc["active"] = {"$ne": False} if active else False
         if input_artifact_id is not None:
@@ -541,6 +544,7 @@ class OperationRepository(MongoDBRepository):
         name: Optional[str] = None,
         active: Optional[bool] = None,
         status: Optional[str] = None,
+        type_urn: Optional[str] = None,
         skip: Optional[int] = None,
         limit: Optional[int] = None,
         sort_col: Optional[str] = None,
@@ -557,6 +561,7 @@ class OperationRepository(MongoDBRepository):
                     name=name,
                     active=active,
                     status=status,
+                    type_urn=type_urn
                 )
             )
             total = len(list(results.clone()))
@@ -578,7 +583,7 @@ class OperationRepository(MongoDBRepository):
         else:
 
             query = self._query_doc_for(
-                id=id, project_ids=project_ids, name=name, active=active, status=status
+                id=id, project_ids=project_ids, name=name, active=active, status=status, type_urn=type_urn
             )
             results = self.collection.aggregate(
                 self._fulltext_agg_docs_for(
