@@ -1,5 +1,4 @@
 import enum
-from lib2to3.pgen2.grammar import opmap_raw
 import pydantic
 import networkx
 import json
@@ -295,6 +294,32 @@ class ArtifactFrameGraph(networkx.DiGraph):
         return "\n".join(builder)
 
 
+class ArtifactFramePath(networkx.DiGraph):
+
+    """
+    ArtifactFramePaths are subgraphs of FrameGraphs that also contain an ordered list of nodes in a path.
+
+    Implicitly this also defines an ordered set of edges in the path (of size len(path_nodes) - 1))
+    """
+
+    def __init__(self, path, graph: networkx.DiGraph):
+        super().__init__(self)
+        self.path_nodes = path
+        subgraph = graph.subgraph(self.path_nodes)
+        self.add_nodes_from(subgraph.nodes())
+        self.add_edges_from(subgraph.edges(data=True))
+
+    @property
+    def path_edges(self):
+        for node_a, node_b in zip(self.path_nodes[0:-1], self.path_nodes[1:]):
+            edge = (
+                (node_a, node_b)
+                if (node_a, node_b) in self.edges()
+                else (node_b, node_a)
+            )
+            yield (edge[0], edge[1], self.edges[edge[0], edge[1]])
+
+
 class ProvenanceServices:
 
     """
@@ -418,3 +443,36 @@ class ProvenanceServices:
                         fringe.append(new_node)
 
         return frame_graph
+
+    def build_artifact_frame_path(self, from_artifact_id, to_artifact_id):
+
+        """
+        Grow a frame graph path starting from a particular artifact and ending at another artifact.
+
+        The path, which includes the transforms along the edges of the path, encodes the full set of
+        information needed to transform one digital artifact coordinate system into another.
+        """
+
+        frame_graph = self.build_artifact_frame_graph(from_artifact_id, strategy="full")
+        undir_frame_graph = frame_graph.to_undirected(as_view=True)
+
+        from_artifact_node = ArtifactFrameGraph.ArtifactNode(
+            artifact_id=str(from_artifact_id)
+        )
+        to_artifact_node = ArtifactFrameGraph.ArtifactNode(
+            artifact_id=str(to_artifact_id)
+        )
+
+        for node in (from_artifact_node, to_artifact_node):
+            if node not in frame_graph.nodes():
+                return None
+
+        try:
+            return ArtifactFramePath(
+                networkx.algorithms.shortest_path(
+                    undir_frame_graph, from_artifact_node, to_artifact_node
+                ),
+                frame_graph,
+            )
+        except networkx.NetworkXNoPath:
+            return None

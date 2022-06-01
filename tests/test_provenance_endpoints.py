@@ -77,26 +77,49 @@ def test_process_property_endpoints_create_provenance(
     assert True
 
 
-def test_artifact_frame_graph_endpoint(
-    api_client, api_storage_layer, api_project
-):
+def test_artifact_frame_graph_endpoint(api_client, api_storage_layer, api_project):
 
     """
     Tests that we can serialize the frame graph via an endpoint
     """
 
     test_frame_graph = test_provenance.TestFrameGraph(
-        api_storage_layer, mppw.models.Project(**api_project)
+        api_storage_layer, mppw.models.Project(**api_project), attach_to_operation=True
     )
 
     frame_graph = api_client.get_json(
-        "/artifacts/"
-        + str(test_frame_graph.mesh.id)
-        + "/services/artifact/frame_graph"
+        "/artifacts/" + str(test_frame_graph.mesh.id) + "/services/artifact/frame_graph"
     )
 
-    print(frame_graph)
+    assert len(frame_graph["nodes"]) == 5
+    assert len(frame_graph["edges"]) == 4
 
-    assert len(frame_graph["nodes"]) == 4
-    assert len(frame_graph["edges"]) == 3
 
+def test_artifact_frame_path_endpoint(api_client, api_storage_layer, api_project):
+
+    """
+    Tests that we can serialize the frame path via an endpoint
+    """
+
+    test_frame_graph = test_provenance.TestFrameGraph(
+        api_storage_layer, mppw.models.Project(**api_project), attach_to_operation=True
+    )
+
+    frame_path = api_client.get_json(
+        "/artifacts/"
+        + str(test_frame_graph.mesh.id)
+        + "/services/artifact/frame_path?to_id="
+        + str(test_frame_graph.mesh2.id)
+    )
+
+    assert len(frame_path["path_nodes"]) == 3
+    assert len(frame_path["path_edges"]) == 2
+
+    frame_path = api_client.get_json(
+        "/artifacts/"
+        + str(test_frame_graph.mesh.id)
+        + "/services/artifact/frame_path?to_id="
+        + str(test_frame_graph.mesh3.id)
+    )
+
+    assert frame_path is None

@@ -89,7 +89,6 @@ def create_router(app):
             )
         )
 
-
     class PaginatedArtifacts(models.BaseJsonModel):
         results: List[models.Artifact]
         total: int
@@ -119,7 +118,7 @@ def create_router(app):
         # MongoDB's sort function expects either 1 or -1
         #   Convert sort_dir to match
         if sort_dir is not None:
-            sort_dir = 1 if sort_dir == 'asc' else -1
+            sort_dir = 1 if sort_dir == "asc" else -1
 
         results, total = repo_layer.artifacts.paged_query(
             project_ids=project_ids,
@@ -128,9 +127,9 @@ def create_router(app):
             limit=page_size,
             sort_col=sort_col,
             sort_dir=sort_dir,
-            )
+        )
 
-        return PaginatedArtifacts(results = list(results), total=total) 
+        return PaginatedArtifacts(results=list(results), total=total)
 
     @router.put("/{id}", response_model=bool)
     def update(
@@ -285,6 +284,25 @@ def create_router(app):
         services = service_layer.provenance_services()
         return endpoints.ArtifactFrameGraphModel.from_graph(
             services.build_artifact_frame_graph(artifact.id, strategy=strategy)
+        )
+
+    @router.get(
+        "/{id}/services/artifact/frame_path",
+        response_model=typing.Optional[endpoints.ArtifactFramePathModel],
+    )
+    def get_frame_path(
+        id: str,
+        to_id: str,
+        user: security.ScopedUser = Security(
+            request_user(app), scopes=[PROVENANCE_SCOPE]
+        ),
+        service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
+    ):
+
+        artifact: models.Artifact = read(id, user, service_layer.repo_layer)
+        services = service_layer.provenance_services()
+        return endpoints.ArtifactFramePathModel.from_path(
+            services.build_artifact_frame_path(artifact.id, to_id)
         )
 
     from .services.artifacts.digital_file_services import FileServices

@@ -551,9 +551,12 @@ class TestFrameGraph:
     alongside another :cloud measurement indirectly attached via :fiducial-points
     """
 
-    def __init__(self, storage_layer, test_project: models.Project):
+    def __init__(
+        self, storage_layer, test_project: models.Project, attach_to_operation=False
+    ):
         self.storage_layer = storage_layer
         self.test_project = test_project
+        self.attach_to_operation = attach_to_operation
         self._init()
 
     def _init(self):
@@ -607,6 +610,78 @@ class TestFrameGraph:
             )
             artifact_repo.update(self.mesh)
 
+            self.mesh2: models.DigitalArtifact = artifact_repo.create(
+                models.DigitalArtifact(
+                    type_urn="urn:x-mfg:artifact:digital:mesh",
+                    project=self.test_project.id,
+                )
+            )
+
+            self.mesh2.spatial_frame = models.SpatialFrame(
+                parent_frame=self.fiducials.id, transform={"x": 4}
+            )
+            artifact_repo.update(self.mesh2)
+
+            # Mesh 3 is *not* related spatially to any other artifact
+            self.mesh3: models.DigitalArtifact = artifact_repo.create(
+                models.DigitalArtifact(
+                    type_urn="urn:x-mfg:artifact:digital:mesh",
+                    project=self.test_project.id,
+                )
+            )
+
+            if self.attach_to_operation:
+
+                operation_repo: repositories.OperationRepository = (
+                    service_layer.repo_layer.operations
+                )
+
+                self.fff = operation_repo.create(
+                    models.Operation(
+                        type_urn="urn:x-mfg:operation:fff",
+                        project=self.test_project.id,
+                        name="Frame Graph FFF",
+                    )
+                )
+
+                fff_services = service_layer.operation_services_for(self.fff)
+                fff_services.init(self.fff)
+
+                self.wall = artifact_repo.create(
+                    models.MaterialArtifact(
+                        type_urn="urn:x-mfg:artifact:material:part",
+                        project=self.test_project.id,
+                    )
+                )
+
+                for kind_path, artifact in [
+                    ([":toolpath"], self.toolpath),
+                    ([":thermal-cloud"], self.cloud),
+                    ([":output-parts"], self.wall),
+                    (
+                        [":output-parts", str(self.wall.id), ":part-geometry"],
+                        self.fiducials,
+                    ),
+                    ([":output-parts", str(self.wall.id), ":part-geometry"], self.mesh),
+                    (
+                        [":output-parts", str(self.wall.id), ":part-geometry"],
+                        self.mesh2,
+                    ),
+                    (
+                        [":output-parts", str(self.wall.id), ":part-geometry"],
+                        self.mesh3,
+                    ),
+                ]:
+
+                    fff_services.attach(
+                        self.fff,
+                        models.AttachmentGraph.AttachmentNode.build(
+                            kind_path,
+                            artifact.id,
+                            models.AttachmentMode.OUTPUT,
+                        ),
+                    )
+
 
 def test_basic_frame_graph(storage_layer, test_project):
 
@@ -626,21 +701,21 @@ def test_basic_frame_graph(storage_layer, test_project):
             test_frame_graph.mesh.id, strategy="full"
         )
 
-        assert len(list(frame_graph.nodes())) == 4
-        assert len(list(frame_graph.edges())) == 3
+        assert len(list(frame_graph.nodes())) == 5
+        assert len(list(frame_graph.edges())) == 4
 
-        toolpath_node = services.artifact_services.ArtifactFrameGraph.ArtifactNode(
+        toolpath_node = services.provenance_services.ArtifactFrameGraph.ArtifactNode(
             artifact_id=str(test_frame_graph.toolpath.id)
         )
-        cloud_node = services.artifact_services.ArtifactFrameGraph.ArtifactNode(
+        cloud_node = services.provenance_services.ArtifactFrameGraph.ArtifactNode(
             artifact_id=str(test_frame_graph.cloud.id)
         )
-        fiducials_node = services.artifact_services.ArtifactFrameGraph.ArtifactNode(
+        fiducials_node = services.provenance_services.ArtifactFrameGraph.ArtifactNode(
             artifact_id=str(test_frame_graph.fiducials.id)
         )
 
         assert len(list(frame_graph.out_edges([toolpath_node]))) == 2
-        assert len(list(frame_graph.out_edges([fiducials_node]))) == 1
+        assert len(list(frame_graph.out_edges([fiducials_node]))) == 2
         assert len(list(frame_graph.out_edges([cloud_node]))) == 0
 
 
@@ -689,8 +764,8 @@ def test_explore_frame_graph(storage_layer, test_project):
             test_frame_graph.fiducials.id, strategy="children"
         )
 
-        assert len(list(frame_graph.nodes())) == 2
-        assert len(list(frame_graph.edges())) == 1
+        assert len(list(frame_graph.nodes())) == 3
+        assert len(list(frame_graph.edges())) == 2
 
         # Parents from toolpath
 
@@ -707,5 +782,92 @@ def test_explore_frame_graph(storage_layer, test_project):
             test_frame_graph.toolpath.id, strategy="children"
         )
 
-        assert len(list(frame_graph.nodes())) == 4
-        assert len(list(frame_graph.edges())) == 3
+        assert len(list(frame_graph.nodes())) == 5
+        assert len(list(frame_graph.edges())) == 4
+
+        # Full from mesh3
+
+        frame_graph = provenance_services.build_artifact_frame_graph(
+            test_frame_graph.mesh3.id, strategy="full"
+        )
+
+        assert len(list(frame_graph.nodes())) == 0
+        assert len(list(frame_graph.edges())) == 0
+
+
+def test_explore_frame_path(storage_layer, test_project):
+
+    """
+    Tests that we can explore paths between artifacts in frame graphs
+    """
+
+    test_frame_graph = TestFrameGraph(storage_layer, test_project)
+
+    with ServiceLayerContext(storage_layer) as service_layer:
+
+        provenance_services = service_layer.provenance_services()
+
+        # Mesh to Cloud
+
+        frame_path = provenance_services.build_artifact_frame_path(
+            test_frame_graph.mesh.id, test_frame_graph.cloud.id
+        )
+
+        toolpath_node = services.provenance_services.ArtifactFrameGraph.ArtifactNode(
+            artifact_id=str(test_frame_graph.toolpath.id)
+        )
+        cloud_node = services.provenance_services.ArtifactFrameGraph.ArtifactNode(
+            artifact_id=str(test_frame_graph.cloud.id)
+        )
+        mesh_node = services.provenance_services.ArtifactFrameGraph.ArtifactNode(
+            artifact_id=str(test_frame_graph.mesh.id)
+        )
+        mesh2_node = services.provenance_services.ArtifactFrameGraph.ArtifactNode(
+            artifact_id=str(test_frame_graph.mesh2.id)
+        )
+
+        assert len(list(frame_path.nodes())) == 4
+        assert len(list(frame_path.edges())) == 3
+        assert frame_path.path_nodes[0] == mesh_node
+        assert frame_path.path_nodes[-1] == cloud_node
+
+        # Cloud to Mesh
+
+        frame_path = provenance_services.build_artifact_frame_path(
+            test_frame_graph.cloud.id, test_frame_graph.mesh.id
+        )
+
+        assert len(list(frame_path.nodes())) == 4
+        assert len(list(frame_path.edges())) == 3
+        assert frame_path.path_nodes[0] == cloud_node
+        assert frame_path.path_nodes[-1] == mesh_node
+
+        # Mesh to Mesh2
+
+        frame_path = provenance_services.build_artifact_frame_path(
+            test_frame_graph.mesh.id, test_frame_graph.mesh2.id
+        )
+
+        assert len(list(frame_path.nodes())) == 3
+        assert len(list(frame_path.edges())) == 2
+        assert frame_path.path_nodes[0] == mesh_node
+        assert frame_path.path_nodes[-1] == mesh2_node
+
+        # Cloud to Toolpath
+
+        frame_path = provenance_services.build_artifact_frame_path(
+            test_frame_graph.cloud.id, test_frame_graph.toolpath.id
+        )
+
+        assert len(list(frame_path.nodes())) == 2
+        assert len(list(frame_path.edges())) == 1
+        assert frame_path.path_nodes[0] == cloud_node
+        assert frame_path.path_nodes[-1] == toolpath_node
+
+        # Toolpath to mesh3
+
+        frame_path = provenance_services.build_artifact_frame_path(
+            test_frame_graph.toolpath.id, test_frame_graph.mesh3.id
+        )
+
+        assert frame_path is None
