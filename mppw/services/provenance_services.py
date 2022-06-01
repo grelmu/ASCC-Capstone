@@ -240,6 +240,61 @@ class ProvenanceStepGraph(networkx.MultiDiGraph):
         return "\n".join(builder)
 
 
+class ArtifactFrameGraph(networkx.DiGraph):
+
+    """
+    A graph representation of spatial frames - aka how artifacts are spatially related to each other
+
+    The graph consists of digital artifacts linked by spatial transforms - transforms map the coordinate
+    systems of one artifact to another.  Each edge between artifacts is associated with a spatial frame.
+    """
+
+    # NOTE that these nodes must support equality comparisons
+    class ArtifactNode(pydantic.BaseModel):
+
+        artifact_id: str
+
+        def __members(self):
+            return (self.artifact_id,)
+
+        def __eq__(self, other):
+            if type(other) is type(self):
+                return self.__members() == other.__members()
+            else:
+                return False
+
+        def __hash__(self):
+            return hash(self.__members())
+
+    def add_spatial_artifact(self, artifact: models.DigitalArtifact):
+
+        child_node = ArtifactFrameGraph.ArtifactNode(artifact_id=str(artifact.id))
+
+        if not artifact.spatial_frame or not artifact.spatial_frame.parent_frame:
+            return (None, None, None)
+
+        parent_node = ArtifactFrameGraph.ArtifactNode(
+            artifact_id=str(artifact.spatial_frame.parent_frame)
+        )
+
+        self.add_edge(parent_node, child_node, frame=artifact.spatial_frame)
+        return (parent_node, child_node, self.edges[parent_node, child_node])
+
+    def __human_str__(self, repo_layer=None):
+        builder = []
+        builder.append("Nodes:")
+        for node in self.nodes():
+            builder.append("  " + node.__repr__())
+            if repo_layer:
+                artifact = repo_layer.artifacts.query_one(id=node.artifact_id)
+                builder.append("    " + f"{artifact.type_urn} {artifact.name}")
+
+        builder.append("Edges:")
+        for edge in self.edges(data=True):
+            builder.append("  " + edge.__repr__())
+        return "\n".join(builder)
+
+
 class ProvenanceServices:
 
     """
@@ -307,3 +362,59 @@ class ProvenanceServices:
                         seen_artifact_nodes.add(artifact_node)
 
         return provenance_graph
+
+    def build_artifact_frame_graph(self, artifact_id, strategy: str = None):
+
+        """
+        Grow a frame graph starting from a particular artifact.
+
+        The exact exploration strategy is configurable to "full", "parents", and "children".
+
+        The exploration proceeds by:
+          - finding all frame parents and/or children of the current artifact node
+            - parents are artifacts that are spatial_frame.parent_frames of the current artifact
+            - children are artifacts that reference the current artifact in their spatial_frame.parent_frame
+          - adding the parent and/or children edges (and nodes, implicitly) to the growing graph
+          - finding unexplored parent/children from above to explore next
+          - continue until all seen artifacts are explored
+        """
+
+        if strategy is None:
+            strategy = "full"
+
+        frame_graph = ArtifactFrameGraph()
+        seed_node = ArtifactFrameGraph.ArtifactNode(artifact_id=str(artifact_id))
+        fringe: List[ArtifactFrameGraph.ArtifactNode] = [seed_node]
+        seen_artifact_nodes: Set[ArtifactFrameGraph.ArtifactNode] = set(fringe)
+
+        artifacts_repo: repositories.ArtifactRepository = self.repo_layer.artifacts
+
+        while fringe:
+
+            next_artifact_node = fringe.pop()
+
+            related_artifacts: List[models.DigitalArtifact] = []
+            if strategy == "full" or strategy == "parents":
+                related_artifacts.extend(
+                    [artifacts_repo.query_one(next_artifact_node.artifact_id)]
+                )
+
+            if strategy == "full" or strategy == "children":
+                related_artifacts.extend(
+                    list(
+                        artifacts_repo.query(
+                            parent_frame_id=next_artifact_node.artifact_id
+                        ),
+                    )
+                )
+
+            for related_artifact in related_artifacts:
+                parent_node, child_node, _ = frame_graph.add_spatial_artifact(
+                    related_artifact
+                )
+                for new_node in [parent_node, child_node]:
+                    if new_node is not None and new_node not in seen_artifact_nodes:
+                        seen_artifact_nodes.add(new_node)
+                        fringe.append(new_node)
+
+        return frame_graph

@@ -268,6 +268,25 @@ def create_router(app):
             services.build_artifact_provenance(artifact.id, strategy=strategy)
         )
 
+    @router.get(
+        "/{id}/services/artifact/frame_graph",
+        response_model=endpoints.ArtifactFrameGraphModel,
+    )
+    def get_frame_graph(
+        id: str,
+        strategy: str = None,
+        user: security.ScopedUser = Security(
+            request_user(app), scopes=[PROVENANCE_SCOPE]
+        ),
+        service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
+    ):
+
+        artifact: models.Artifact = read(id, user, service_layer.repo_layer)
+        services = service_layer.provenance_services()
+        return endpoints.ArtifactFrameGraphModel.from_graph(
+            services.build_artifact_frame_graph(artifact.id, strategy=strategy)
+        )
+
     from .services.artifacts.digital_file_services import FileServices
 
     @router.get(

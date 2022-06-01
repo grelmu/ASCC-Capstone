@@ -7,6 +7,7 @@ from mppw import services
 
 from mppw import models
 from mppw import schemas
+from mppw import services
 
 from .fixtures_services import ServiceLayerContext
 
@@ -539,3 +540,172 @@ def test_process_property_provenance(storage_layer, test_project):
 
         assert len(list(provenance.artifact_nodes())) == 5
         assert len(list(provenance.step_nodes())) == 3
+
+
+class TestFrameGraph:
+
+    """
+    A basic frame graph used to check geometric provenance
+
+    Builds a minimal set of artifacts with a root :toolpath directly attached to a :cloud measurement
+    alongside another :cloud measurement indirectly attached via :fiducial-points
+    """
+
+    def __init__(self, storage_layer, test_project: models.Project):
+        self.storage_layer = storage_layer
+        self.test_project = test_project
+        self._init()
+
+    def _init(self):
+
+        with ServiceLayerContext(self.storage_layer) as service_layer:
+
+            artifact_repo: repositories.ArtifactRepository = (
+                service_layer.repo_layer.artifacts
+            )
+
+            self.toolpath: models.DigitalArtifact = artifact_repo.create(
+                models.DigitalArtifact(
+                    type_urn="urn:x-mfg:artifact:digital:file",
+                    project=self.test_project.id,
+                )
+            )
+
+            self.cloud: models.DigitalArtifact = artifact_repo.create(
+                models.DigitalArtifact(
+                    type_urn="urn:x-mfg:artifact:digital:point-cloud",
+                    project=self.test_project.id,
+                )
+            )
+
+            self.cloud.spatial_frame = models.SpatialFrame(
+                parent_frame=self.toolpath.id, transform={"x": 1}
+            )
+            artifact_repo.update(self.cloud)
+
+            self.fiducials: models.DigitalArtifact = artifact_repo.create(
+                models.DigitalArtifact(
+                    type_urn="urn:x-mfg:artifact:digital:fiducial-points",
+                    project=self.test_project.id,
+                )
+            )
+
+            self.fiducials.spatial_frame = models.SpatialFrame(
+                parent_frame=self.toolpath.id, transform={"x": 2}
+            )
+            artifact_repo.update(self.fiducials)
+
+            self.mesh: models.DigitalArtifact = artifact_repo.create(
+                models.DigitalArtifact(
+                    type_urn="urn:x-mfg:artifact:digital:mesh",
+                    project=self.test_project.id,
+                )
+            )
+
+            self.mesh.spatial_frame = models.SpatialFrame(
+                parent_frame=self.fiducials.id, transform={"x": 3}
+            )
+            artifact_repo.update(self.mesh)
+
+
+def test_basic_frame_graph(storage_layer, test_project):
+
+    """
+    Tests that we can generate a full artifact frame graph
+    """
+
+    test_frame_graph = TestFrameGraph(storage_layer, test_project)
+
+    with ServiceLayerContext(storage_layer) as service_layer:
+
+        provenance_services = service_layer.provenance_services()
+
+        # Full from mesh
+
+        frame_graph = provenance_services.build_artifact_frame_graph(
+            test_frame_graph.mesh.id, strategy="full"
+        )
+
+        assert len(list(frame_graph.nodes())) == 4
+        assert len(list(frame_graph.edges())) == 3
+
+        toolpath_node = services.artifact_services.ArtifactFrameGraph.ArtifactNode(
+            artifact_id=str(test_frame_graph.toolpath.id)
+        )
+        cloud_node = services.artifact_services.ArtifactFrameGraph.ArtifactNode(
+            artifact_id=str(test_frame_graph.cloud.id)
+        )
+        fiducials_node = services.artifact_services.ArtifactFrameGraph.ArtifactNode(
+            artifact_id=str(test_frame_graph.fiducials.id)
+        )
+
+        assert len(list(frame_graph.out_edges([toolpath_node]))) == 2
+        assert len(list(frame_graph.out_edges([fiducials_node]))) == 1
+        assert len(list(frame_graph.out_edges([cloud_node]))) == 0
+
+
+def test_explore_frame_graph(storage_layer, test_project):
+
+    """
+    Tests that we can explore parents/children of a artifact frame graph
+    """
+
+    test_frame_graph = TestFrameGraph(storage_layer, test_project)
+
+    with ServiceLayerContext(storage_layer) as service_layer:
+
+        provenance_services = service_layer.provenance_services()
+
+        # Parents from mesh
+
+        frame_graph = provenance_services.build_artifact_frame_graph(
+            test_frame_graph.mesh.id, strategy="parents"
+        )
+
+        assert len(list(frame_graph.nodes())) == 3
+        assert len(list(frame_graph.edges())) == 2
+
+        # Children from mesh
+
+        frame_graph = provenance_services.build_artifact_frame_graph(
+            test_frame_graph.mesh.id, strategy="children"
+        )
+
+        assert len(list(frame_graph.nodes())) == 0
+        assert len(list(frame_graph.edges())) == 0
+
+        # Parents from fiducials
+
+        frame_graph = provenance_services.build_artifact_frame_graph(
+            test_frame_graph.fiducials.id, strategy="parents"
+        )
+
+        assert len(list(frame_graph.nodes())) == 2
+        assert len(list(frame_graph.edges())) == 1
+
+        # Children from fiducials
+
+        frame_graph = provenance_services.build_artifact_frame_graph(
+            test_frame_graph.fiducials.id, strategy="children"
+        )
+
+        assert len(list(frame_graph.nodes())) == 2
+        assert len(list(frame_graph.edges())) == 1
+
+        # Parents from toolpath
+
+        frame_graph = provenance_services.build_artifact_frame_graph(
+            test_frame_graph.toolpath.id, strategy="parents"
+        )
+
+        assert len(list(frame_graph.nodes())) == 0
+        assert len(list(frame_graph.edges())) == 0
+
+        # Children from toolpath
+
+        frame_graph = provenance_services.build_artifact_frame_graph(
+            test_frame_graph.toolpath.id, strategy="children"
+        )
+
+        assert len(list(frame_graph.nodes())) == 4
+        assert len(list(frame_graph.edges())) == 3

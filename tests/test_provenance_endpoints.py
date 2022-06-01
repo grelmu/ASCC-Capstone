@@ -75,3 +75,28 @@ def test_process_property_endpoints_create_provenance(
     )
 
     assert True
+
+
+def test_artifact_frame_graph_endpoint(
+    api_client, api_storage_layer, api_project
+):
+
+    """
+    Tests that we can serialize the frame graph via an endpoint
+    """
+
+    test_frame_graph = test_provenance.TestFrameGraph(
+        api_storage_layer, mppw.models.Project(**api_project)
+    )
+
+    frame_graph = api_client.get_json(
+        "/artifacts/"
+        + str(test_frame_graph.mesh.id)
+        + "/services/artifact/frame_graph"
+    )
+
+    print(frame_graph)
+
+    assert len(frame_graph["nodes"]) == 4
+    assert len(frame_graph["edges"]) == 3
+
