@@ -289,6 +289,7 @@ class ArtifactRepository(MongoDBRepository):
         self,
         id: str = None,
         project_ids: List[str] = None,
+        parent_frame_id: str = None,
         active: Optional[bool] = None,
     ):
         query_doc = {}
@@ -296,6 +297,8 @@ class ArtifactRepository(MongoDBRepository):
             query_doc["_id"] = coerce_doc_id(id)
         if project_ids is not None:
             query_doc["project"] = {"$in": list(map(coerce_doc_id, project_ids))}
+        if parent_frame_id is not None:
+            query_doc["spatial_frame.parent_frame"] = coerce_doc_id(parent_frame_id)
         if active is not None:
             query_doc["active"] = {"$ne": False} if active else False
         return query_doc
@@ -309,13 +312,19 @@ class ArtifactRepository(MongoDBRepository):
         self,
         id: str = None,
         project_ids: List[str] = None,
+        parent_frame_id: str = None,
         active: Optional[bool] = None,
     ):
         return map(
             lambda doc: type(self).doc_to_artifact(doc),
             list(
                 self.collection.find(
-                    self._query_doc_for(id=id, project_ids=project_ids, active=active)
+                    self._query_doc_for(
+                        id=id,
+                        project_ids=project_ids,
+                        parent_frame_id=parent_frame_id,
+                        active=active,
+                    )
                 )
             ),
         )
@@ -324,6 +333,7 @@ class ArtifactRepository(MongoDBRepository):
         self,
         id: str = None,
         project_ids: List[str] = None,
+        parent_frame_id: str = None,
         active: Optional[bool] = None,
         skip: Optional[int] = None,
         limit: Optional[int] = None,
@@ -332,7 +342,12 @@ class ArtifactRepository(MongoDBRepository):
     ):
 
         results = self.collection.find(
-            self._query_doc_for(id=id, project_ids=project_ids, active=active)
+            self._query_doc_for(
+                id=id,
+                project_ids=project_ids,
+                parent_frame_id=parent_frame_id,
+                active=active,
+            )
         )
         total = len(list(results.clone()))
 
