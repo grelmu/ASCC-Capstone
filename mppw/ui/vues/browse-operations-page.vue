@@ -77,7 +77,7 @@
         backend-filtering @filters-change="onFilter"
         backend-pagination @page-change="onPageChange" :total="total">
           <template v-for="column in opsColumns" :key="column.id">
-            <o-table-column v-bind="column">
+            <o-table-column v-bind="column" :width="['type_urn', 'status'].includes(column.field) ? 110 : null">
               <template v-if="column.field == 'type_urn'" v-slot:searchable="props">
                 <o-select @update:modelValue='val => props.filters.type_urn = val'>
                   <option :value="null">Select an operation type</option>
@@ -146,6 +146,13 @@ export default {
       total: 1000,
       opsColumns: [
         {
+          field: 'type_urn',
+          label: 'Type',
+          sortable: true,
+          searchable: true,
+          position: 'centered',
+        },
+        {
           field: 'status',
           label: 'Status',
           searchable: true,
@@ -156,13 +163,6 @@ export default {
           label: 'Name',
           searchable: true,
           sortable: true,
-        },
-        {
-          field: 'type_urn',
-          label: 'Type',
-          sortable: true,
-          searchable: true,
-          position: 'centered',
         },
         {
           field: 'start_at',
