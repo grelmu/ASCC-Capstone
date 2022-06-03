@@ -69,24 +69,72 @@
       </o-modal>
 
       <section>
-        <o-table :loading="opsLoading" :data="opsRows || []" 
-        :current.sync="parameters.page_num"
-        :debounce-search="750" :per-page="parameters.page_size"   
-        :paginated="isPaginated"
-        backend-sorting @sort="onSort"
-        backend-filtering @filters-change="onFilter"
-        backend-pagination @page-change="onPageChange" :total="total">
+        <o-table
+          :loading="opsLoading"
+          :data="opsRows || []"
+          :current.sync="parameters.page_num"
+          :debounce-search="750"
+          :per-page="parameters.page_size"
+          :paginated="isPaginated"
+          backend-sorting
+          @sort="onSort"
+          backend-filtering
+          @filters-change="onFilter"
+          backend-pagination
+          @page-change="onPageChange"
+          :total="total"
+        >
           <template v-for="column in opsColumns" :key="column.id">
-            <o-table-column v-bind="column">
+            <o-table-column
+              v-bind="column"
+              :width="
+                ['type_urn', 'status'].includes(column.field) ? 110 : null
+              "
+            >
+              <template
+                v-if="column.field == 'type_urn'"
+                v-slot:searchable="props"
+              >
+                <o-select
+                  @update:modelValue="(val) => (props.filters.type_urn = val)"
+                >
+                  <option :value="null">Select an operation type</option>
+                  <option
+                    v-for="opType in opTypes || []"
+                    :key="opType.type_urn"
+                    :value="opType.type_urn"
+                    stye="align-items: flex-start;
+                          display: flex;
+                          text-align: left;"
+                  >
+                    {{ opType.name }}
+                  </option>
+                </o-select>
+              </template>
               <template v-slot="props">
-                <span v-if="column.field == 'id'">
+                <span v-if="column.field == 'type_urn'">
+                  <span class="o-icon">
+                    <i
+                      class="mdi mdi-24px"
+                      :class="getIconFromTypeName(props.row.type_urn)"
+                      :title="
+                        props.row.type_urn.replace('urn:x-mfg:operation:', '')
+                      "
+                    ></i>
+                  </span>
+                </span>
+                <span v-else-if="column.field == 'name'">
                   <router-link :to="'/operations/' + props.row.id">
-                    View Operation
+                    {{ props.row.name }}
                   </router-link>
                 </span>
-                <span v-else-if="column.field == 'start_at' || column.field == 'end_at'">
+                <span
+                  v-else-if="
+                    column.field == 'start_at' || column.field == 'end_at'
+                  "
+                >
                   <span v-if="props.row[column.field] != null">
-                  {{ new Date(props.row[column.field]).toLocaleDateString() }}
+                    {{ new Date(props.row[column.field]).toLocaleDateString() }}
                   </span>
                 </span>
                 <span v-else>
@@ -97,7 +145,6 @@
           </template>
         </o-table>
       </section>
-
     </div>
   </div>
 </template>
@@ -124,32 +171,34 @@ export default {
       total: 1000,
       opsColumns: [
         {
-          field: 'id',
-          label: 'Link',
-          sortable: false,
+          field: "type_urn",
+          label: "Type",
+          sortable: true,
+          searchable: true,
+          position: "centered",
         },
         {
-          field: 'name',
-          label: 'Name',
+          field: "status",
+          label: "Status",
           searchable: true,
           sortable: true,
         },
         {
-          field: 'status',
-          label: 'Status',
+          field: "name",
+          label: "Name",
           searchable: true,
           sortable: true,
         },
         {
-          field: 'start_at',
-          label: 'Start',
+          field: "start_at",
+          label: "Start",
           sortable: true,
         },
         {
-          field: 'end_at',
-          label: 'End',
+          field: "end_at",
+          label: "End",
           sortable: true,
-        }
+        },
       ],
 
       isCreatingNewOp: false,
@@ -188,11 +237,16 @@ export default {
           );
         });
     },
-    apiFetchProjectOpsPaged(project_id, parameters={}) {
-      let fetchUrl = `operations/paged/?project_ids=${project_id}&` +
-      Object.keys(parameters).map(key => {
-        return parameters[key] ? key + '=' + encodeURIComponent(parameters[key]) : null;
-      }).join("&");
+    apiFetchProjectOpsPaged(project_id, parameters = {}) {
+      let fetchUrl =
+        `operations/paged/?project_ids=${project_id}&` +
+        Object.keys(parameters)
+          .map((key) => {
+            return parameters[key]
+              ? key + "=" + encodeURIComponent(parameters[key])
+              : null;
+          })
+          .join("&");
 
       return this.$root
         .apiFetch(fetchUrl, {
@@ -240,8 +294,22 @@ export default {
           );
         });
     },
-    // TODO END move to $root app.vue
-
+    getIconFromTypeName(type_urn) {
+      switch (type_urn.replace("urn:x-mfg:operation:", "")) {
+        case "fff":
+          return "mdi-printer-3d";
+        case "prepare:waterjetcut":
+          return "mdi-water-pump";
+        case "prepare:machining":
+          return "mdi-hammer-wrench";
+        case "characterize:dimensioning":
+          return "mdi-ruler";
+        case "characterize:tensile-test":
+          return "mdi-weight-lifter";
+        default:
+          return "mdi-help-rhombus";
+      }
+    },
     refreshProjects() {
       this.projects = null;
       this.projectId = null;
@@ -307,38 +375,44 @@ export default {
           this.loadOpsTable();
         });
     },
-    onPageChange(page){
+    onPageChange(page) {
       this.opsLoading = true;
       this.parameters.page_num = page;
-      return this.apiFetchProjectOpsPaged(this.projectId, this.parameters).then((ops) => {
-        console.log(ops);
-        this.opsRows = ops.results;
-        this.total = ops.total;
-        this.opsLoading = false;
-      });
+      return this.apiFetchProjectOpsPaged(this.projectId, this.parameters).then(
+        (ops) => {
+          console.log(ops);
+          this.opsRows = ops.results;
+          this.total = ops.total;
+          this.opsLoading = false;
+        }
+      );
     },
-    onFilter(parameters){
-      Object.keys(parameters).map(key => {
+    onFilter(parameters) {
+      Object.keys(parameters).map((key) => {
         this.parameters[key] = parameters[key];
       });
       this.opsLoading = true;
-      return this.apiFetchProjectOpsPaged(this.projectId, this.parameters).then((ops) => {
-        this.opsRows = ops.results;
-        this.total = ops.total;
-        this.opsLoading = false;
-        console.log(ops);
-      });
+      return this.apiFetchProjectOpsPaged(this.projectId, this.parameters).then(
+        (ops) => {
+          this.opsRows = ops.results;
+          this.total = ops.total;
+          this.opsLoading = false;
+          console.log(ops);
+        }
+      );
     },
-    onSort(field, dir, event){
+    onSort(field, dir, event) {
       this.parameters.sort_col = field;
       this.parameters.sort_dir = dir;
-      return this.apiFetchProjectOpsPaged(this.projectId, this.parameters).then((ops) => {
-        this.opsRows = ops.results;
-        this.total = ops.total;
-        this.opsLoading = false;
-        console.log(ops);
-      });
-    }
+      return this.apiFetchProjectOpsPaged(this.projectId, this.parameters).then(
+        (ops) => {
+          this.opsRows = ops.results;
+          this.total = ops.total;
+          this.opsLoading = false;
+          console.log(ops);
+        }
+      );
+    },
   },
 
   mounted() {
