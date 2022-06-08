@@ -1,3 +1,11 @@
+# 0.4.0
+
+New Features: 
+
+* Icons!
+* Frame graph / geometric provenance APIs
+* Shear test operations and artifacts
+
 # 0.3.0
 
 New Features: 
