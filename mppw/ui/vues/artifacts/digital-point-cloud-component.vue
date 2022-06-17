@@ -49,16 +49,17 @@
               <o-button v-if="tbChunks.length > 0"
                 id="l-scroll-btn" @click="scb(-300)">←</o-button>
               <div v-for="(chunk, index) in tbChunks"
-                class="text-end imposter-btn o-btn"
+                class="text-end chunk-btn-wrapper o-btn"
                 outlined
-                :key="chunk[0]">
+                :title="'FROM:\n' + chunk['start'] + '\n\nTO:\n' + chunk['end']"
+                :key="chunk['start']">
                 <div class="chunk-btn-ctr">
                   <o-button inverted @click="(e) => {
                       downloadPointCloud(e, chunk, `pc_chunk_${index}`)
                     }"><o-icon :icon="'download'"></o-icon>
                   </o-button>
                   <o-button inverted @click="(e) => {
-                      gpc(e, chunk)
+                      getPointCloudChunk(e, chunk)
                     }"><o-icon :icon="'eye'"></o-icon>
                   </o-button>
                 </div>
@@ -178,19 +179,17 @@ export default {
           this.tbChunks = this.getDateChunks(
             new Date(this.timeBoundsStart),
             new Date(this.timeBoundsEnd),
-            // This means chunks are 2 minutes long: 
-            2 
-            // ^ TODO: swap to 1 hour chunks
+            // This means chunks are 60 minutes long: 
+            60
           );
       });
     },
-    // get point cloud, but for a chunk not the whole range 
-    // TODO: rename
-    gpc(e, chunk) {
+    // Get point cloud, but for a chunk not the whole range 
+    getPointCloudChunk(e, chunk) {
       // Update styling so the current chunk button is visually selected
       document.querySelectorAll('.selected-chunk').forEach(el =>{el.classList.remove('selected-chunk')});
       let targ = e.target;
-      while (targ.classList.contains('imposter-btn') == false) {
+      while (targ.classList.contains('chunk-btn-wrapper') == false) {
         targ = targ.parentElement;
       }
       targ.classList.add("selected-chunk");
@@ -221,7 +220,6 @@ export default {
       } else {
         url = this.buildIntervalURL(e, chunk);
       }
-      console.log("Download URL: ", url);
       a.href = url;
       a.click();
     },
@@ -232,20 +230,15 @@ export default {
      * Parameters:
      * - start: the start time of the full range
      * - end: the end time of the full range
-     * - chunkSize: the size of each smaller constituent time range
+     * - chunkSize: the size of each smaller constituent time range in minutes
      * 
      * Returns:
      * - an array of {start: Date(), end: Date()} objects representing
      *   constituent chunks of the parent range
      */
     getDateChunks(start, end, chunkSize) {
-      // chunkSize is how big each chunk should be, i.e. 1 hour
-      // currently, it's in minutes. 
-      // TODO: Change to hours
       let result = [];
       let s = new Date(start);
-      // TODO: Make sure we're inclusive of the last data if chunk
-      // would extend beyond 'end' (so we don't lose last chunk of data)
       while (s < end) {
         let e = new Date(s);
         e.setMinutes(e.getMinutes() + chunkSize);
@@ -266,7 +259,7 @@ export default {
       let targ = e.target;
       // doing this because if the user clicks on the text inside
       // the button the event target isn't the button. TODO: make better.
-      while (targ.classList.contains('imposter-btn') == false) {
+      while (targ.classList.contains('chunk-btn-wrapper') == false) {
         targ = targ.parentElement;
       }
       targ.classList.add('clicked-dl-btn');
@@ -342,7 +335,7 @@ export default {
   align-items: center;
   border-radius: 4px;
 }
-.imposter-btn {
+.chunk-btn-wrapper {
   margin: 0px 5px 0px 5px;
   position: relative;
   min-width: 130px;
@@ -351,16 +344,16 @@ export default {
   justify-content: center;
   align-items: center;
 }
-.imposter-btn p {
+.chunk-btn-wrapper p {
   position: absolute;
   margin: 0 auto;
   width: 100%;
   text-align: center;
 }
-.imposter-btn .chunk-btn-ctr {
+.chunk-btn-wrapper .chunk-btn-ctr {
   opacity: 0%;
 }
-.imposter-btn:hover .chunk-btn-ctr {
+.chunk-btn-wrapper:hover .chunk-btn-ctr {
   opacity: 100%;
 }
 .chunk-btn-ctr {
@@ -373,13 +366,13 @@ export default {
   align-items: center;
 }
 .chunk-btn-ctr button {
-  z-index: 90;
+  z-index: 10;
   margin-left: 0px !important;
   width: 50%;
   border-radius: 0px;
 }
 #l-scroll-btn, #r-scroll-btn {
-  z-index: 100;
+  z-index: 15;
   box-shadow: 0px 0px 5px #c0c0c0;
 }
 #l-scroll-btn {
