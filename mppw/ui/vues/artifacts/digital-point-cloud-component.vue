@@ -45,6 +45,10 @@
               </o-button>
             </div>
 
+            <p id="dl-label" v-if="tbChunks.length > 0">
+              Incremental Downloads
+            </p>
+
             <div class="mt-3 text-end pcl-btns scrolling-btn-row">
               <o-button v-if="tbChunks.length > 0"
                 id="l-scroll-btn" @click="scb(-300)">←</o-button>
@@ -258,7 +262,7 @@ export default {
     buildIntervalURL(e, chunk) {
       let targ = e.target;
       // doing this because if the user clicks on the text inside
-      // the button the event target isn't the button. TODO: make better.
+      // the button the event target isn't the button.
       while (targ.classList.contains('chunk-btn-wrapper') == false) {
         targ = targ.parentElement;
       }
@@ -307,9 +311,12 @@ export default {
 .pcl-btns {
   display: flex;
   flex-direction: row;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
-.pcl-btns button.o-btn {
+.pcl-btns:not(.scrolling-btn-row) {
+  flex-wrap: wrap;
+}
+.pcl-btns button.o-btn:last-of-type {
   margin-left: 10px;
 }
 .large-warning {
@@ -325,15 +332,21 @@ export default {
 .large-warning p {
   margin: 25px;
 }
+#dl-label {
+  text-align: left;
+  margin: 20px 0px 0px 0px;
+  font-weight: bold;
+}
 .scrolling-btn-row {
   position: relative;
   max-width: 100%;
-  height: 70px;
+  height: 55px;
   overflow: hidden;
-  overflow-x: scroll;
+  overflow-x: auto;
   justify-content: initial;
   align-items: center;
   border-radius: 4px;
+  margin-top: 0px !important;
 }
 .chunk-btn-wrapper {
   margin: 0px 5px 0px 5px;
