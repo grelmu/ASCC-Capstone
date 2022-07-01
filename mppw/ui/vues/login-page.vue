@@ -1,7 +1,6 @@
 <template>
   <div class="form-body text-center">
 
-    <scatter-plot :points=yourdata></scatter-plot>
     <div class="form-signin">
       <form>
         <h1><img src="favicon.ico" class="p-1" />MPPW</h1>
@@ -47,9 +46,7 @@
 </template>
 
 <script>
-import scatterPlot from './scatter-plot.vue';
 export default {
-  components: { scatterPlot },
   data() {
     return {
       username: null,
