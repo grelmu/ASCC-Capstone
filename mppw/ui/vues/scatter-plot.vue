@@ -1,9 +1,5 @@
-<template>
-  <div>
-    <h1>This is the scatter-plot component</h1>
-    <button @click="createScene">3D</button>
-    <button @click="createScatterPlot">Scatter plot Example</button>
-    <button @click="createRayCasterPlot">Raycaster Plot Example</button>
+<template >
+  <div ref="scatterPlotRef">
     <div id="threejs-container"></div>
     <div v-if="scatterPlot">
       {{ scatterPlot }}
@@ -407,6 +403,9 @@ export default {
     this.toggle = 0;
     return this.refreshPlot();
   },
+  mounted() {
+    this.createRayCasterPlot();
+  }
 };
 </script>
 

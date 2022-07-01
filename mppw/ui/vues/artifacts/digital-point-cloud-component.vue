@@ -43,6 +43,12 @@
                 variant="info">
                   Download Full Point Cloud
               </o-button>
+              <o-button
+                @click="initThree"
+                class="text-end"
+                variant="info">
+                  Visualize
+              </o-button>
             </div>
 
             <p id="dl-label" v-if="tbChunks.length > 0">
@@ -80,20 +86,24 @@
             TODO: 
               Paginate the results for large data (once API supports this)
           -->
-          <pre v-if="response.length < 5000" class="col-12">
-            {{ JSON.stringify(response, null, 2) }}
-          </pre>
-          <div class="large-warning" v-else-if="response.length >= 5000"> 
-            <p>
-              Large response &lpar;{{response.length}} items&rpar;
-              not displayed for page performance.
-              <br />
-              <br />
-              <b>Please download to view data.</b>
-            </p>
+          <div v-if="!visualizePoints">
+            <pre v-if="response.length < 5000" class="col-12">
+              {{ JSON.stringify(response, null, 2) }}
+            </pre>
+            <div class="large-warning" v-else-if="response.length >= 5000"> 
+              <p>
+                Large response &lpar;{{response.length}} items&rpar;
+                not displayed for page performance.
+                <br />
+                <br />
+                <b>Please download to view data.</b>
+              </p>
+            </div>
+          </div>
+          <div id="three-parent-container" style="display: none">
+            <scatter-plot :points=yourdata></scatter-plot>
           </div>
         </div>
-
       </o-collapse>
     </section>
    
@@ -101,7 +111,9 @@
 </template>
 
 <script>
+import scatterPlot from '../scatter-plot.vue';
 export default {
+  components: { scatterPlot },
   data() {
     return {
       artifact: null,
@@ -116,7 +128,8 @@ export default {
       timeBoundsStart: null,
       timeBoundsEnd: null,
       response: null,
-      tbChunks: [] 
+      tbChunks: [],
+      visualizePoints: false
     };
   },
   props: {
@@ -124,6 +137,18 @@ export default {
     artifactId: String,
   },
   methods: {
+    initThree() {
+      this.visualizePoints = true;
+      let container = document.querySelector("#three-parent-container");
+      // TODO: extract all this into a css class and just apply that
+      container.style.display = "block";
+      container.style.position = "fixed";
+      container.style.width = "calc(100vw - 50px)";
+      container.style.height = "calc(100vh - 50px)";
+      container.style.top = "50px";
+      container.style.zIndex = "1000";
+      container.style.right = "50px";
+    },
     refreshArtifact() {
       this.artifact = null;
       this.timeBoundsStart = new Date();
@@ -173,6 +198,7 @@ export default {
       );
     },
     getPointCloud() {
+      this.visualizePoints = false;
       // Clear style on previously clicked chunk buttons:
       document.querySelectorAll('.clicked-dl-btn').forEach(item => {item.classList.remove('clicked-dl-btn')})
       return this.$root.apiFetchPointcloud(
@@ -190,6 +216,7 @@ export default {
     },
     // Get point cloud, but for a chunk not the whole range 
     getPointCloudChunk(e, chunk) {
+      this.visualizePoints = false;
       // Update styling so the current chunk button is visually selected
       document.querySelectorAll('.selected-chunk').forEach(el =>{el.classList.remove('selected-chunk')});
       let targ = e.target;
@@ -316,8 +343,12 @@ export default {
 .pcl-btns:not(.scrolling-btn-row) {
   flex-wrap: wrap;
 }
-.pcl-btns button.o-btn:last-of-type {
-  margin-left: 10px;
+.pcl-btns button.o-btn {
+  /* TODO: fix this for chunk buttons */
+  margin: 5px;
+}
+.pcl-btns button.o-btn:first-of-type {
+  margin-left: 0px;
 }
 .large-warning {
   width: 100%;
@@ -406,6 +437,10 @@ export default {
 }
 .selected-chunk {
   box-shadow: 0px 0px 5px black;
+}
+#three-parent-container {
+  width: 500px;
+  height: 500px;
 }
 </style>
 
