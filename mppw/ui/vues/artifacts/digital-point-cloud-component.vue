@@ -44,7 +44,7 @@
                   Download Full Point Cloud
               </o-button>
               <o-button
-                @click="initThree"
+                @click="showThree"
                 class="text-end"
                 variant="info">
                   Visualize
@@ -86,7 +86,7 @@
             TODO: 
               Paginate the results for large data (once API supports this)
           -->
-          <div v-if="!visualizePoints">
+          <div v-if="!visualizePoints" class="large-warning-ctr">
             <pre v-if="response.length < 5000" class="col-12">
               {{ JSON.stringify(response, null, 2) }}
             </pre>
@@ -100,7 +100,11 @@
               </p>
             </div>
           </div>
-          <div id="three-parent-container" style="display: none">
+          <div id="three-parent-container">
+            <o-button class="three-exit-btn" inverted @click="(e) => {
+                hideThree();
+              }"><o-icon :icon="'close'"></o-icon>
+            </o-button>
             <scatter-plot :points=yourdata></scatter-plot>
           </div>
         </div>
@@ -137,17 +141,15 @@ export default {
     artifactId: String,
   },
   methods: {
-    initThree() {
+    showThree() {
       this.visualizePoints = true;
       let container = document.querySelector("#three-parent-container");
-      // TODO: extract all this into a css class and just apply that
-      container.style.display = "block";
-      container.style.position = "fixed";
-      container.style.width = "calc(100vw - 50px)";
-      container.style.height = "calc(100vh - 50px)";
-      container.style.top = "50px";
-      container.style.zIndex = "1000";
-      container.style.right = "50px";
+      container.classList.add("three-full-screen");
+    },
+    hideThree() {
+      this.visualizePoints = false;
+      document.querySelector('#three-parent-container')
+      .classList.remove('three-full-screen');
     },
     refreshArtifact() {
       this.artifact = null;
@@ -328,7 +330,8 @@ export default {
 }
 .pcl-res-container {
   max-height: 400px;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   margin: 10px 0px 0px 0px;
 }
 .pcl-res-container pre {
@@ -350,6 +353,7 @@ export default {
 .pcl-btns button.o-btn:first-of-type {
   margin-left: 0px;
 }
+.large-warning-ctr {height: 100%;}
 .large-warning {
   width: 100%;
   height: 100%;
@@ -411,7 +415,7 @@ export default {
 }
 .chunk-btn-ctr button {
   z-index: 10;
-  margin-left: 0px !important;
+  margin: 0px !important;
   width: 50%;
   border-radius: 0px;
 }
@@ -439,8 +443,21 @@ export default {
   box-shadow: 0px 0px 5px black;
 }
 #three-parent-container {
-  width: 500px;
-  height: 500px;
+  display: none;
+}
+#three-parent-container.three-full-screen {
+  display: block;
+  position: fixed;
+  width: calc(100vw - 50px);
+  height: calc(100vh - 50px);
+  top: 50px;
+  z-index: 1000;
+  right: 50px;
+}
+.three-exit-btn {
+  position: fixed;
+  top: 65px;
+  left: 20px;
 }
 </style>
 
