@@ -105,7 +105,7 @@
                 hideThree();
               }"><o-icon :icon="'close'"></o-icon>
             </o-button>
-            <scatter-plot :points=yourdata></scatter-plot>
+            <scatter-plot v-if="response" :importData=response :key=response></scatter-plot>
           </div>
         </div>
       </o-collapse>

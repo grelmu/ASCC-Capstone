@@ -22,6 +22,7 @@ export default {
   props: {
     opId: String,
     artifactId: String,
+    importData: Array,
   },
   methods: {
     refreshPlot() {
@@ -78,42 +79,51 @@ export default {
 
 				this.scene = new THREE.Scene();
 				this.scene.background = new THREE.Color( 0x050505 );
-				this.scene.fog = new THREE.Fog( 0x050505, 2000, 3500 );
-
-				//
+				// this.scene.fog = new THREE.Fog( 0x050505, 2000, 3500 );
 
 				const particles = 500000;
 
 				const geometry = new THREE.BufferGeometry();
 
-				const positions = [];
+				let positions = [];
 				const colors = [];
 
 				const color = new THREE.Color();
 
 				const n = 1000, n2 = n / 2; // particles spread in the cube
 
-				for ( let i = 0; i < particles; i ++ ) {
+        let maxNum = 1;
+				for ( let i = 0; i < this.importData.length; i ++ ) {
 
 					// positions
 
-					const x = Math.random() * n - n2;
-					const y = Math.random() * n - n2;
-					const z = Math.random() * n - n2;
 
-					positions.push( x, y, z );
+					const x = this.importData[i].ctx.x;
+					const y = this.importData[i].ctx.y;
+					const z = this.importData[i].ctx.z;
+
+          [x, y, z].forEach( value => {
+            if (value > maxNum) maxNum = value;
+          });
+
+					positions.push(x, y, z);
 
 					// colors
 
-					const vx = ( x / n ) + 0.5;
-					const vy = ( y / n ) + 0.5;
-					const vz = ( z / n ) + 0.5;
+					// const vx = (i / this.importData.length) ; //( x / n ) + 0.5;
+					// const vy = (i / this.importData.length) ; //( y / n ) + 0.5;
+					// const vz = (i / this.importData.length) ; //( z / n ) + 0.5;
+          const colorRatio = (i / this.importData.length);
 
-					color.setRGB( vx, vy, vz );
+					color.setRGB( colorRatio * 0.75 + 0.25  , 1 , 1 );
 
 					colors.push( color.r, color.g, color.b );
 
 				}
+
+        let ratio = 500 / maxNum;
+
+        positions = positions.map(position => { return position * ratio});
 
 				geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
 				geometry.setAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
@@ -153,8 +163,8 @@ export default {
     render_1(){
       const time = Date.now() * 0.001;
 
-      this.points.rotation.x = time * 0.25;
-      this.points.rotation.y = time * 0.5;
+      this.points.rotation.x = 0; // time * 0.25;
+      this.points.rotation.y = 0; //time * 0.5;
 
       this.renderer.render( this.scene, this.camera );
     },
@@ -203,6 +213,7 @@ export default {
     generatePointcloud( color, width, length ) {
 
       const geometry = this.generatePointCloudGeometry( color, width, length );
+      console.table(geometry);
       const material = new THREE.PointsMaterial( { size: this.pointSize, vertexColors: true } );
 
       return new THREE.Points( geometry, material );
@@ -287,6 +298,7 @@ export default {
 				//
 
 				const pcBuffer = this.generatePointcloud( new THREE.Color( 1, 0, 0 ), this.width, this.length );
+        console.table(pcBuffer);
 				pcBuffer.scale.set( 5, 10, 10 );
 				pcBuffer.position.set( - 5, 0, 0 );
 				this.scene.add( pcBuffer );
@@ -308,6 +320,7 @@ export default {
 				const sphereGeometry = new THREE.SphereGeometry( 0.1, 32, 32 );
 				const sphereMaterial = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
 
+        // trailing mouse line
 				for ( let i = 0; i < 40; i ++ ) {
 
 					const sphere = new THREE.Mesh( sphereGeometry, sphereMaterial );
@@ -342,7 +355,7 @@ export default {
     onPointerMove( event ) {
 
       this.pointer.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-      this.pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+      this.pointer.y = - ( (event.clientY - 48 ) / window.innerHeight ) * 2 + 1;
 
     },
 
@@ -404,7 +417,9 @@ export default {
     return this.refreshPlot();
   },
   mounted() {
-    this.createRayCasterPlot();
+    console.log(this.points);
+    this.createScatterPlot();
+    // this.createRayCasterPlot();
   }
 };
 </script>
