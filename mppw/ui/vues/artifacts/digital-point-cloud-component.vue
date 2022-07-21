@@ -44,7 +44,8 @@
                   Download Full Point Cloud
               </o-button>
               <o-button
-                @click="showThree"
+                v-if="response[0]"
+                @click="toggleThree()"
                 class="text-end"
                 variant="info">
                   Visualize
@@ -101,11 +102,7 @@
             </div>
           </div>
           <div id="three-parent-container">
-            <o-button class="three-exit-btn" inverted @click="(e) => {
-                hideThree();
-              }"><o-icon :icon="'close'"></o-icon>
-            </o-button>
-            <scatter-plot v-if="response" :importData=response :key=response></scatter-plot>
+            <scatter-plot v-if="response[0]" :importData=response :key=response></scatter-plot>
           </div>
         </div>
       </o-collapse>
@@ -141,15 +138,18 @@ export default {
     artifactId: String,
   },
   methods: {
+    toggleThree(){
+      this.visualizePoints ? this.hideThree() : this.showThree();
+    },
     showThree() {
       this.visualizePoints = true;
       let container = document.querySelector("#three-parent-container");
-      container.classList.add("three-full-screen");
+      container.classList.add("three-show");
     },
     hideThree() {
       this.visualizePoints = false;
       document.querySelector('#three-parent-container')
-      .classList.remove('three-full-screen');
+      .classList.remove('three-show');
     },
     refreshArtifact() {
       this.artifact = null;
@@ -218,7 +218,7 @@ export default {
     },
     // Get point cloud, but for a chunk not the whole range 
     getPointCloudChunk(e, chunk) {
-      this.visualizePoints = false;
+      this.hideThree();
       // Update styling so the current chunk button is visually selected
       document.querySelectorAll('.selected-chunk').forEach(el =>{el.classList.remove('selected-chunk')});
       let targ = e.target;
@@ -333,6 +333,7 @@ export default {
   overflow-x: hidden;
   overflow-y: auto;
   margin: 10px 0px 0px 0px;
+  position: relative;
 }
 .pcl-res-container pre {
   margin-right: 10px;
@@ -444,20 +445,23 @@ export default {
 }
 #three-parent-container {
   display: none;
+  position:absolute;
+  width: 100%;
+  height: 100%;
+  /* max-height: 400px; */
+  top: 0;
 }
 #three-parent-container.three-full-screen {
-  display: block;
   position: fixed;
-  width: calc(100vw - 50px);
-  height: calc(100vh - 50px);
-  top: 50px;
+  width: calc(100vw );
+  height: calc(100vh - 48px);
+  top: 48px;
   z-index: 1000;
-  right: 50px;
+  right: 0px;
 }
-.three-exit-btn {
-  position: fixed;
-  top: 65px;
-  left: 20px;
+
+#three-parent-container.three-show {
+  display: block;
 }
 </style>
 

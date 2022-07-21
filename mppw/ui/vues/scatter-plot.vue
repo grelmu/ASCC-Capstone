@@ -1,9 +1,10 @@
 <template >
   <div ref="scatterPlotRef">
-    <div id="threejs-container"></div>
-    <div v-if="scatterPlot">
-      {{ scatterPlot }}
-    </div>
+    <div id="threejs-container" @click="toggleFullscreen()"></div>
+    <o-button class="three-exit-btn" inverted 
+      @click="(e) => { toggleFullscreen(); }">
+      <o-icon :icon="'close'"></o-icon>
+    </o-button>
   </div>
 </template>
 
@@ -17,6 +18,7 @@ export default {
   data() {
     return {
       scatterPlot: null,
+      fullScreen: false
     };
   },
   props: {
@@ -25,41 +27,24 @@ export default {
     importData: Array,
   },
   methods: {
+    toggleFullscreen(){
+      this.fullScreen = !this.fullScreen;
+      this.fullScreen ? 
+        this.$el.parentElement.classList.add('three-full-screen'):
+        this.$el.parentElement.classList.remove('three-full-screen');
+
+      let box = this.$el.parentElement.getBoundingClientRect();
+
+      this.camera.aspect = box.width / box.height;
+      this.camera.updateProjectionMatrix();
+      this.renderer.setSize( box.width, box.height );
+    },
     refreshPlot() {
       this.scatterPlot = null;
       const scene = new THREE.Scene();
       // return this.$root.apiFetchArtifact(this.artifactId).then((artifact) => {
       //   this.artifact = artifact;
       // });
-    },
-    createScene() {
-      // Initialize Three.js scene
-      const scene = new THREE.Scene();
-      const container = document.querySelector("#threejs-container");
-      scene.background = new THREE.Color('skyblue');
-
-      // Create a camera
-      const fov = 35;
-      const aspect = container.clientWidth / container.clientHeight;
-      const near = 0.1;
-      const far = 100;
-      const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-      camera.position.set(0, 0, 10);
-
-      const geometry = new THREE.BoxBufferGeometry(2, 2, 2);
-      const material = new THREE.MeshBasicMaterial();
-      const cube = new THREE.Mesh(geometry, material);
-      scene.add(cube);
-      const renderer = new THREE.WebGLRenderer();
-
-      // Create controls for dragging the scene
-      // const orbitControls = new OrbitControls(camera, renderer.domElement);
-
-      // Display it all
-      renderer.setSize(container.clientWidth, container.clientHeight);
-      renderer.setPixelRatio(window.devicePixelRatio);
-      container.append(renderer.domElement);
-      renderer.render(scene, camera);
     },
     createScatterPlot(){
       this.init_1();
@@ -72,91 +57,68 @@ export default {
     init_1() {
         this.container = document.getElementById( 'threejs-container' );
 
-				//
+        let box = this.$el.parentElement.parentElement.getBoundingClientRect();
 
-				this.camera = new THREE.PerspectiveCamera( 27, window.innerWidth / window.innerHeight, 5, 3500 );
-				this.camera.position.z = 2750;
+				this.camera = new THREE.PerspectiveCamera( 27, box.width / box.height, 5, 3500 );
+				this.camera.position.z = 750;
 
 				this.scene = new THREE.Scene();
 				this.scene.background = new THREE.Color( 0x050505 );
 				// this.scene.fog = new THREE.Fog( 0x050505, 2000, 3500 );
 
-				const particles = 500000;
-
 				const geometry = new THREE.BufferGeometry();
 
-				let positions = [];
+				const positions = [];
 				const colors = [];
 
 				const color = new THREE.Color();
 
-				const n = 1000, n2 = n / 2; // particles spread in the cube
-
-        let maxNum = 1;
+        let max = [1,1,1,1];
+        let min = [1,1,1,1];
 				for ( let i = 0; i < this.importData.length; i ++ ) {
 
 					// positions
-
-
 					const x = this.importData[i].ctx.x;
 					const y = this.importData[i].ctx.y;
 					const z = this.importData[i].ctx.z;
 
-          [x, y, z].forEach( value => {
-            if (value > maxNum) maxNum = value;
+          [x, y, z].forEach( (value, i) => {
+            if (value < min[i]) min[i] = value;
+            if (value > max[i]) max[i] = value;
+            if (value > max[3]) max[3] = value;
           });
 
 					positions.push(x, y, z);
 
 					// colors
-
-					// const vx = (i / this.importData.length) ; //( x / n ) + 0.5;
-					// const vy = (i / this.importData.length) ; //( y / n ) + 0.5;
-					// const vz = (i / this.importData.length) ; //( z / n ) + 0.5;
           const colorRatio = (i / this.importData.length);
-
 					color.setRGB( colorRatio * 0.75 + 0.25  , 1 , 1 );
-
 					colors.push( color.r, color.g, color.b );
 
 				}
 
-        let ratio = 500 / maxNum;
+        let ratio = 500 / max[3];
 
-        positions = positions.map(position => { return position * ratio});
+        let adjustedPositions = positions.map(position => { return position * ratio});
 
-				geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
+				geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( adjustedPositions, 3 ) );
 				geometry.setAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
 
 				geometry.computeBoundingSphere();
-
-				//
 
 				const material = new THREE.PointsMaterial( { size: 15, vertexColors: true } );
 
 				this.points = new THREE.Points( geometry, material );
 				this.scene.add( this.points );
 
-				//
-
 				this.renderer = new THREE.WebGLRenderer();
 				this.renderer.setPixelRatio( window.devicePixelRatio );
-				this.renderer.setSize( window.innerWidth, window.innerHeight );
+				this.renderer.setSize( box.width, box.height );
 
 				this.container.appendChild( this.renderer.domElement );
-
-				//
-
-				// this.stats = new Stats();
-				// this.container.appendChild( stats.dom );
-
-				//
-
-				// window.addEventListener( 'resize', onWindowResize );
     },
     animate_1(){
       requestAnimationFrame( this.animate_1 );
-
       this.render_1();
       // stats.update();
     },
@@ -164,7 +126,8 @@ export default {
       const time = Date.now() * 0.001;
 
       this.points.rotation.x = 0; // time * 0.25;
-      this.points.rotation.y = 0; //time * 0.5;
+      this.points.rotation.y = time * 0.25;
+      this.points.geometry.center();
 
       this.renderer.render( this.scene, this.camera );
     },
@@ -417,7 +380,6 @@ export default {
     return this.refreshPlot();
   },
   mounted() {
-    console.log(this.points);
     this.createScatterPlot();
     // this.createRayCasterPlot();
   }
@@ -426,7 +388,29 @@ export default {
 
 <style scoped>
   #threejs-container {
-    width: 500px;
-    height: 500px;
+    /* width: 500px;
+    height: 500px; */
   }
+
+  #three-parent-container { 
+    height: 100%;
+  }
+
+  #three-parent-container div {
+    height: 100%;
+  }
+
+
+  .three-exit-btn {
+    display: none;
+    position: fixed;
+    top: 65px;
+    left: 20px;
+  }
+
+  .three-show.three-full-screen .three-exit-btn{
+    display: flex;
+  }
+
+  
 </style>
