@@ -32,6 +32,21 @@
                 icon="calendar" v-model="timeBoundsEnd" @update:modelValue="normalizeTimeBounds">
               </o-datetimepicker>
             </o-field>
+
+            <select v-if="response[0] && showSelectors" v-model="pointSelector">
+              <option 
+                v-for="option in findPropertyPaths(response[0])"
+                :key="option"
+              >{{ option }}</option>
+            </select>
+            <select v-if="response[0] && pointSelector && showSelectors" v-model="displayValue">
+              <option value="">No filter value</option>
+              <option 
+                v-for="option in getBooleanOptions()"
+                :key="option"
+              >{{ option }}</option>
+            </select>
+
             <div class="mt-3 text-end pcl-btns">
               <o-button @click="getPointCloud()"
                 class="text-end">
@@ -101,8 +116,8 @@
               </p>
             </div>
           </div>
-          <div id="three-parent-container">
-            <scatter-plot v-if="response[0]" :importData=response :key=response></scatter-plot>
+          <div class="three-parent-container">
+            <scatter-plot v-if="response[0]" :importData=response :displayValue=displayValue :pointSelector=pointSelector :key=response></scatter-plot>
           </div>
         </div>
       </o-collapse>
@@ -130,7 +145,10 @@ export default {
       timeBoundsEnd: null,
       response: null,
       tbChunks: [],
-      visualizePoints: false
+      visualizePoints: false,
+      pointSelector: '',
+      displayValue: '',
+      showSelectors: true
     };
   },
   props: {
@@ -138,17 +156,50 @@ export default {
     artifactId: String,
   },
   methods: {
+    getBooleanOptions(){
+      this.response[0].ctx.testBool = true; 
+      let obj = this.pointSelector.split('.').reduce(function(p,prop) { return p[prop] }, this.response[0]);
+      let arr = this.findBooleanPaths(obj, this.pointSelector);
+      if (!arr.includes(this.displayValue)) this.displayValue = '';
+      return arr;
+    },
+    findPropertyPaths(obj, path=''){
+      if (path.charAt(0) == '.') path = path.slice(1);
+      let successfulArray = [];
+      if (["x","y","z"].every(key => Object.keys(obj).includes(key))){
+        successfulArray.push(path);
+        if (!this.pointSelector) this.pointSelector = path;
+      }
+      Object.getOwnPropertyNames(obj).forEach(key => {
+        if(typeof obj[key] == "object")
+          successfulArray = successfulArray.concat(this.findPropertyPaths(obj[key], path + "." + key ));
+      });
+      return successfulArray;
+    },
+    findBooleanPaths(obj, path=''){
+      if (path.charAt(0) == '.') path = path.slice(1);
+      let successfulArray = [];
+
+      Object.getOwnPropertyNames(obj).forEach(key => {
+        if(typeof obj[key] == "boolean")
+          successfulArray.push(path + '.' + key);
+        if(typeof obj[key] == "object")
+          successfulArray = successfulArray.concat(this.findBooleanPaths(obj[key], path + "." + key ));
+      });
+
+      return successfulArray;
+    },
     toggleThree(){
       this.visualizePoints ? this.hideThree() : this.showThree();
     },
     showThree() {
       this.visualizePoints = true;
-      let container = document.querySelector("#three-parent-container");
+      let container = this.$el.querySelector(".three-parent-container");
       container.classList.add("three-show");
     },
     hideThree() {
       this.visualizePoints = false;
-      document.querySelector('#three-parent-container')
+      this.$el.querySelector('.three-parent-container')
       .classList.remove('three-show');
     },
     refreshArtifact() {
@@ -443,7 +494,7 @@ export default {
 .selected-chunk {
   box-shadow: 0px 0px 5px black;
 }
-#three-parent-container {
+.three-parent-container {
   display: none;
   position:absolute;
   width: 100%;
@@ -451,7 +502,7 @@ export default {
   /* max-height: 400px; */
   top: 0;
 }
-#three-parent-container.three-full-screen {
+.three-parent-container.three-full-screen {
   position: fixed;
   width: calc(100vw );
   height: calc(100vh - 48px);

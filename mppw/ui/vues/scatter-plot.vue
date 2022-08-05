@@ -1,10 +1,16 @@
 <template >
   <div ref="scatterPlotRef">
-    <div id="threejs-container" @click="toggleFullscreen()"></div>
+    <div class="threejs-container"></div>
     <o-button class="three-exit-btn" inverted 
       @click="(e) => { toggleFullscreen(); }">
       <o-icon :icon="'close'"></o-icon>
     </o-button>
+    <div class="icon-row">
+      <o-icon :icon="fullScreen ? 'fullscreen-exit' : 'fullscreen'" @click="toggleFullscreen()"></o-icon>
+      <o-icon :icon="rotate ? 'lock-reset' : 'rotate-3d'" @click="toggleRotation()"></o-icon>
+      <o-icon :icon="'backup-restore'" @click="resetCamera"></o-icon>
+      <o-icon :icon="'sync'"></o-icon>
+    </div>
   </div>
 </template>
 
@@ -18,15 +24,30 @@ export default {
   data() {
     return {
       scatterPlot: null,
-      fullScreen: false
+      fullScreen: false,
+      rotate: false,
+      position: [0,0,0]
     };
   },
   props: {
     opId: String,
     artifactId: String,
     importData: Array,
+    displayValue: String,
+    pointSelector: String
   },
+  watch: { 
+      	displayValue: function(){ this.updateVisualization() },
+        pointSelector: function(){ this.updateVisualization() },
+      },
   methods: {
+    updateVisualization(e){
+      console.log("Updating Visualization...");
+      this.scene.remove( this.points);
+      const material = new THREE.PointsMaterial( { size: 15, vertexColors: true } );
+      this.points = this.buildPoints();
+      this.scene.add( this.points );
+    },
     toggleFullscreen(){
       this.fullScreen = !this.fullScreen;
       this.fullScreen ? 
@@ -37,7 +58,27 @@ export default {
 
       this.camera.aspect = box.width / box.height;
       this.camera.updateProjectionMatrix();
+      this.controls.update();
       this.renderer.setSize( box.width, box.height );
+    },
+    toggleRotation(){
+      this.rotate = !this.rotate;
+      if (!this.rotate) {
+        // this.points.rotation.x = 0;
+        // this.points.rotation.y = 0;
+        // this.points.rotation.z = 0;
+      }
+    },
+    resetCamera(){
+      this.rotate = false;
+      this.points.rotation.x = 0;
+      this.points.rotation.y = 0;
+      this.points.rotation.z = 0;
+      this.camera.position.x = this.position.x;
+      this.camera.position.y = this.position.y;
+      this.camera.position.z = this.position.z;
+      this.controls.reset();
+      
     },
     refreshPlot() {
       this.scatterPlot = null;
@@ -54,82 +95,112 @@ export default {
       this.init_2();
       this.animate_2();
     },
-    init_1() {
-        this.container = document.getElementById( 'threejs-container' );
+    buildPoints(){
+      const box = this.$el.parentElement.parentElement.getBoundingClientRect();
+      const geometry = new THREE.BufferGeometry();
+      const color = new THREE.Color();
 
-        let box = this.$el.parentElement.parentElement.getBoundingClientRect();
+      const positions = [];
+      const colors = [];
+      let max = [null, null, null, null];
+      let min = [null, null, null, null];
+      for ( let i = 0; i < this.importData.length; i ++ ) {
+        var currentPoint = this.pointSelector.split('.').reduce(function(p,prop) { return p[prop] }, this.importData[i]);
+        var displayBool = this.displayValue.split('.').reduce(function(p,prop) { return p[prop] }, this.importData[i]);
 
-				this.camera = new THREE.PerspectiveCamera( 27, box.width / box.height, 5, 3500 );
-				this.camera.position.z = 750;
-
-				this.scene = new THREE.Scene();
-				this.scene.background = new THREE.Color( 0x050505 );
-				// this.scene.fog = new THREE.Fog( 0x050505, 2000, 3500 );
-
-				const geometry = new THREE.BufferGeometry();
-
-				const positions = [];
-				const colors = [];
-
-				const color = new THREE.Color();
-
-        let max = [1,1,1,1];
-        let min = [1,1,1,1];
-				for ( let i = 0; i < this.importData.length; i ++ ) {
-
-					// positions
-					const x = this.importData[i].ctx.x;
-					const y = this.importData[i].ctx.y;
-					const z = this.importData[i].ctx.z;
-
-          [x, y, z].forEach( (value, i) => {
-            if (value < min[i]) min[i] = value;
-            if (value > max[i]) max[i] = value;
-            if (value > max[3]) max[3] = value;
+        if ((!this.displayValue || displayBool) && this.pointSelector){
+          positions.push(currentPoint.x, currentPoint.y, currentPoint.z);
+          [currentPoint.x, currentPoint.y, currentPoint.z].forEach( (value, i) => {
+            if ((value < min[i]) || min[i] === null) min[i] = value;
+            if ((value > max[i]) || max[i] === null) max[i] = value;
           });
 
-					positions.push(x, y, z);
-
-					// colors
           const colorRatio = (i / this.importData.length);
-					color.setRGB( colorRatio * 0.75 + 0.25  , 1 , 1 );
-					colors.push( color.r, color.g, color.b );
+          color.setRGB( colorRatio , colorRatio , 1 );
+          colors.push( color.r, color.g, color.b );
+        }
+      };
 
-				}
+      let span = max[0] - min[0];
+      if (max[1]-min[1] > span) span = max[1] - min[1];
+      if (max[2]-min[2] > span) span = max[1] - min[1];
 
-        let ratio = 500 / max[3];
+      let adjustedPositions = positions.map((position, i) => { return ((position - min[i%3]) * (1 / span)) * 500});
+      console.log(adjustedPositions);
 
-        let adjustedPositions = positions.map(position => { return position * ratio});
+      geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( adjustedPositions, 3 ) );
+      geometry.setAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
 
-				geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( adjustedPositions, 3 ) );
-				geometry.setAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
+      geometry.computeBoundingSphere();
 
-				geometry.computeBoundingSphere();
+      const material = new THREE.PointsMaterial( { size: 15, vertexColors: true } );
 
-				const material = new THREE.PointsMaterial( { size: 15, vertexColors: true } );
+      var points = new THREE.Points( geometry, material );
+      points.geometry.center();
 
-				this.points = new THREE.Points( geometry, material );
-				this.scene.add( this.points );
+      return points;
+    },
 
-				this.renderer = new THREE.WebGLRenderer();
-				this.renderer.setPixelRatio( window.devicePixelRatio );
-				this.renderer.setSize( box.width, box.height );
+    init_1() {
+      this.container = this.$el.querySelector( '.threejs-container' );
+      let box = this.$el.parentElement.parentElement.getBoundingClientRect();
 
-				this.container.appendChild( this.renderer.domElement );
+      this.camera = new THREE.PerspectiveCamera( 27, box.width / box.height, 5, 3500 );
+      this.camera.position.z = 750;
+      this.position = this.camera.position;
+      console.log(this.camera);
+      console.log(this.camera.position);
+
+      this.scene = new THREE.Scene();
+      this.scene.background = new THREE.Color( 0x050505 );
+      // this.scene.fog = new THREE.Fog( 0x050505, 2000, 3500 );
+
+
+// ///NOTE WE CAN FAKE THE TIME SLIDER
+// // slider actually sets the end index [0:i] and on select we show that the time value is for it [array[i]]
+
+// // let user pick what field to use to color code the results
+// // let user pick what field to say if we display or not
+
+      this.points = this.buildPoints();
+      this.scene.add( this.points );
+
+      this.renderer = new THREE.WebGLRenderer();
+      this.renderer.setPixelRatio( window.devicePixelRatio );
+      this.renderer.setSize( box.width, box.height );
+      this.controls = new OrbitControls( this.camera, this.renderer.domElement );
+
+      this.container.appendChild( this.renderer.domElement );
     },
     animate_1(){
       requestAnimationFrame( this.animate_1 );
       this.render_1();
-      // stats.update();
     },
     render_1(){
-      const time = Date.now() * 0.001;
+      if (this.rotate){
+        var SPEED = 0.01;
+        this.points.rotation.x -= SPEED * 2;
+        this.points.rotation.y -= SPEED;
+        this.points.rotation.z -= SPEED * 3;
+      }
 
-      this.points.rotation.x = 0; // time * 0.25;
-      this.points.rotation.y = time * 0.25;
       this.points.geometry.center();
+      this.renderer.render(this.scene, this.camera);
+      this.controls.update();
+    },
+    render_1_old(){
+      const time = Date.now() * 0.001;
+      
 
+      if (this.rotate){
+        // r[2] is the var to use for colors
+        this.points.rotation.x = time * 0.8; // time * 0.25;
+        this.points.rotation.y = time * 0.75;
+        this.points.rotation.z = time * 0.5;
+      }
+      this.points.geometry.center();
       this.renderer.render( this.scene, this.camera );
+      this.controls.update();
     },
     generatePointCloudGeometry( color, width, length ) {
 
@@ -180,6 +251,7 @@ export default {
       const material = new THREE.PointsMaterial( { size: this.pointSize, vertexColors: true } );
 
       return new THREE.Points( geometry, material );
+      // can we set point size(yes), transparency(?), and point color (yes)
 
     },
     generateIndexedPointcloud( color, width, length ) {
@@ -237,7 +309,7 @@ export default {
     },
     init_2() {
 
-				this.container = document.getElementById( 'threejs-container' );
+				this.container = this.$el.querySelector( '.threejs-container' );
         this.threshold = 0.1;
         this.pointSize = 0.05;
         this.width = 80;
@@ -387,7 +459,7 @@ export default {
 </script>
 
 <style scoped>
-  #threejs-container {
+  .threejs-container {
     /* width: 500px;
     height: 500px; */
   }
@@ -410,6 +482,23 @@ export default {
 
   .three-show.three-full-screen .three-exit-btn{
     display: flex;
+  }
+
+  #three-parent-container .icon-row{
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    height: 24px;
+    margin: 5px;
+  }
+
+  #three-parent-container .icon-row .o-icon {
+    color: white;
+    width: auto;
+    height: 100%;
+    margin-left: 5px;
+    pointer-events: all;
+    cursor: pointer;
   }
 
   

@@ -63,7 +63,8 @@
           "oruga": "https://cdn.jsdelivr.net/npm/@oruga-ui/oruga-next@0.5.4/dist/oruga.mjs",
           "@lljj/vue3-form-element": "https://cdn.jsdelivr.net/npm/@lljj/vue3-form-element@1.12.0/dist/vue3-form-element.esm.js",
           "element-plus": "https://cdn.jsdelivr.net/npm/element-plus@2.1.1/dist/index.full.mjs",
-          "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"
+          "three": "https://unpkg.com/three@0.138.0/build/three.module.js",
+          "OrbitControls": "https://unpkg.com/three@0.138.0/examples/jsm/controls/OrbitControls.js"
         }
       }
     </script>
@@ -77,10 +78,13 @@
       import JsonSchemaFormComponent from "@lljj/vue3-form-element";
       import * as ElementPlus from "element-plus";
       import ForceGraph from "./assets/js/d3-force-graph-module.js";
+      import { OrbitControls, MapControls } from "OrbitControls";
 
       window["JsonSchemaFormComponent"] = JsonSchemaFormComponent;
       window["RemoteVue"] = RemoteVue;
       window["ForceGraph"] = ForceGraph;
+      window["OrbitControls"] = OrbitControls;
+      window["THREE"] = THREE;     
 
       RemoteVue.component("vues/app.vue").then((root) => {
         const router = VueRouter.createRouter({
