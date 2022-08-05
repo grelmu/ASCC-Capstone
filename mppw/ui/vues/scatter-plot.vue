@@ -1,6 +1,6 @@
 <template >
   <div ref="scatterPlotRef">
-    <div id="threejs-container" @click="toggleFullscreen()"></div>
+    <div :id="'threejs-container-' + $.uid" class="threejs-container" @click="toggleFullscreen()"></div>
     <o-button class="three-exit-btn" inverted 
       @click="(e) => { toggleFullscreen(); }">
       <o-icon :icon="'close'"></o-icon>
@@ -55,7 +55,7 @@ export default {
       this.animate_2();
     },
     init_1() {
-        this.container = document.getElementById( 'threejs-container' );
+        this.container = document.getElementById( 'threejs-container-' + this.$.uid);
 
         let box = this.$el.parentElement.parentElement.getBoundingClientRect();
 
@@ -125,8 +125,9 @@ export default {
     render_1(){
       const time = Date.now() * 0.001;
 
-      this.points.rotation.x = 0; // time * 0.25;
-      this.points.rotation.y = time * 0.25;
+      this.points.rotation.x = time * (0.25 / 10.0);
+      this.points.rotation.y = time * (0.25 / 10.0);
+      this.points.rotation.z = time * 0.25;
       this.points.geometry.center();
 
       this.renderer.render( this.scene, this.camera );
@@ -237,7 +238,7 @@ export default {
     },
     init_2() {
 
-				this.container = document.getElementById( 'threejs-container' );
+				this.container = document.getElementById(  'threejs-container-' + this.$.uid );
         this.threshold = 0.1;
         this.pointSize = 0.05;
         this.width = 80;
@@ -377,6 +378,7 @@ export default {
   created() {
     this.spheresIndex = 0;
     this.toggle = 0;
+    console.log(this.importData)
     return this.refreshPlot();
   },
   mounted() {
@@ -387,16 +389,16 @@ export default {
 </script>
 
 <style scoped>
-  #threejs-container {
+  .threejs-container {
     /* width: 500px;
     height: 500px; */
   }
 
-  #three-parent-container { 
+  .three-parent-container { 
     height: 100%;
   }
 
-  #three-parent-container div {
+  .three-parent-container div {
     height: 100%;
   }
 

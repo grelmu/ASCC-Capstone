@@ -101,7 +101,7 @@
               </p>
             </div>
           </div>
-          <div id="three-parent-container">
+          <div :id="'three-parent-container-' + $.uid" class="three-parent-container">
             <scatter-plot v-if="response[0]" :importData=response :key=response></scatter-plot>
           </div>
         </div>
@@ -143,12 +143,12 @@ export default {
     },
     showThree() {
       this.visualizePoints = true;
-      let container = document.querySelector("#three-parent-container");
+      let container = document.querySelector("#three-parent-container-" + this.$.uid);
       container.classList.add("three-show");
     },
     hideThree() {
       this.visualizePoints = false;
-      document.querySelector('#three-parent-container')
+      document.querySelector('#three-parent-container-' + this.$.uid)
       .classList.remove('three-show');
     },
     refreshArtifact() {
@@ -443,7 +443,7 @@ export default {
 .selected-chunk {
   box-shadow: 0px 0px 5px black;
 }
-#three-parent-container {
+.three-parent-container {
   display: none;
   position:absolute;
   width: 100%;
@@ -451,7 +451,7 @@ export default {
   /* max-height: 400px; */
   top: 0;
 }
-#three-parent-container.three-full-screen {
+.three-parent-container.three-full-screen {
   position: fixed;
   width: calc(100vw );
   height: calc(100vh - 48px);
@@ -460,7 +460,7 @@ export default {
   right: 0px;
 }
 
-#three-parent-container.three-show {
+.three-parent-container.three-show {
   display: block;
 }
 </style>
