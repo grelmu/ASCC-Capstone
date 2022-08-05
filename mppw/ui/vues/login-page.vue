@@ -1,5 +1,6 @@
 <template>
   <div class="form-body text-center">
+
     <div class="form-signin">
       <form>
         <h1><img src="favicon.ico" class="p-1" />MPPW</h1>
