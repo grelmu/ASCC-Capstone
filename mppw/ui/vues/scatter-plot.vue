@@ -9,7 +9,6 @@
       <o-icon :icon="fullScreen ? 'fullscreen-exit' : 'fullscreen'" @click="toggleFullscreen()"></o-icon>
       <o-icon :icon="rotate ? 'lock-reset' : 'rotate-3d'" @click="toggleRotation()"></o-icon>
       <o-icon :icon="'backup-restore'" @click="resetCamera"></o-icon>
-      <o-icon :icon="'sync'"></o-icon>
     </div>
   </div>
 </template>
