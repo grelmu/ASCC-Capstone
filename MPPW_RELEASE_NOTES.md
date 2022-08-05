@@ -1,3 +1,9 @@
+# 0.5.0
+
+New Features: 
+
+* Basic 3D point cloud visualization
+
 # 0.4.0
 
 New Features: 
