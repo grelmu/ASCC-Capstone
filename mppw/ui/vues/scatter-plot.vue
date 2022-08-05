@@ -1,6 +1,6 @@
 <template >
   <div ref="scatterPlotRef">
-    <div class="threejs-container"></div>
+    <div :id="'threejs-container-' + $.uid" class="threejs-container"></div>
     <o-button class="three-exit-btn" inverted 
       @click="(e) => { toggleFullscreen(); }">
       <o-icon :icon="'close'"></o-icon>
@@ -449,6 +449,7 @@ export default {
   created() {
     this.spheresIndex = 0;
     this.toggle = 0;
+    console.log(this.importData)
     return this.refreshPlot();
   },
   mounted() {
@@ -464,11 +465,11 @@ export default {
     height: 500px; */
   }
 
-  #three-parent-container { 
+  .three-parent-container { 
     height: 100%;
   }
 
-  #three-parent-container div {
+  .three-parent-container div {
     height: 100%;
   }
 

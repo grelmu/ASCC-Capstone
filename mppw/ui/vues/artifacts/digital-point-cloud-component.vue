@@ -116,7 +116,8 @@
               </p>
             </div>
           </div>
-          <div class="three-parent-container">
+
+          <div :id="'three-parent-container-' + $.uid" class="three-parent-container">
             <scatter-plot v-if="response[0]" :importData=response :displayValue=displayValue :pointSelector=pointSelector :key=response></scatter-plot>
           </div>
         </div>
@@ -511,7 +512,7 @@ export default {
   right: 0px;
 }
 
-#three-parent-container.three-show {
+.three-parent-container.three-show {
   display: block;
 }
 </style>
