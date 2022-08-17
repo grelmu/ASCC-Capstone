@@ -1,5 +1,5 @@
 [submodule "mppw/post/fff"]
-	path = fff_post
+	path = fff_analysis
 	url = git@gitlab.composites.umaine.edu:DataProcessing/Thermal.git
 [submodule "mppw_clients"]
 	path = mppw_clients
