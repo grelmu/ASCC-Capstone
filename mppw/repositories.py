@@ -780,12 +780,12 @@ class BucketRepository:
         else:
             raise UnsupportedSchemeException(bucket_scheme)
 
-    def add_file_to_bucket(self, bucket_url, path, file):
+    def add_file_to_bucket(self, bucket_url, path, file, replace=False):
 
         bucket_furl = furl.furl(bucket_url)
 
         if bucket_furl.scheme == BucketRepository.GRIDFS_SCHEME:
-            return self.add_file_to_gridfs_bucket(bucket_url, path, file)
+            return self.add_file_to_gridfs_bucket(bucket_url, path, file, replace=replace)
         else:
             raise UnsupportedSchemeException(bucket_furl.url)
 
@@ -1106,16 +1106,20 @@ class BucketRepository:
         db = client.get_default_database()
         return gridfs.GridFSBucket(db, bucket_id)
 
-    def add_file_to_gridfs_bucket(self, bucket_url, path, file: tempfile.TemporaryFile):
+    def add_file_to_gridfs_bucket(self, bucket_url, path, file: tempfile.TemporaryFile, replace=False):
 
         resolved_bucket_url = self.storage_layer.resolve_local_storage_url_host(
             bucket_url
         )
-        bucket: gridfs.GridFSBucket = self.get_gridfs_bucket(resolved_bucket_url)
-        bucket.upload_from_stream(path, file)
 
         file_furl = furl.furl(bucket_url)
         file_furl.path.add(furl.Path(path))
+
+        bucket: gridfs.GridFSBucket = self.get_gridfs_bucket(resolved_bucket_url)
+        if replace:
+            self.delete_gridfs_file_by_path(bucket_url, path)
+        bucket.upload_from_stream(path, file)
+
         return file_furl.url
 
     def get_gridfs_file_by_url(self, file_url):

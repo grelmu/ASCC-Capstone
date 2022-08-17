@@ -14,8 +14,10 @@ class FileBucketServices(ArtifactServices):
         self.repo_layer.artifacts.update(artifact)
         return artifact
 
-    def upload(self, artifact: models.DigitalArtifact, path: str, file):
-        return self.repo_layer.buckets.add_file_to_bucket(artifact.url_data, path, file)
+    def upload(self, artifact: models.DigitalArtifact, path: str, file, replace=False):
+        return self.repo_layer.buckets.add_file_to_bucket(
+            artifact.url_data, path, file, replace=replace
+        )
 
     def download(self, artifact: models.DigitalArtifact, path: str):
         return self.repo_layer.buckets.get_file_by_path(artifact.url_data, path)
