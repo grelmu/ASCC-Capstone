@@ -384,6 +384,7 @@ def create_router(app):
         id: str,
         path: str = fastapi.Body(None),
         file: fastapi.UploadFile = fastapi.File(None),
+        replace: bool = fastapi.Body(None),
         user: security.ScopedUser = Security(
             request_user(app), scopes=[PROVENANCE_SCOPE]
         ),
@@ -400,7 +401,7 @@ def create_router(app):
             artifact, FileBucketServices
         )
 
-        return service.upload(artifact, path, SyncUploadFile(file))
+        return service.upload(artifact, path, SyncUploadFile(file), replace=replace)
 
     @router.post(
         "/{id}/services/file-bucket/ls", response_model=List[repositories.BucketFile]
