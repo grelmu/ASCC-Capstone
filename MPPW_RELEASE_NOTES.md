@@ -1,3 +1,10 @@
+# 0.6.0
+
+New Features: 
+
+* MPPW client library support
+  * Support for papermill Jupyter! notebooks
+
 # 0.5.0
 
 New Features: 
