@@ -204,6 +204,7 @@ const componentMap = {
   "urn:x-mfg:artifact:digital:point-cloud": "digital-point-cloud-component",
   "urn:x-mfg:artifact:digital:document": "digital-frame-document-component",
   "urn:x-mfg:artifact:digital:frame": "digital-frame-document-component",
+  "urn:x-mfg:artifact:digital:time-series": "digital-time-series-component",
   "urn:x-mfg:artifact": "default-component",
 };
 
@@ -230,6 +231,9 @@ export default {
     ),
     "digital-database-bucket-component": RemoteVue.asyncComponent(
       "vues/artifacts/database-bucket-component.vue"
+    ),
+    "digital-time-series-component": RemoteVue.asyncComponent(
+      "vues/artifacts/digital-time-series-component.vue"
     ),
     "default-component": RemoteVue.asyncComponent(
       "vues/artifacts/default-component.vue"

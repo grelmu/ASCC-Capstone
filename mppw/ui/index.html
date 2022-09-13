@@ -41,11 +41,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pivottable/2.13.0/pivot.min.js"></script>
     <script src="https://cdn.plot.ly/plotly-basic-latest.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pivottable/2.22.0/plotly_renderers.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pivottable/2.22.0/export_renderers.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/screenfull.js/5.1.0/screenfull.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.4.4/d3.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.5.3/math.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/markdown-it/13.0.1/markdown-it.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.1.0/uuidv4.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/seikichi/tiff.js@master/tiff.min.js"></script>
 
     <!-- Polyfill for importmap on all browsers -->
     <script
@@ -64,7 +66,8 @@
           "@lljj/vue3-form-element": "https://cdn.jsdelivr.net/npm/@lljj/vue3-form-element@1.12.0/dist/vue3-form-element.esm.js",
           "element-plus": "https://cdn.jsdelivr.net/npm/element-plus@2.1.1/dist/index.full.mjs",
           "three": "https://unpkg.com/three@0.138.0/build/three.module.js",
-          "OrbitControls": "https://unpkg.com/three@0.138.0/examples/jsm/controls/OrbitControls.js"
+          "OrbitControls": "https://unpkg.com/three@0.138.0/examples/jsm/controls/OrbitControls.js",
+          "client-zip": "https://cdn.jsdelivr.net/npm/client-zip@2.2.2/index.min.js"
         }
       }
     </script>
@@ -79,12 +82,14 @@
       import * as ElementPlus from "element-plus";
       import ForceGraph from "./assets/js/d3-force-graph-module.js";
       import { OrbitControls, MapControls } from "OrbitControls";
+      import { downloadZip } from "client-zip"
 
       window["JsonSchemaFormComponent"] = JsonSchemaFormComponent;
       window["RemoteVue"] = RemoteVue;
       window["ForceGraph"] = ForceGraph;
       window["OrbitControls"] = OrbitControls;
-      window["THREE"] = THREE;     
+      window["THREE"] = THREE;
+      window["downloadZip"] = downloadZip;
 
       RemoteVue.component("vues/app.vue").then((root) => {
         const router = VueRouter.createRouter({
