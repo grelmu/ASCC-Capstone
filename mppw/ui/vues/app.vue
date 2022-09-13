@@ -460,6 +460,47 @@ export default {
         );
       });
     },
+    apiFetchTimeSeriesBounds(id){
+      // Obtain the bounds of a time series
+      return this.apiFetch(`artifacts/${id}/services/time-series/bounds`, {
+        method:"GET",
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when retrieving json bounds for artifact"
+        );
+      });
+    },
+    apiFetchTimeSeriesUrl(id, data) {
+      // Build query URL by encoding all existing props of 'data' obj
+      let fetchUrl =
+        `artifacts/${id}/services/time-series/sample?` +
+        Object.keys(data)
+          .map((key) => {
+            return key + "=" + encodeURIComponent(data[key]);
+          })
+          .join("&");
+
+      return fetchUrl;
+    },
+    apiFetchTimeSeries(id, data) {
+      // Build query URL by encoding all existing props of 'data' obj
+      let fetchUrl = this.apiFetchTimeSeriesUrl(id, data);
+
+      return this.apiFetch(fetchUrl, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when retrieving json schema for artifact"
+        );
+      });
+    },
     //Function to get the stats data using the api
     apiFetchDatabaseBucketStats(id) {
       return this.apiFetch(

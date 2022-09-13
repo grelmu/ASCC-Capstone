@@ -1,7 +1,7 @@
 <template>
   <div v-if="artifact">
-    
-     {{ artifact }}
+
+    {{ artifact }}
   </div>
 </template>
 

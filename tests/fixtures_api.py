@@ -9,7 +9,7 @@ import os
 import tempfile
 import dbvox
 
-from fff_post import mppw_api
+from mppw_clients import mppw_clients
 from mppw import storage
 
 """
@@ -27,7 +27,7 @@ def api_storage_layer():
 
 @pytest.fixture
 def api_client():
-    client = mppw_api.MppwClient("http://localhost:8000/api")
+    client = mppw_clients.mppw_api.MppwClient("http://localhost:8000/api")
     client.login("admin", "password")
     return client
 
@@ -67,4 +67,10 @@ def build_cloud_url(bucket_url, collection):
     cloud_furl = furl.furl(bucket_url)
     cloud_furl.path.segments.append(collection.name)
     cloud_furl.scheme = cloud_furl.scheme + "+dbvox"
+    return cloud_furl.url
+
+def build_time_series_url(bucket_url, collection):
+    cloud_furl = furl.furl(bucket_url)
+    cloud_furl.path.segments.append(collection.name)
+    cloud_furl.scheme = cloud_furl.scheme + "+ts"
     return cloud_furl.url

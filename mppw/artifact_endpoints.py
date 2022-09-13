@@ -585,4 +585,47 @@ def create_router(app):
         else:
             raise fastapi.exceptions.HTTPException(fastapi.status.HTTP_400_BAD_REQUEST)
 
+    from .services.artifacts.digital_time_series_services import (
+        TimeSeriesServices
+    )
+
+    @router.get("/{id}/services/time-series/sample")
+    def time_series_sample(
+        id: str,
+        time_bounds: str = None,
+        user: security.ScopedUser = Security(
+            request_user(app), scopes=[PROVENANCE_SCOPE]
+        ),
+        service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
+    ):
+        
+        artifact: models.DigitalArtifact = read(id, user, service_layer.repo_layer)
+        services: TimeSeriesServices = service_layer.artifact_services_for(
+            artifact, TimeSeriesServices
+        )
+
+        time_bounds = json.loads(time_bounds)
+        time_bounds = tuple(arrow.get(bound).datetime for bound in time_bounds)
+
+        cursor = services.sample(artifact, time_bounds)
+        return cursor
+
+    @router.get("/{id}/services/time-series/bounds")
+    def time_series_bounds(
+        id: str,
+        user: security.ScopedUser = Security(
+            request_user(app), scopes=[PROVENANCE_SCOPE]
+        ),
+        service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
+    ):
+        artifact: models.DigitalArtifact = read(id, user, service_layer.repo_layer)
+
+        services: TimeSeriesServices = service_layer.artifact_services_for(
+            artifact, TimeSeriesServices
+        )
+
+        bounds = services.get_bounds(artifact)
+        bounds = [str(arrow.get(bounds[0])), str(arrow.get(bounds[1]))]
+        return bounds
+
     return router
