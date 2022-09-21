@@ -16,7 +16,15 @@
                 ":test-measurements": [":digital:frame:force-displacement"],
                 ":images": [":digital:file"],
                 ":notes": [":digital:file", ":digital:text"],
-                ":tested-specimen": [":material:part"],
+                ":tested-specimen": [
+                  [
+                    ":material:part",
+                    {
+                      ":images": [":digital:file"],
+                      ":notes": [":digital:file", ":digital:text"],
+                    },
+                  ],
+                ],
                 ":computed-properties": [
                   [
                     ":digital:document:tensile-properties",

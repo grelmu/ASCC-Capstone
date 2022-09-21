@@ -289,6 +289,7 @@ class ArtifactRepository(MongoDBRepository):
         self,
         id: str = None,
         project_ids: List[str] = None,
+        name: str = None,
         parent_frame_id: str = None,
         active: Optional[bool] = None,
     ):
@@ -297,6 +298,8 @@ class ArtifactRepository(MongoDBRepository):
             query_doc["_id"] = coerce_doc_id(id)
         if project_ids is not None:
             query_doc["project"] = {"$in": list(map(coerce_doc_id, project_ids))}
+        if name is not None:
+            query_doc["name"] = name
         if parent_frame_id is not None:
             query_doc["spatial_frame.parent_frame"] = coerce_doc_id(parent_frame_id)
         if active is not None:
@@ -312,6 +315,7 @@ class ArtifactRepository(MongoDBRepository):
         self,
         id: str = None,
         project_ids: List[str] = None,
+        name: str = None,
         parent_frame_id: str = None,
         active: Optional[bool] = None,
     ):
@@ -322,6 +326,7 @@ class ArtifactRepository(MongoDBRepository):
                     self._query_doc_for(
                         id=id,
                         project_ids=project_ids,
+                        name=name,
                         parent_frame_id=parent_frame_id,
                         active=active,
                     )
@@ -333,6 +338,7 @@ class ArtifactRepository(MongoDBRepository):
         self,
         id: str = None,
         project_ids: List[str] = None,
+        name: str = None,
         parent_frame_id: str = None,
         active: Optional[bool] = None,
         skip: Optional[int] = None,
@@ -345,6 +351,7 @@ class ArtifactRepository(MongoDBRepository):
             self._query_doc_for(
                 id=id,
                 project_ids=project_ids,
+                name=name,
                 parent_frame_id=parent_frame_id,
                 active=active,
             )
@@ -1107,6 +1114,9 @@ class BucketRepository:
         return gridfs.GridFSBucket(db, bucket_id)
 
     def add_file_to_gridfs_bucket(self, bucket_url, path, file: tempfile.TemporaryFile, replace=False):
+        
+        if not path.startswith("/"):
+            path = "/" + path
 
         resolved_bucket_url = self.storage_layer.resolve_local_storage_url_host(
             bucket_url
