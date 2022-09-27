@@ -94,9 +94,7 @@ class TimeSeriesServices(ArtifactServices):
         )
 
         client = pymongo.MongoClient(base_url)
-        size = client[ts_furl.path.segments[0]].command("collstats",colname)["size"]
-        count = client[ts_furl.path.segments[0]].command("collstats",colname)["count"]
-        return count/size
+        return client[ts_furl.path.segments[0]].command("collstats",colname)["avgObjSize"]
 
     class DbTimeSeriesMeta(pydantic.BaseModel):
         t_bounds: Optional[list]
@@ -203,7 +201,12 @@ class TimeSeriesServices(ArtifactServices):
         # Converted the desired limit of bytes to a limit of docs
         if(est_limit_bytes != None):
             avg_size = self.get_mdb_collection_avg_doc_size(collection.name)
-            limit = int(est_limit_bytes/avg_size)
+
+            # default limit == 0 means no limit to doc count in .find()
+            if(limit == 0):
+                limit = int(est_limit_bytes/avg_size)
+            else:
+                limit = min(limit, int(est_limit_bytes/avg_size))
 
         t_query = TimeSeriesServices.mdb_time_bounded_query(collection, meta, t_bounds)
 
