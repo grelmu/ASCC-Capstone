@@ -593,6 +593,8 @@ def create_router(app):
     def time_series_sample(
         id: str,
         time_bounds: str = None,
+        limit: int = 0,
+        est_limit_bytes: int = None,
         user: security.ScopedUser = Security(
             request_user(app), scopes=[PROVENANCE_SCOPE]
         ),
@@ -607,7 +609,7 @@ def create_router(app):
         time_bounds = json.loads(time_bounds)
         time_bounds = tuple(arrow.get(bound).datetime for bound in time_bounds)
 
-        cursor = services.sample(artifact, time_bounds)
+        cursor = services.sample(artifact, time_bounds, limit, est_limit_bytes)
         return cursor
 
     @router.get("/{id}/services/time-series/bounds")

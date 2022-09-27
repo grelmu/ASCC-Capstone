@@ -34,11 +34,11 @@ class TimeSeriesServices(ArtifactServices):
         t: datetime.datetime
         ctx: Any
 
-    def sample(self, time_series_artifact: models.DigitalArtifact, t_bounds):
+    def sample(self, time_series_artifact: models.DigitalArtifact, t_bounds, limit, est_limit_bytes):
 
         series_furl = furl.furl(time_series_artifact.url_data)
         if series_furl.scheme in ["mongodb+ts", "mongodb", "mongodb+dbvox"]:
-            return self.sample_mongodb_ts(time_series_artifact, t_bounds)
+            return self.sample_mongodb_ts(time_series_artifact, t_bounds, limit, est_limit_bytes)
         else:
             raise UnkownTimeSeriesTypeException(
                 f"Unkown time series type for {series_furl.url}"
@@ -78,6 +78,25 @@ class TimeSeriesServices(ArtifactServices):
 
         client = pymongo.MongoClient(base_url)
         return client[ts_furl.path.segments[0]][ts_furl.path.segments[1]]
+
+    def get_mdb_collection_avg_doc_size(self, colname):
+        """
+        Get the average document size for the collection
+        """
+        time_series_furl = furl.furl(time_series_artifact.url_data)
+        ts_furl = furl.furl(time_series_furl.url)
+        base_furl = furl.furl(ts_furl)
+        base_furl.scheme = "mongodb"
+        base_furl.path = base_furl.path.segments[0]
+
+        base_url = self.repo_layer.storage_layer.resolve_local_storage_url_host(
+            base_furl.url
+        )
+
+        client = pymongo.MongoClient(base_url)
+        size = client[ts_furl.path.segments[0]].command("collstats",colname)["size"]
+        count = client[ts_furl.path.segments[0]].command("collstats",colname)["count"]
+        return count/size
 
     class DbTimeSeriesMeta(pydantic.BaseModel):
         t_bounds: Optional[list]
@@ -177,13 +196,18 @@ class TimeSeriesServices(ArtifactServices):
         _, meta = self.get_mdb_ts_collection_meta(time_series_artifact, with_bounds=True)
         return meta.t_bounds
 
-    def sample_mongodb_ts(self, time_series_artifact: models.DigitalArtifact, t_bounds):
+    def sample_mongodb_ts(self, time_series_artifact: models.DigitalArtifact, t_bounds, limit, est_limit_bytes):
 
         collection, meta = self.get_mdb_ts_collection_meta(time_series_artifact)
 
+        # Converted the desired limit of bytes to a limit of docs
+        if(est_limit_bytes != None):
+            avg_size = self.get_mdb_collection_avg_doc_size(collection.name)
+            limit = int(est_limit_bytes/avg_size)
+
         t_query = TimeSeriesServices.mdb_time_bounded_query(collection, meta, t_bounds)
 
-        docs = collection.find(t_query)
+        docs = collection.find(t_query,limit=limit)
         for doc in docs:
             # We've gotta wrap results in some standard format so the consumer can know
             # what time the event is at
