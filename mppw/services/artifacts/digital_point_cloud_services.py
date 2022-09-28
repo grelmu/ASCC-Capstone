@@ -95,10 +95,12 @@ class PointCloudServices(ArtifactServices):
             )
 
             client = pymongo.MongoClient(base_url)
-            collection = client[dbvox_furl.path.segments[0]][dbvox_furl.path.segments[1]]
+            collection = client[dbvox_furl.path.segments[0]][
+                dbvox_furl.path.segments[1]
+            ]
 
             meta = collection.find_one({"_id": None})
-            return meta['xyzt_bounds']
+            return meta["xyzt_bounds"]
 
     def sample_mongodb_dbvox(self, dbvox_url, space_bounds, time_bounds):
 

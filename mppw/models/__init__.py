@@ -386,7 +386,9 @@ class AttachmentGraph(networkx.MultiDiGraph):
                 else transform.output_artifacts
             ).append(DbId.init(node.artifact_id))
 
-        transforms = sorted(list(kind_path_transforms.values()), key=lambda t: t.kind_urn)
+        transforms = sorted(
+            list(kind_path_transforms.values()), key=lambda t: t.kind_urn
+        )
 
         return transforms
 

@@ -7,6 +7,7 @@ from mppw import services
 Unit tests of the services layer
 """
 
+
 def test_services_load_qualname():
 
     """

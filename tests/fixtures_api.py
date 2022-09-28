@@ -69,6 +69,7 @@ def build_cloud_url(bucket_url, collection):
     cloud_furl.scheme = cloud_furl.scheme + "+dbvox"
     return cloud_furl.url
 
+
 def build_time_series_url(bucket_url, collection):
     cloud_furl = furl.furl(bucket_url)
     cloud_furl.path.segments.append(collection.name)

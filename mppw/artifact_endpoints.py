@@ -593,9 +593,7 @@ def create_router(app):
         else:
             raise fastapi.exceptions.HTTPException(fastapi.status.HTTP_400_BAD_REQUEST)
 
-    from .services.artifacts.digital_time_series_services import (
-        TimeSeriesServices
-    )
+    from .services.artifacts.digital_time_series_services import TimeSeriesServices
 
     @router.get("/{id}/services/time-series/sample")
     def time_series_sample(
@@ -606,7 +604,7 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-        
+
         artifact: models.DigitalArtifact = read(id, user, service_layer.repo_layer)
         services: TimeSeriesServices = service_layer.artifact_services_for(
             artifact, TimeSeriesServices

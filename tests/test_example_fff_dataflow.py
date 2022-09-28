@@ -72,7 +72,10 @@ def api_fff(api_client, api_project):
     flir_ts_furl.path.add("flir_sample")
     flir_ts_furl.scheme = "mongodb+ts"
 
-    for ts_name, ts_url in [("OPC Time Series", opc_ts_furl.url), ("FLIR Time Series", flir_ts_furl.url)]:
+    for ts_name, ts_url in [
+        ("OPC Time Series", opc_ts_furl.url),
+        ("FLIR Time Series", flir_ts_furl.url),
+    ]:
 
         ts = api_client.post_json(
             "/artifacts/",
@@ -99,6 +102,7 @@ def api_fff(api_client, api_project):
 
     return fff_operation
 
+
 def test_opc_voxelization(api_client, api_project, api_fff):
 
     """
@@ -107,6 +111,7 @@ def test_opc_voxelization(api_client, api_project, api_fff):
 
     # TODO
     pass
+
 
 def test_time_series_fetch(api_client, api_fff):
     """
@@ -118,7 +123,7 @@ def test_time_series_fetch(api_client, api_fff):
     for artifact in artifacts:
         if artifact[1]["type_urn"] == "urn:x-mfg:artifact:digital:time-series":
             time_series_artifacts.append(artifact)
-    
+
     # test the first artifact
     opc_artifact = time_series_artifacts[0][1]
     ts_bounds_query = furl.furl(
@@ -130,6 +135,6 @@ def test_time_series_fetch(api_client, api_fff):
     ts_sample_query = furl.furl(
         "/artifacts/" + opc_artifact["id"] + "/services/time-series/sample"
     )
-    ts_sample_query.query.params["time_bounds"] = json.dumps([bounds[0],bounds[1]])
+    ts_sample_query.query.params["time_bounds"] = json.dumps([bounds[0], bounds[1]])
     docs = api_client.get_json(ts_sample_query.url)
     assert len(docs) >= 10

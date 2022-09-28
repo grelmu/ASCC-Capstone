@@ -39,7 +39,9 @@ class CharacterizeTensileTestServices(OperationServices):
             type_urn=models.MaterialArtifact.URN_PREFIX + ":sample",
             project=operation.project,
             name=kwargs.get("sample_name", "Test Sample"),
-            description=kwargs.get("sample_description", "Sample containing all specimens under test"),
+            description=kwargs.get(
+                "sample_description", "Sample containing all specimens under test"
+            ),
         )
 
         sample_artifact = self.repo_layer.artifacts.create(sample_artifact)

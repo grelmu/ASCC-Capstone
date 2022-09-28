@@ -15,4 +15,3 @@ class DatabaseBucketServices(ArtifactServices):
 
     def stats(self, artifact: models.DigitalArtifact):
         return self.repo_layer.buckets.get_db_stats(artifact.url_data)
-    

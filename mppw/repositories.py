@@ -537,7 +537,11 @@ class OperationRepository(MongoDBRepository):
                 list(
                     self.collection.find(
                         self._query_doc_for(
-                            id=id, project_ids=project_ids, name=name, tags=tags, active=active
+                            id=id,
+                            project_ids=project_ids,
+                            name=name,
+                            tags=tags,
+                            active=active,
                         )
                     )
                 ),
@@ -581,7 +585,7 @@ class OperationRepository(MongoDBRepository):
                     tags=tags,
                     active=active,
                     status=status,
-                    type_urn=type_urn
+                    type_urn=type_urn,
                 )
             )
             total = len(list(results.clone()))
@@ -603,7 +607,13 @@ class OperationRepository(MongoDBRepository):
         else:
 
             query = self._query_doc_for(
-                id=id, project_ids=project_ids, name=name, tags=tags, active=active, status=status, type_urn=type_urn
+                id=id,
+                project_ids=project_ids,
+                name=name,
+                tags=tags,
+                active=active,
+                status=status,
+                type_urn=type_urn,
             )
             results = self.collection.aggregate(
                 self._fulltext_agg_docs_for(
@@ -805,7 +815,9 @@ class BucketRepository:
         bucket_furl = furl.furl(bucket_url)
 
         if bucket_furl.scheme == BucketRepository.GRIDFS_SCHEME:
-            return self.add_file_to_gridfs_bucket(bucket_url, path, file, replace=replace)
+            return self.add_file_to_gridfs_bucket(
+                bucket_url, path, file, replace=replace
+            )
         else:
             raise UnsupportedSchemeException(bucket_furl.url)
 
@@ -1126,8 +1138,10 @@ class BucketRepository:
         db = client.get_default_database()
         return gridfs.GridFSBucket(db, bucket_id)
 
-    def add_file_to_gridfs_bucket(self, bucket_url, path, file: tempfile.TemporaryFile, replace=False):
-        
+    def add_file_to_gridfs_bucket(
+        self, bucket_url, path, file: tempfile.TemporaryFile, replace=False
+    ):
+
         if not path.startswith("/"):
             path = "/" + path
 

@@ -35,13 +35,12 @@ def create_router(app):
         user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
     ):
         return list(schemas.get_artifact_schemas())
-    
+
     @router.get("/artifacts/by_type", response_model=schemas.ArtifactSchema)
     def query_artifact_schema(
         type_urn: str,
         user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
     ):
         return schemas.get_artifact_schema(type_urn)
-
 
     return router
