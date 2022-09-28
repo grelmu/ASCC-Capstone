@@ -2,15 +2,22 @@
   <div v-if="artifact">
     <h1>{{ artifact.name || defaultName() }}</h1>
 
-    <p>{{ artifact }}</p>
+    <details>
+      <summary>Artifact</summary>
+      <p>{{ artifact }}</p>
+    </details>
 
     <h2>Provenance</h2>
 
     <div :id="graphElId"></div>
 
-    <p v-if="provenance">
-      {{ provenance }}
-    </p>
+    <details v-if="provenance">
+      <summary>Provenance</summary>
+      <p>
+        {{ provenance }}
+      </p>
+    </details>
+
   </div>
 </template>
 
