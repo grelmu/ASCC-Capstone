@@ -71,6 +71,7 @@ def create_router(app):
     def query(
         project_ids: List[str] = fastapi.Query(None),
         name: str = fastapi.Query(None),
+        tags: List[str] = fastapi.Query(None),
         active: bool = fastapi.Query(True),
         user: security.ScopedUser = Security(
             request_user(app), scopes=[PROVENANCE_SCOPE]
@@ -87,6 +88,7 @@ def create_router(app):
             repo_layer.artifacts.query(
                 project_ids=project_ids,
                 name=name,
+                tags=tags,
                 active=active,
             )
         )
@@ -99,6 +101,7 @@ def create_router(app):
     def paged_query(
         project_ids: List[str] = fastapi.Query(None),
         name: str = fastapi.Query(None),
+        tags: List[str] = fastapi.Query(None),
         active: bool = fastapi.Query(True),
         page_size: int = fastapi.Query(None),
         page_num: int = fastapi.Query(None),
@@ -126,6 +129,7 @@ def create_router(app):
         results, total = repo_layer.artifacts.paged_query(
             project_ids=project_ids,
             name=name,
+            tags=tags,
             active=active,
             skip=skip,
             limit=page_size,

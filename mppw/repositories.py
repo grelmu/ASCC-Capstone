@@ -290,6 +290,7 @@ class ArtifactRepository(MongoDBRepository):
         id: str = None,
         project_ids: List[str] = None,
         name: str = None,
+        tags: List[str] = None,
         parent_frame_id: str = None,
         active: Optional[bool] = None,
     ):
@@ -300,6 +301,8 @@ class ArtifactRepository(MongoDBRepository):
             query_doc["project"] = {"$in": list(map(coerce_doc_id, project_ids))}
         if name is not None:
             query_doc["name"] = name
+        if tags is not None:
+            query_doc["tags"] = {"$in": list(tags)}
         if parent_frame_id is not None:
             query_doc["spatial_frame.parent_frame"] = coerce_doc_id(parent_frame_id)
         if active is not None:
@@ -316,6 +319,7 @@ class ArtifactRepository(MongoDBRepository):
         id: str = None,
         project_ids: List[str] = None,
         name: str = None,
+        tags: List[str] = None,
         parent_frame_id: str = None,
         active: Optional[bool] = None,
     ):
@@ -327,6 +331,7 @@ class ArtifactRepository(MongoDBRepository):
                         id=id,
                         project_ids=project_ids,
                         name=name,
+                        tags=tags,
                         parent_frame_id=parent_frame_id,
                         active=active,
                     )
@@ -339,6 +344,7 @@ class ArtifactRepository(MongoDBRepository):
         id: str = None,
         project_ids: List[str] = None,
         name: str = None,
+        tags: List[str] = None,
         parent_frame_id: str = None,
         active: Optional[bool] = None,
         skip: Optional[int] = None,
@@ -352,6 +358,7 @@ class ArtifactRepository(MongoDBRepository):
                 id=id,
                 project_ids=project_ids,
                 name=name,
+                tags=tags,
                 parent_frame_id=parent_frame_id,
                 active=active,
             )
@@ -432,6 +439,7 @@ class OperationRepository(MongoDBRepository):
         id: str = None,
         project_ids: List[str] = None,
         name: Optional[str] = None,
+        tags: Optional[List[str]] = None,
         status: Optional[str] = None,
         type_urn: Optional[str] = None,
         active: Optional[bool] = None,
@@ -447,6 +455,8 @@ class OperationRepository(MongoDBRepository):
         if name is not None:
             # Using a regex to match any names with $name in the string
             query_doc["name"] = {"$regex": name, "$options": "i"}
+        if tags is not None:
+            query_doc["tags"] = {"$in": list(tags)}
         if status is not None:
             query_doc["status"] = status
         if type_urn is not None:
@@ -517,6 +527,7 @@ class OperationRepository(MongoDBRepository):
         id: str = None,
         project_ids: List[str] = None,
         name: Optional[str] = None,
+        tags: Optional[List[str]] = None,
         active: Optional[bool] = None,
         fulltext_query: str = None,
     ):
@@ -526,14 +537,14 @@ class OperationRepository(MongoDBRepository):
                 list(
                     self.collection.find(
                         self._query_doc_for(
-                            id=id, project_ids=project_ids, name=name, active=active
+                            id=id, project_ids=project_ids, name=name, tags=tags, active=active
                         )
                     )
                 ),
             )
         else:
             query_doc = self._query_doc_for(
-                id=id, project_ids=project_ids, name=name, active=active
+                id=id, project_ids=project_ids, name=name, tags=tags, active=active
             )
             return map(
                 lambda doc: doc_to_model(doc, models.Operation),
@@ -549,6 +560,7 @@ class OperationRepository(MongoDBRepository):
         id: str = None,
         project_ids: List[str] = None,
         name: Optional[str] = None,
+        tags: Optional[List[str]] = None,
         active: Optional[bool] = None,
         status: Optional[str] = None,
         type_urn: Optional[str] = None,
@@ -566,6 +578,7 @@ class OperationRepository(MongoDBRepository):
                     id=id,
                     project_ids=project_ids,
                     name=name,
+                    tags=tags,
                     active=active,
                     status=status,
                     type_urn=type_urn
@@ -590,7 +603,7 @@ class OperationRepository(MongoDBRepository):
         else:
 
             query = self._query_doc_for(
-                id=id, project_ids=project_ids, name=name, active=active, status=status, type_urn=type_urn
+                id=id, project_ids=project_ids, name=name, tags=tags, active=active, status=status, type_urn=type_urn
             )
             results = self.collection.aggregate(
                 self._fulltext_agg_docs_for(

@@ -80,6 +80,14 @@ def build(*args):
             os.path.join(fff_analysis_dir, "dist"), os.path.join(dist_dir, "fff_analysis")
         )
 
+        mech_analysis_dir = os.path.join(root_dir, "mech_analysis")
+        subprocess.run(["poetry", "build"], cwd=mech_analysis_dir)
+
+        shutil.rmtree(os.path.join(dist_dir, "mech_analysis"), ignore_errors=True)
+        shutil.copytree(
+            os.path.join(mech_analysis_dir, "dist"), os.path.join(dist_dir, "mech_analysis")
+        )
+
         shutil.rmtree(
             os.path.join(containers_dir, project_name, "dist"), ignore_errors=True
         )

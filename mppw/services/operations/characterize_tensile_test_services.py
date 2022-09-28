@@ -23,7 +23,7 @@ class CharacterizeTensileTestServices(OperationServices):
         # Tensile test operations always have a default "sample" created
         if not list(operation.attachments.find_nodes_by_path(":sample")):
 
-            sample_artifact = self._init_sample_artifact(operation)
+            sample_artifact = self._init_sample_artifact(operation, **kwargs)
             self.attach(
                 operation,
                 models.AttachmentGraph.AttachmentNode.build(
@@ -33,13 +33,13 @@ class CharacterizeTensileTestServices(OperationServices):
 
         return operation
 
-    def _init_sample_artifact(self, operation):
+    def _init_sample_artifact(self, operation, **kwargs):
 
         sample_artifact = models.MaterialArtifact(
             type_urn=models.MaterialArtifact.URN_PREFIX + ":sample",
             project=operation.project,
-            name="Test Sample",
-            description="Sample containing all specimens under test",
+            name=kwargs.get("sample_name", "Test Sample"),
+            description=kwargs.get("sample_description", "Sample containing all specimens under test"),
         )
 
         sample_artifact = self.repo_layer.artifacts.create(sample_artifact)
