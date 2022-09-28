@@ -45,9 +45,14 @@ mppw-docker = "scripts.docker:main"
 mppw-migrations = "scripts.migrations:main"
 mppw-app = "scripts.app:main"
 
+[tool.poetry.group.dev.dependencies]
+requests-toolbelt = "^0.9.1"
+papermill = "^2.4.0"
+nbconvert = "^7.0.0"
+
 [tool.black]
 extend-exclude = '''
-(^/(containers|fff_post|mppw/pcl))
+(^/(containers|.*analysis|mppw_clients|mppw/pcl))
 '''
 
 [build-system]
