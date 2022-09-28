@@ -170,13 +170,26 @@ export default {
         nodeHighlightColor: "orange",
         nodeStroke: "#eee",
         linkStrokeWidth: (l) => Math.sqrt(l.value) * 3,
-        width: 800,
-        height: 1600,
+        width: 1600,
+        height: 1000,
         colors: ["lightsteelblue", "darkseagreen"],
         icons: ["\u{F01A6}", "\u{F072A}"],
       });
 
       graphEl.appendChild(graph);
+
+      // Zoom/pan behavior for force graph
+      function handleZoom(e) {
+        d3.selectAll('svg g')
+          .attr('transform', e.transform);
+      }
+
+      let zoom = d3.zoom()
+        .on('zoom', handleZoom)
+
+      d3.select('svg')
+        .call(zoom);
+
     },
     defaultName() {
       return (
