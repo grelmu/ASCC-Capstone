@@ -594,7 +594,7 @@ def create_router(app):
         id: str,
         time_bounds: str = None,
         limit: int = 0,
-        est_limit_bytes: int = None,
+        est_limit_bytes: int = 0,
         user: security.ScopedUser = Security(
             request_user(app), scopes=[PROVENANCE_SCOPE]
         ),

@@ -1,3 +1,4 @@
+from audioop import avg
 import furl
 import pydantic
 import pymongo
@@ -79,7 +80,7 @@ class TimeSeriesServices(ArtifactServices):
         client = pymongo.MongoClient(base_url)
         return client[ts_furl.path.segments[0]][ts_furl.path.segments[1]]
 
-    def get_mdb_collection_avg_doc_size(self, colname):
+    def get_mdb_collection_avg_doc_size(self, time_series_artifact, colname):
         """
         Get the average document size for the collection
         """
@@ -199,14 +200,19 @@ class TimeSeriesServices(ArtifactServices):
         collection, meta = self.get_mdb_ts_collection_meta(time_series_artifact)
 
         # Converted the desired limit of bytes to a limit of docs
-        if(est_limit_bytes != None):
-            avg_size = self.get_mdb_collection_avg_doc_size(collection.name)
+        # byte limit works same as the doc count limit: 0 => no limit
+        if(est_limit_bytes != 0):
+            avg_size = self.get_mdb_collection_avg_doc_size(time_series_artifact, collection.name)
 
+            # this insures we round up if est_limit_bytes/avg_size < 1, without this it would set the limit to 0, which is no limit
+            # alternatively could use math.ceil()
+            doc_limit_from_bytes = (est_limit_bytes // avg_size) + (est_limit_bytes % avg_size > 0) 
+            
             # default limit == 0 means no limit to doc count in .find()
             if(limit == 0):
-                limit = int(est_limit_bytes/avg_size)
+                limit = doc_limit_from_bytes
             else:
-                limit = min(limit, int(est_limit_bytes/avg_size))
+                limit = min(limit, doc_limit_from_bytes)
 
         t_query = TimeSeriesServices.mdb_time_bounded_query(collection, meta, t_bounds)
 

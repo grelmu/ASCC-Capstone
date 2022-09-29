@@ -206,12 +206,16 @@ export default {
       this.sliderVal = this.timeBoundsToSlider(sampleBounds);
       return this.refreshSamples(sampleBounds);
     },
-    refreshSamples(sampleBounds) {
+    refreshSamples(sampleBounds, doc_limit = 0, byte_limit = 0) {
 
       let sampleBoundsStr = [sampleBounds[0].toISOString(), sampleBounds[1].toISOString()];
 
+      let data = {"time_bounds":JSON.stringify(sampleBoundsStr),
+                  "limit":JSON.stringify(doc_limit),
+                  "est_limit_bytes":JSON.stringify(byte_limit)};
+
       this.isLoadingSampleDocs = true;
-      return this.$root.apiFetchTimeSeries(this.artifactId,{"time_bounds":JSON.stringify(sampleBoundsStr)}).then((result) => {
+      return this.$root.apiFetchTimeSeries(this.artifactId, data).then((result) => {
         this.sampleDocs = result;
         this.isImageDocs = (this.inferDocImage((this.sampleDocs || []).length > 0 ? this.sampleDocs[0] : {}) != null);
         this.pivotData = this.buildPivotData(this.sampleDocs);
