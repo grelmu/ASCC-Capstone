@@ -162,6 +162,13 @@ export default {
         this.sliderVal = [minSlider, this.sliderMax];
       });
     },
+    inferBoundsFromDocs(docs){
+      if(docs.length > 0) {
+        let bounds = [new Date(docs[0]["t"]), new Date(docs[docs.length-1]["t"])]; // Making the assumption that the documents are sorted by time
+        this.datetime = bounds;
+        this.sliderVal = this.timeBoundsToSlider(bounds);
+      }
+    },
     sliderToTimeBounds(sliderVal) {
       return [new Date(this.timeBounds[0].getTime() + (sliderVal[0] * 1000)),
               new Date(this.timeBounds[0].getTime() + (sliderVal[1] * 1000))];
@@ -206,7 +213,7 @@ export default {
       this.sliderVal = this.timeBoundsToSlider(sampleBounds);
       return this.refreshSamples(sampleBounds);
     },
-    refreshSamples(sampleBounds, doc_limit = 0, byte_limit = 0) {
+    refreshSamples(sampleBounds, doc_limit = 0, byte_limit = 1000) {
 
       let sampleBoundsStr = [sampleBounds[0].toISOString(), sampleBounds[1].toISOString()];
 
@@ -223,6 +230,7 @@ export default {
       })
       .finally(() => {
         this.isLoadingSampleDocs = false;
+        this.inferBoundsFromDocs(this.sampleDocs);
       });
     },
     toNameSlug(name) {
