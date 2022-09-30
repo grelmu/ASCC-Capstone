@@ -142,6 +142,22 @@ function ForceGraph(
 
   const node = svg.append("g").selectAll("circle").data(nodes).join("g");
 
+  let expansionRatio = 3;
+  // Resize node content when any part of the node is hovered over
+  node.on("mouseover", function() {
+    let c = this.querySelector('circle');
+    c.style.transitionDuration = '.2s';
+    c.style.zIndex = '1000'; 
+    // Increase the radius of the circle
+    c.r.baseVal.value = c.r.baseVal.value * expansionRatio;
+  });
+  node.on("mouseout", function() {
+    let c = this.querySelector('circle');
+    c.style.transitionDuration = 'initial';
+    c.style.zIndex = 'initial';
+    c.r.baseVal.value = c.r.baseVal.value / expansionRatio; 
+  });
+
   const nodeCircles = node
     .append("circle")
     .attr("stroke", nodeStroke)

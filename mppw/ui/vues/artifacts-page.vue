@@ -2,7 +2,7 @@
   <div v-if="artifact">
     <h1>{{ artifact.name || defaultName() }}</h1>
 
-    <details>
+    <details class="card">
       <summary>Artifact</summary>
       <p>{{ artifact }}</p>
     </details>
@@ -11,7 +11,17 @@
 
     <div :id="graphElId"></div>
 
-    <details v-if="provenance">
+    <div class="pan-zoom-btn-container">
+      <div class="pan-zoom-btn">
+        <o-button outlined @click="centerZoom">Center</o-button>
+      </div>
+
+      <div class="pan-zoom-btn">
+        <o-button outlined @click="resetZoom">Reset Zoom</o-button>
+      </div>
+    </div>
+
+    <details v-if="provenance" class="card">
       <summary>Provenance</summary>
       <p>
         {{ provenance }}
@@ -29,6 +39,8 @@ export default {
       artifact: null,
       provenance: null,
       graphElId: null,
+      graphWidth: 1600,
+      graphHeight: 1000
     };
   },
 
@@ -170,25 +182,15 @@ export default {
         nodeHighlightColor: "orange",
         nodeStroke: "#eee",
         linkStrokeWidth: (l) => Math.sqrt(l.value) * 3,
-        width: 1600,
-        height: 1000,
+        width: this.graphWidth,
+        height: this.graphHeight,
         colors: ["lightsteelblue", "darkseagreen"],
         icons: ["\u{F01A6}", "\u{F072A}"],
       });
 
       graphEl.appendChild(graph);
 
-      // Zoom/pan behavior for force graph
-      function handleZoom(e) {
-        d3.selectAll('svg g')
-          .attr('transform', e.transform);
-      }
-
-      let zoom = d3.zoom()
-        .on('zoom', handleZoom)
-
-      d3.select('svg')
-        .call(zoom);
+      d3.select('svg').call(this.zoom());
 
     },
     defaultName() {
@@ -199,6 +201,23 @@ export default {
         ")"
       );
     },
+    zoom() {
+      return d3.zoom().on('zoom', this.handleZoom)
+    },
+    handleZoom(e) {
+      d3.selectAll('svg g')
+        .attr('transform', e.transform);
+    },
+    resetZoom() {
+      d3.select('svg')
+        .transition()
+        .call(this.zoom().scaleTo, 1);
+    },
+    centerZoom () {
+      d3.select('svg')
+        .transition()
+        .call(this.zoom().translateTo, 2 / this.graphWidth, 2 / this.graphHeight);
+    }
   },
   created() {
     this.artifactId = this.$route.params.id;
@@ -208,4 +227,14 @@ export default {
 };
 </script>
 
-<style scoped></style>
+<style scoped>
+details {padding: 5px;}
+summary::marker {color: #888888;}
+.pan-zoom-btn-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+}
+.pan-zoom-btn {margin: 5px;}
+</style>
