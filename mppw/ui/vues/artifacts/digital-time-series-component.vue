@@ -50,6 +50,9 @@
           <o-field label = "Max slider data size: [MiB]">
             <o-input v-model="mibLimit"></o-input>
           </o-field>
+          <o-field label = "Max picker data size: [MiB]">
+            <o-input v-model="pickerLimit"></o-input>
+          </o-field>
         </o-tab-item>
       </o-tabs>
     </div>
@@ -130,6 +133,7 @@ export default {
       firstSelected: false,
       isLoadingSampleDocs: false,
       mibLimit: 10,
+      pickerLimit: 100,
     };
   },
   props: {
@@ -218,7 +222,7 @@ export default {
 
       let sampleBounds = this.datetime;
       this.sliderVal = this.timeBoundsToSlider(sampleBounds);
-      return this.refreshSamples(sampleBounds); // No limits when using the button
+      return this.refreshSamples(sampleBounds,0,this.pickerLimit*(1024**2));
     },
     refreshSamples(sampleBounds, doc_limit = 0, byte_limit = 0) { // Default to no limit
 
