@@ -82,17 +82,6 @@ function ForceGraph(
     }
   };
 
-  // Force from right to left
-  const forceRight = () => {
-    for (let link of links) {
-      let dx = link.source.x - link.target.x;
-      if (dx > nodeRadius * 2) {
-        let d = nodeRadius * 3 + dx;
-        link.source.vx -= d * 0.1;
-        link.target.vx += d * 0.1;
-      }
-    }
-  };
 
   const simulation = d3
     .forceSimulation(nodes)
