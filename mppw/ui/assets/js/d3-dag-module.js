@@ -14,6 +14,17 @@ TODO:
 - [*] Change to Zherebko layout
 */
 
+/**
+ * 
+ * @param {Array} graphData An array of objects in the form:
+ *   [{
+ *     "id": "<NODE ID>",
+ *     "parentIds": ["<NODE ID>", "<NODE ID>", ...]
+ *   }]
+ * @param {Object} network Object containing "links" and "nodes" properties
+ * @param {Object} param2 Object containing google font icons
+ * @returns An array with the SVG width and height
+ */
 function Dag(graphData, network, {icons=null}) {
   console.log("Graph data: ", graphData);
   console.log("Network: ", network);
