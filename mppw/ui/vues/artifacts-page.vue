@@ -9,7 +9,8 @@
 
     <h2>Provenance</h2>
 
-    <div :id="graphElId"></div>
+    <!-- Provenance DAG goes here: -->
+    <svg></svg>
 
     <div class="pan-zoom-btn-container">
       <div class="pan-zoom-btn">
@@ -39,8 +40,8 @@ export default {
       artifact: null,
       provenance: null,
       graphElId: null,
-      graphWidth: 1600,
-      graphHeight: 1000
+      graphWidth: null,
+      graphHeight: null
     };
   },
 
@@ -100,16 +101,11 @@ export default {
         });
     },
     refreshProvenanceChart() {
-      let graphEl = document.getElementById(this.graphElId);
-      while (graphEl.children.length > 0)
-        graphEl.removeChild(graphEl.children[0]);
-
       let network = { nodes: [], links: [] };
 
       let nodeIdFor = function (node) {
         return (
-          node["artifact_id"] ||
-          node["operation_id"] + node["context_path"] + node["name"]
+          node["artifact_id"] || node["operation_id"] 
         );
       };
 
@@ -171,24 +167,30 @@ export default {
         network.links.push(networkLink);
       }
 
-      let graph = ForceGraph(network, {
-        nodeId: (d) => d.id,
-        nodeGroup: (d) => d.group,
-        nodeTitle: (d) => d.title,
-        nodeText: (d) => d.text,
-        nodeHref: (d) => d.href,
-        nodeHighlight: (d) => d.highlight,
-        nodeRadius: 30,
-        nodeHighlightColor: "orange",
-        nodeStroke: "#eee",
-        linkStrokeWidth: (l) => Math.sqrt(l.value) * 3,
-        width: this.graphWidth,
-        height: this.graphHeight,
-        colors: ["lightsteelblue", "darkseagreen"],
-        icons: ["\u{F01A6}", "\u{F072A}"],
-      });
+      // Build DAG structure to pass to dag-module
+      // TODO: make this process less wasteful (complexity-wise)
+      let parsedLinks = [];
+      network.links.forEach(link => {
+        let datapoint = {
+          id: nodeIdFor(link.edge.from_node),
+          parentIds: network.links.filter(
+            ln => ln.target == nodeIdFor(link.edge.from_node)
+          ).map(l => {return l.source})
+        }
+        parsedLinks.push(datapoint);
+      })
 
-      graphEl.appendChild(graph);
+      // Drop duplicates from parsedLinks:
+      let i1 = []; // intermediate array #1 holds unique node IDs
+      let i2 = []; // intermediate array #2 holds unique node objects
+      parsedLinks.forEach(l => {if (!i1.includes(l.id)) {
+        i1.push(l.id); i2.push(l)
+      }});
+
+      let dagGraph = Dag(i2, network, {icons: ["\u{F01A6}", "\u{F072A}"]})
+
+      this.graphWidth = dagGraph[0];
+      this.graphHeight = dagGraph[1];
 
       d3.select('svg').call(this.zoom());
 
@@ -206,6 +208,9 @@ export default {
     },
     handleZoom(e) {
       d3.selectAll('svg g')
+        // Get the first two <g>s, which are the nodes and edges
+        .filter(function(d, i) { return i == 0 || i == 1; })
+        // apply transformations to the graph
         .attr('transform', e.transform);
     },
     resetZoom() {
@@ -216,7 +221,7 @@ export default {
     centerZoom () {
       d3.select('svg')
         .transition()
-        .call(this.zoom().translateTo, 2 / this.graphWidth, 2 / this.graphHeight);
+        .call(this.zoom().translateTo, this.graphWidth / 2, this.graphHeight / 2);
     }
   },
   created() {
