@@ -225,10 +225,25 @@ export default {
           this.timeBoundsStart = new Date(time_bounds[0]);
           this.timeBoundsEnd = new Date(time_bounds[1]);
 
-          this.formData.time_bounds = JSON.stringify(time_bounds);
-          this.formData.space_bounds = JSON.stringify(bounds);
+          this.formData.time_bounds = JSON.stringify(this.incTimeBounds(time_bounds));
+          this.formData.space_bounds = JSON.stringify(this.incSpaceBounds(bounds));
           
         });
+    },
+    incSpaceBounds(bounds) {
+      let incBounds = [[], []]
+      for (let i = 0; i < bounds[0].length; ++i) {
+        incBounds[0].push(Math.ceil(bounds[0][i]) - 1);
+        incBounds[1].push(Math.floor(bounds[1][i]) + 1);
+      }
+      return incBounds;
+    },
+    incTimeBounds(bounds) {
+      let incBounds = [new Date(bounds[0] + "Z"), new Date(bounds[1] + "Z")];
+      incBounds[0].setMinutes(incBounds[0].getMinutes(), incBounds[0].getSeconds(), 0);
+      incBounds[1].setMinutes(incBounds[1].getMinutes(), incBounds[1].getSeconds() + 1, 0);
+      incBounds = [incBounds[0].toISOString().substring(0, 19), incBounds[1].toISOString().substring(0, 19)];
+      return incBounds;
     },
     normalizeTimeBounds() {
       this.formData.time_bounds = this.normTB(
@@ -263,8 +278,8 @@ export default {
           this.tbChunks = this.getDateChunks(
             new Date(this.timeBoundsStart),
             new Date(this.timeBoundsEnd),
-            // This means chunks are 60 minutes long: 
-            60
+            // This means chunks contain 1 minute of data: 
+            1
           );
       });
     },
@@ -328,7 +343,7 @@ export default {
         let e = new Date(s);
         e.setMinutes(e.getMinutes() + chunkSize);
         result.push({start:new Date(s), end: e <= end? e : new Date(end)});
-        s.setMinutes(s.getMinutes() + chunkSize + 1); 
+        s.setMinutes(s.getMinutes() + chunkSize); 
       }
       return result;
     },
