@@ -5,7 +5,7 @@
         <template v-slot:trigger="trigger">
           <div class="card-header" role="button">
             <router-link
-              v-if="attachment['attachment_mode'] == 'input'"
+              v-if="attachment['attachment_mode'] == 'input' && parentOp"
               :to="'/operations/' + parentOp['id']"
               :title="parentOp['name']"
               target="_blank"

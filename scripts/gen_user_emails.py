@@ -27,10 +27,13 @@ def main(
 
         user_filename = f"./{username}.txt"
 
-        content = str.format(TEMPLATE, warehouse_url=warehouse_url, username=username, password=password)
+        content = str.format(
+            TEMPLATE, warehouse_url=warehouse_url, username=username, password=password
+        )
 
-        with open(user_filename, 'w') as f:
+        with open(user_filename, "w") as f:
             f.write(content)
+
 
 if __name__ == "__main__":
     argh.dispatch_command(main)

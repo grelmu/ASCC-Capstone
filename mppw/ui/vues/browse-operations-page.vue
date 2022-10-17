@@ -306,6 +306,10 @@ export default {
           return "mdi-ruler";
         case "characterize:tensile-test":
           return "mdi-weight-lifter";
+        case "characterize:shear-test":
+          return "mdi-weight-lifter";
+        case "characterize:compression-test":
+          return "mdi-weight-lifter";
         default:
           return "mdi-help-rhombus";
       }

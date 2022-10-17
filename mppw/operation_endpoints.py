@@ -71,6 +71,7 @@ def create_router(app):
     def query(
         project_ids: List[str] = fastapi.Query(None),
         name: str = fastapi.Query(None),
+        tags: List[str] = fastapi.Query(None),
         active: bool = fastapi.Query(True),
         fulltext_query: str = fastapi.Query(None),
         limit: int = fastapi.Query(None),
@@ -88,6 +89,7 @@ def create_router(app):
         result = repo_layer.operations.query(
             project_ids=project_ids,
             name=name,
+            tags=tags,
             active=active,
             fulltext_query=fulltext_query,
         )
@@ -106,6 +108,7 @@ def create_router(app):
     def paged_query(
         project_ids: List[str] = fastapi.Query(None),
         name: str = fastapi.Query(None),
+        tags: List[str] = fastapi.Query(None),
         active: bool = fastapi.Query(True),
         status: str = fastapi.Query(None),
         type_urn: str = fastapi.Query(None),
@@ -131,11 +134,12 @@ def create_router(app):
         # MongoDB's sort function expects either 1 or -1
         #   Convert sort_dir to match
         if sort_dir is not None:
-            sort_dir = 1 if sort_dir == 'asc' else -1
+            sort_dir = 1 if sort_dir == "asc" else -1
 
         results, total = repo_layer.operations.paged_query(
             project_ids=project_ids,
             name=name,
+            tags=tags,
             active=active,
             status=status,
             type_urn=type_urn,
@@ -146,7 +150,7 @@ def create_router(app):
             fulltext_query=fulltext_query,
         )
 
-        return PaginatedOperations(results = list(results), total=total) 
+        return PaginatedOperations(results=list(results), total=total)
 
     @router.put("/{id}", response_model=bool)
     def update(

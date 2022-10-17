@@ -1,7 +1,7 @@
 {
-  type_urn: "urn:x-mfg:operation:characterize:shear-test",
-  name: "Shear Test Operation",
-  description: "A test of shear stress response",
+  type_urn: "urn:x-mfg:operation:characterize:compression-test",
+  name: "Compression Test Operation",
+  description: "A test of compression stress response",
   parent_urns: ["urn:x-mfg:operation:default"],
   attachments: {
     ":sample": [
@@ -27,7 +27,7 @@
                 ],
                 ":computed-properties": [
                   [
-                    ":digital:document:shear-properties",
+                    ":digital:document:compression-properties",
                     {
                       ":notes": [":digital:file", ":digital:text"],
                     },
@@ -38,7 +38,7 @@
           ],
           ":computed-properties": [
             [
-              ":digital:document:shear-properties",
+              ":digital:document:compression-properties",
               {
                 ":notes": [":digital:file", ":digital:text"],
               },
@@ -94,6 +94,6 @@
     ],
   },
   services: {
-    class_qualname: "mppw.services.operations.characterize_shear_test_services:CharacterizeShearTestServices",
+    class_qualname: "mppw.services.operations.characterize_compression_test_services:CharacterizeCompressionTestServices",
   },
 }

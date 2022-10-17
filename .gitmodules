@@ -4,3 +4,6 @@
 [submodule "mppw_clients"]
 	path = mppw_clients
 	url = git@gitlab.composites.umaine.edu:DataProcessing/material-process-warehouse-clients.git
+[submodule "mech_analysis"]
+	path = mech_analysis
+	url = git@gitlab.composites.umaine.edu:DataProcessing/cherry.git

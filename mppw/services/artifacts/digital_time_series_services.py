@@ -23,8 +23,8 @@ class UnknownTimeSeriesFieldException(Exception):
 class UnknownTimeSeriesEncodingException(Exception):
     pass
 
-class TimeSeriesServices(ArtifactServices):
 
+class TimeSeriesServices(ArtifactServices):
     class TEvent(models.BaseJsonModel):
 
         """
@@ -150,7 +150,10 @@ class TimeSeriesServices(ArtifactServices):
             if first_ts is None:
                 meta.t_bounds = [None, None]
             else:
-                meta.t_bounds = [arrow.get(first_ts[meta.dt_field]).datetime, arrow.get(last_ts[meta.dt_field]).datetime]
+                meta.t_bounds = [
+                    arrow.get(first_ts[meta.dt_field]).datetime,
+                    arrow.get(last_ts[meta.dt_field]).datetime,
+                ]
 
         return meta
 
@@ -171,10 +174,15 @@ class TimeSeriesServices(ArtifactServices):
                 f"Cannot query unkown datetime type: {meta.dt_encoding}"
             )
 
-        return {meta.dt_field: {"$gte": t_bounds[0], "$lte": t_bounds[-1]}, "_id": {"$ne": None}}
+        return {
+            meta.dt_field: {"$gte": t_bounds[0], "$lte": t_bounds[-1]},
+            "_id": {"$ne": None},
+        }
 
     def get_mbd_bounds(self, time_series_artifact: models.DigitalArtifact):
-        _, meta = self.get_mdb_ts_collection_meta(time_series_artifact, with_bounds=True)
+        _, meta = self.get_mdb_ts_collection_meta(
+            time_series_artifact, with_bounds=True
+        )
         return meta.t_bounds
 
     def sample_mongodb_ts(self, time_series_artifact: models.DigitalArtifact, t_bounds):
@@ -187,4 +195,6 @@ class TimeSeriesServices(ArtifactServices):
         for doc in docs:
             # We've gotta wrap results in some standard format so the consumer can know
             # what time the event is at
-            yield TimeSeriesServices.TEvent(t=arrow.get(doc[meta.dt_field]).datetime, ctx=doc)
+            yield TimeSeriesServices.TEvent(
+                t=arrow.get(doc[meta.dt_field]).datetime, ctx=doc
+            )

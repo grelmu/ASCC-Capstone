@@ -6,5 +6,5 @@ from ... import models
 from .characterize_tensile_test_services import CharacterizeTensileTestServices
 
 
-class CharacterizeShearTestServices(CharacterizeTensileTestServices):
+class CharacterizeCompressionTestServices(CharacterizeTensileTestServices):
     pass

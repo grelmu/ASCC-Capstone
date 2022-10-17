@@ -3,9 +3,11 @@ import pydantic
 import pyjson5
 from typing import List, Union, Optional, ForwardRef, Any
 
+
 class ServicesSchema(pydantic.BaseModel):
 
     class_qualname: Optional[str]
+
 
 class ArtifactSchema(pydantic.BaseModel):
 

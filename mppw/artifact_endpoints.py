@@ -70,6 +70,8 @@ def create_router(app):
     @router.get("/", response_model=List[models.AnyArtifact])
     def query(
         project_ids: List[str] = fastapi.Query(None),
+        name: str = fastapi.Query(None),
+        tags: List[str] = fastapi.Query(None),
         active: bool = fastapi.Query(True),
         user: security.ScopedUser = Security(
             request_user(app), scopes=[PROVENANCE_SCOPE]
@@ -85,6 +87,8 @@ def create_router(app):
         return list(
             repo_layer.artifacts.query(
                 project_ids=project_ids,
+                name=name,
+                tags=tags,
                 active=active,
             )
         )
@@ -96,6 +100,8 @@ def create_router(app):
     @router.get("/paged/", response_model=PaginatedArtifacts)
     def paged_query(
         project_ids: List[str] = fastapi.Query(None),
+        name: str = fastapi.Query(None),
+        tags: List[str] = fastapi.Query(None),
         active: bool = fastapi.Query(True),
         page_size: int = fastapi.Query(None),
         page_num: int = fastapi.Query(None),
@@ -108,9 +114,9 @@ def create_router(app):
     ):
 
         if project_ids is None:
-            project_ids = projects.project_claims_for_user(user)
+            project_ids = project_endpoints.project_claims_for_user(user)
 
-        projects.check_project_claims_for_user(user, project_ids)
+        project_endpoints.check_project_claims_for_user(user, project_ids)
 
         # Calculate the skip value based on page_size and page_num args
         skip = page_size * (page_num - 1) if None not in (page_size, page_num) else None
@@ -122,6 +128,8 @@ def create_router(app):
 
         results, total = repo_layer.artifacts.paged_query(
             project_ids=project_ids,
+            name=name,
+            tags=tags,
             active=active,
             skip=skip,
             limit=page_size,
@@ -212,7 +220,7 @@ def create_router(app):
     @router.post("/{id}/services/artifact/init", response_model=models.AnyArtifact)
     def init(
         id: str,
-        args: dict,
+        args: dict = {},
         user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
@@ -585,9 +593,7 @@ def create_router(app):
         else:
             raise fastapi.exceptions.HTTPException(fastapi.status.HTTP_400_BAD_REQUEST)
 
-    from .services.artifacts.digital_time_series_services import (
-        TimeSeriesServices
-    )
+    from .services.artifacts.digital_time_series_services import TimeSeriesServices
 
     @router.get("/{id}/services/time-series/sample")
     def time_series_sample(
@@ -598,7 +604,7 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-        
+
         artifact: models.DigitalArtifact = read(id, user, service_layer.repo_layer)
         services: TimeSeriesServices = service_layer.artifact_services_for(
             artifact, TimeSeriesServices
