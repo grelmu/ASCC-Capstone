@@ -8,6 +8,7 @@ import arrow
 import os
 import tempfile
 import dbvox
+import inspect
 
 from mppw_clients import mppw_clients
 from mppw import storage
@@ -27,7 +28,7 @@ def api_storage_layer():
 
 @pytest.fixture
 def api_client():
-    client = mppw_clients.mppw_api.MppwClient("http://localhost:8000/api")
+    client = mppw_clients.MppwApiClient("http://localhost:8000/api")
     client.login("admin", "password")
     return client
 
@@ -35,6 +36,47 @@ def api_client():
 @pytest.fixture
 def api_project(api_client):
     return api_client.post_json("/projects/", json={"name": "Test Project"})
+
+
+@pytest.fixture
+def api_pytest_client(
+    api_client: mppw_clients.MppwApiClient, request: pytest.FixtureRequest
+):
+
+    """
+    A MPPW API client which creates a project for each test module and tags every
+    operation and artifact created with a tag containing the particular test name.
+
+    Before running a test, all operations and artifacts with the existing test name
+    tag are removed - this allows for inspecting test results in the UI while also
+    making it easy to write repeatable tests that assume a clean slate.
+    """
+
+    test_name = request.node.name
+    module_name = inspect.getmodule(request.node.obj).__name__
+    project_name = f"Pytest Project {module_name}"
+    test_tag = f"test:{test_name}"
+
+    project = api_client.find_project(name=project_name) or api_client.create_project(
+        {"name": project_name}
+    )
+
+    operations = api_client.find_operations(tags=[test_tag])
+    artifacts = api_client.find_artifacts(tags=[test_tag])
+
+    print(
+        f"Deleting {len(operations)} operations and {len(artifacts)} artifacts with tag {test_tag}..."
+    )
+    for operation in operations:
+        api_client.delete_operation(operation["id"], preserve_data=False)
+    for artifact in artifacts:
+        api_client.delete_artifact(artifact["id"], preserve_data=False)
+    print(f"Done deleting operations and artifacts with tag {test_tag}.")
+
+    api_client.default_project = project
+    api_client.default_tags = [test_tag]
+
+    return api_client
 
 
 @pytest.fixture
