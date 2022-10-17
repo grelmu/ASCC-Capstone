@@ -1,6 +1,4 @@
 from mppw_clients import mppw_clients
-from mppw_clients.mppw_clients.mppw_api_client import MppwApiClient
-
 
 def test_basic_artifact_crud(api_pytest_client: mppw_clients.MppwApiClient):
 
@@ -18,7 +16,7 @@ def test_basic_artifact_crud(api_pytest_client: mppw_clients.MppwApiClient):
     part["label"] = "Updated Label"
     api.update_artifact(part)
     api.patch_artifact(
-        part["id"], description="Patched Description", label=MppwApiClient.UNDEFINED
+        part["id"], description="Patched Description", label=mppw_clients.MppwApiClient.UNDEFINED
     )
 
     part = api.get_artifact(part["id"])
