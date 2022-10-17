@@ -263,8 +263,8 @@ export default {
           this.tbChunks = this.getDateChunks(
             new Date(this.timeBoundsStart),
             new Date(this.timeBoundsEnd),
-            // This means chunks are 60 minutes long: 
-            60
+            // This means chunks contain 1 minute of data: 
+            1
           );
       });
     },
@@ -328,7 +328,7 @@ export default {
         let e = new Date(s);
         e.setMinutes(e.getMinutes() + chunkSize);
         result.push({start:new Date(s), end: e <= end? e : new Date(end)});
-        s.setMinutes(s.getMinutes() + chunkSize + 1); 
+        s.setMinutes(s.getMinutes() + chunkSize); 
       }
       return result;
     },
