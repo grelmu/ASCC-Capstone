@@ -1,3 +1,14 @@
+# 0.7.0
+
+New Features:
+
+* Support for time series artifacts
+  * JSON export
+  * Image browsing and export
+  * Dynamic graphing / CSV export support
+* Support for artifact/operation API tag queries
+* Fixed bounds and smaller 1m chunk downloads for point clouds
+
 # 0.6.0
 
 New Features: 
