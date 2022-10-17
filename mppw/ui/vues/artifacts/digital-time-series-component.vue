@@ -22,6 +22,7 @@
               <o-field label="Start Date & Time">
                 <o-datetimepicker
                   v-model="datetime[0]"
+                  v-on:active-change="onDateTimeChange"
                   icon="clock"
                   placeholder="Click to select..."
                   :timepicker="{ enableSeconds, hourFormat }"
@@ -32,6 +33,7 @@
               <o-field label="End Date & Time">
                 <o-datetimepicker
                   v-model="datetime[1]"
+                  v-on:active-change="onDateTimeChange"
                   icon="clock"
                   placeholder="Click to select..."
                   :timepicker="{ enableSeconds, hourFormat }"
@@ -43,6 +45,14 @@
             @click="onSelectorClick">
             Get Samples in Range
           </o-button>
+        </o-tab-item>
+        <o-tab-item label = "Limits">
+          <o-field label = "Max slider data size: [MiB]">
+            <o-input v-model="mibLimit"></o-input>
+          </o-field>
+          <o-field label = "Max picker data size: [MiB]">
+            <o-input v-model="pickerLimit"></o-input>
+          </o-field>
         </o-tab-item>
       </o-tabs>
     </div>
@@ -122,6 +132,8 @@ export default {
       pivotData: null,
       firstSelected: false,
       isLoadingSampleDocs: false,
+      mibLimit: 10,
+      pickerLimit: 100,
     };
   },
   props: {
@@ -162,6 +174,15 @@ export default {
         this.sliderVal = [minSlider, this.sliderMax];
       });
     },
+    inferBoundsFromDocs(docs){
+      if(docs.length > 0){
+        if(("t" in docs[0]) && ("t" in docs[docs.length-1])){
+          let bounds = [new Date(docs[0]["t"]), new Date(docs[docs.length-1]["t"])]; // Making the assumption that the documents are sorted by time
+          this.datetime = bounds;
+          this.sliderVal = this.timeBoundsToSlider(bounds);
+        }
+      }
+    },
     sliderToTimeBounds(sliderVal) {
       return [new Date(this.timeBounds[0].getTime() + (sliderVal[0] * 1000)),
               new Date(this.timeBounds[0].getTime() + (sliderVal[1] * 1000))];
@@ -175,21 +196,18 @@ export default {
       return new Date(this.timeBounds[0].getTime() + (sliderPos * 1000)).toISOString();
     },
     onSliderChange(newSliderVal) {
-
-      // console.log("Slider changed! " + newSliderVal);
-
       let sampleBounds = this.sliderToTimeBounds(newSliderVal);
       this.datetime = sampleBounds;
-
-      return this.refreshSamples(sampleBounds);
+      return this.refreshSamples(sampleBounds,0,this.mibLimit*(1024**2)); // slider fetches documents by limiting the size
+    },
+    onDateTimeChange() {
+      let sampleBounds = this.datetime;
+      this.sliderVal = this.timeBoundsToSlider(sampleBounds);
     },
     onFirstSelectorClick() {
       return this.onSliderChange(this.sliderVal);
     },
     onSelectorClick() {
-
-      // console.log("Selector clicked!" + this.datetime);
-
       if (this.datetime[1] < this.datetime[0]) {
         let swap = this.datetime[1];
         this.datetime[1] = this.datetime[0];
@@ -204,14 +222,18 @@ export default {
 
       let sampleBounds = this.datetime;
       this.sliderVal = this.timeBoundsToSlider(sampleBounds);
-      return this.refreshSamples(sampleBounds);
+      return this.refreshSamples(sampleBounds,0,this.pickerLimit*(1024**2));
     },
-    refreshSamples(sampleBounds) {
+    refreshSamples(sampleBounds, doc_limit = 0, byte_limit = 0) { // Default to no limit
 
       let sampleBoundsStr = [sampleBounds[0].toISOString(), sampleBounds[1].toISOString()];
 
+      let data = {"time_bounds":JSON.stringify(sampleBoundsStr),
+                  "limit":JSON.stringify(parseInt(doc_limit)),
+                  "est_limit_bytes":JSON.stringify(parseInt(byte_limit))};
+
       this.isLoadingSampleDocs = true;
-      return this.$root.apiFetchTimeSeries(this.artifactId,{"time_bounds":JSON.stringify(sampleBoundsStr)}).then((result) => {
+      return this.$root.apiFetchTimeSeries(this.artifactId, data).then((result) => {
         this.sampleDocs = result;
         this.isImageDocs = (this.inferDocImage((this.sampleDocs || []).length > 0 ? this.sampleDocs[0] : {}) != null);
         this.pivotData = this.buildPivotData(this.sampleDocs);
@@ -219,6 +241,9 @@ export default {
       })
       .finally(() => {
         this.isLoadingSampleDocs = false;
+        if(doc_limit != 0 || byte_limit != 0){
+          this.inferBoundsFromDocs(this.sampleDocs);
+        }
       });
     },
     toNameSlug(name) {

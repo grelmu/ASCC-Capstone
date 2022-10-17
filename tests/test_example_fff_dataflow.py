@@ -16,6 +16,7 @@ import json_stream.dump
 from mppw import models
 
 from .fixtures_api import resolve_bucket_url, build_cloud_url
+from mppw_clients import mppw_clients
 
 
 def build_dataset_filename(local_name):
@@ -23,87 +24,90 @@ def build_dataset_filename(local_name):
 
 
 @pytest.fixture
-def api_fff(api_client, api_project):
+def api_fff_builder(api_pytest_client: mppw_clients.MppwApiClient):
 
-    fff_operation = api_client.post_json(
-        "/operations/",
-        json={
-            "project": api_project["id"],
-            "type_urn": "urn:x-mfg:operation:fff",
-            "name": f"FFF for {__name__}",
-            "description": f"(for testing only)",
-        },
-    )
+    api = api_pytest_client
 
-    fff_operation = api_client.post_json(
-        "/operations/" + fff_operation["id"] + "/services/operation/init", json={}
-    )
+    def builder(fff_name, num_docs=1024 * 1024):
 
-    fff_bucket_id = api_client.get_attached_artifact_ids_of_kind(
-        fff_operation, ":process-data"
-    )[0]
-    fff_bucket = models.DigitalArtifact(
-        **api_client.get_json(f"/artifacts/{fff_bucket_id}")
-    )
-
-    client = pymongo.MongoClient(
-        resolve_bucket_url(fff_bucket.url_data, api_client.api_url)
-    )
-
-    opc_collection = client.get_default_database()["opc_sample"]
-
-    with open(build_dataset_filename("opc_sample.mdb.json"), "r") as f:
-        opc_docs = json.load(f, object_hook=bson.json_util.object_hook)
-        for doc in opc_docs[0:12]:
-            opc_collection.insert_one(doc)
-
-    flir_collection = client.get_default_database()["flir_sample"]
-
-    with open(build_dataset_filename("flir_sample.mdb.json"), "r") as f:
-        flir_docs = json.load(f, object_hook=bson.json_util.object_hook)
-        for doc in flir_docs[0:12]:
-            flir_collection.insert_one(doc)
-
-    opc_ts_furl = furl.furl(fff_bucket.url_data)
-    opc_ts_furl.path.add("opc_sample")
-    opc_ts_furl.scheme = "mongodb+ts"
-
-    flir_ts_furl = furl.furl(fff_bucket.url_data)
-    flir_ts_furl.path.add("flir_sample")
-    flir_ts_furl.scheme = "mongodb+ts"
-
-    for ts_name, ts_url in [
-        ("OPC Time Series", opc_ts_furl.url),
-        ("FLIR Time Series", flir_ts_furl.url),
-    ]:
-
-        ts = api_client.post_json(
-            "/artifacts/",
-            json={
-                "project": api_project["id"],
-                "type_urn": "urn:x-mfg:artifact:digital:time-series",
-                "name": ts_name,
-                "url_data": ts_url,
+        fff_operation = api.create_operation(
+            {
+                "type_urn": "urn:x-mfg:operation:fff",
+                "name": fff_name,
+                "description": f"(for testing only)",
             },
+            init=True,
         )
 
-        ts = api_client.post_json(
-            "/artifacts/" + ts["id"] + "/services/artifact/init", json={}
+        fff_bucket = api.get_artifact(
+            api.find_operation_attachment(fff_operation, [":process-data"])[1]
         )
 
-        ts_attachment = api_client.post_json(
-            "/operations/" + fff_operation["id"] + "/artifacts/",
-            json={
-                "artifact_id": ts["id"],
-                "kind_path": [":process-data", str(fff_bucket.id), ":streams"],
-                "attachment_mode": "output",
-            },
+        client = pymongo.MongoClient(
+            resolve_bucket_url(fff_bucket["url_data"], api.api_url)
         )
 
-    return fff_operation
+        opc_collection = client.get_default_database()["opc_sample"]
+
+        with open(build_dataset_filename("opc_sample.mdb.json"), "r") as f:
+            opc_docs = json.load(f, object_hook=bson.json_util.object_hook)
+            for doc in opc_docs[0:num_docs]:
+                opc_collection.insert_one(doc)
+
+        flir_collection = client.get_default_database()["flir_sample"]
+
+        with open(build_dataset_filename("flir_sample.mdb.json"), "r") as f:
+            flir_docs = json.load(f, object_hook=bson.json_util.object_hook)
+            for doc in flir_docs[0:num_docs]:
+                flir_collection.insert_one(doc)
+
+        flir_toolhead_collection = client.get_default_database()["flir_toolhead_sample"]
+
+        with open(build_dataset_filename("flir_toolhead_sample.mdb.json"), "r") as f:
+            flir_docs = json.load(f, object_hook=bson.json_util.object_hook)
+            for doc in flir_docs[0:num_docs]:
+                flir_toolhead_collection.insert_one(doc)
+
+        opc_ts_furl = furl.furl(fff_bucket["url_data"])
+        opc_ts_furl.path.add("opc_sample")
+        opc_ts_furl.scheme = "mongodb+ts"
+
+        flir_ts_furl = furl.furl(fff_bucket["url_data"])
+        flir_ts_furl.path.add("flir_sample")
+        flir_ts_furl.scheme = "mongodb+ts"
+
+        flir_toolhead_ts_furl = furl.furl(fff_bucket["url_data"])
+        flir_toolhead_ts_furl.path.add("flir_toolhead_sample")
+        flir_toolhead_ts_furl.scheme = "mongodb+ts"
+
+        for ts_name, ts_url in [
+            ("OPC Time Series", opc_ts_furl.url),
+            ("FLIR External Time Series", flir_ts_furl.url),
+            ("FLIR Toolhead Time Series", flir_toolhead_ts_furl.url),
+        ]:
+
+            ts = api.create_artifact(
+                {
+                    "type_urn": "urn:x-mfg:artifact:digital:time-series",
+                    "name": ts_name,
+                    "url_data": ts_url,
+                },
+                init=True,
+            )
+
+            api.add_operation_attachment(
+                fff_operation["id"],
+                [":process-data", fff_bucket["id"], ":streams"],
+                ts["id"],
+                mppw_clients.MppwApiClient.OUTPUT,
+            )
+
+        return fff_operation
+
+    return builder
 
 
-def test_opc_voxelization(api_client, api_project, api_fff):
+def test_opc_voxelization(api_client, api_project, api_fff_builder):
 
     """
     Test that we can store and voxelize an OPC toolpath in an FFF operation
@@ -113,10 +117,14 @@ def test_opc_voxelization(api_client, api_project, api_fff):
     pass
 
 
-def test_time_series_fetch(api_client, api_fff):
+def test_time_series_fetch(api_client, api_fff_builder):
+
     """
     Test that we can fetch the bounds and sample the opc/flir time series
     """
+
+    api_fff = api_fff_builder("FFF for Test Time Series Fetch")
+
     id = api_fff["id"]
     artifacts = api_client.get_json("/operations/" + id + "/artifacts/all")
     time_series_artifacts = []

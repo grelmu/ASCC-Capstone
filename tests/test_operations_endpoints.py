@@ -1,5 +1,4 @@
 from mppw_clients import mppw_clients
-from mppw_clients.mppw_clients.mppw_api_client import MppwApiClient
 
 
 def test_basic_operation_craud(api_pytest_client: mppw_clients.MppwApiClient):
@@ -22,24 +21,32 @@ def test_basic_operation_craud(api_pytest_client: mppw_clients.MppwApiClient):
     part_x = api.create_artifact({"type_urn": ":material:part", "name": "Test Part X"})
     part_y = api.create_artifact({"type_urn": ":material:part", "name": "Test Part Y"})
 
-    api.add_operation_attachment(op["id"], [":first"], part["id"], MppwApiClient.OUTPUT)
     api.add_operation_attachment(
-        op["id"], [":first", part["id"], ":second"], file_a["id"], MppwApiClient.OUTPUT
+        op["id"], [":first"], part["id"], mppw_clients.MppwApiClient.OUTPUT
     )
     api.add_operation_attachment(
-        op["id"], [":first", part["id"], ":second"], file_b["id"], MppwApiClient.OUTPUT
+        op["id"],
+        [":first", part["id"], ":second"],
+        file_a["id"],
+        mppw_clients.MppwApiClient.OUTPUT,
+    )
+    api.add_operation_attachment(
+        op["id"],
+        [":first", part["id"], ":second"],
+        file_b["id"],
+        mppw_clients.MppwApiClient.OUTPUT,
     )
     api.add_operation_attachment(
         op["id"],
         [":first", part["id"], ":second", file_a["id"], ":third"],
         part_x["id"],
-        MppwApiClient.OUTPUT,
+        mppw_clients.MppwApiClient.OUTPUT,
     )
     api.add_operation_attachment(
         op["id"],
         [":first", part["id"], ":second", file_b["id"], ":third"],
         part_y["id"],
-        MppwApiClient.OUTPUT,
+        mppw_clients.MppwApiClient.OUTPUT,
     )
 
     op = api.find_operations(name="Test Operation")[0]
@@ -55,7 +62,9 @@ def test_basic_operation_craud(api_pytest_client: mppw_clients.MppwApiClient):
     op["system_name"] = "Updated System Name"
     api.update_operation(op)
     api.patch_operation(
-        op["id"], description="Patched Description", system_name=MppwApiClient.UNDEFINED
+        op["id"],
+        description="Patched Description",
+        system_name=mppw_clients.MppwApiClient.UNDEFINED,
     )
 
     op = api.get_operation(op["id"])
@@ -103,15 +112,17 @@ def test_basic_process_creation(api_pytest_client: mppw_clients.MppwApiClient):
         {"type_urn": ":material:part", "name": "Machined Part"}
     )
 
-    graph.attach_artifact(build_op, [":output-parts"], built_part, MppwApiClient.OUTPUT)
     graph.attach_artifact(
-        machining_op, [":input-parts"], built_part, MppwApiClient.INPUT
+        build_op, [":output-parts"], built_part, mppw_clients.MppwApiClient.OUTPUT
+    )
+    graph.attach_artifact(
+        machining_op, [":input-parts"], built_part, mppw_clients.MppwApiClient.INPUT
     )
     graph.attach_artifact(
         machining_op,
         [":input-parts", built_part, ":output-parts"],
         machined_part,
-        MppwApiClient.OUTPUT,
+        mppw_clients.MppwApiClient.OUTPUT,
     )
 
     graph.write(api, verbose=True)
