@@ -54,6 +54,13 @@ def api_fff_builder(api_pytest_client: mppw_clients.MppwApiClient):
             for doc in opc_docs[0:num_docs]:
                 opc_collection.insert_one(doc)
 
+        opc_cloud_collection = client.get_default_database()["opc_cloud"]
+
+        with open(build_dataset_filename("opc_cloud.mdb.json"), "r") as f:
+            opc_voxels = json.load(f, object_hook=bson.json_util.object_hook)
+            for vox in opc_voxels[0:num_docs]:
+                opc_cloud_collection.insert_one(vox)
+
         flir_collection = client.get_default_database()["flir_sample"]
 
         with open(build_dataset_filename("flir_sample.mdb.json"), "r") as f:
@@ -101,6 +108,26 @@ def api_fff_builder(api_pytest_client: mppw_clients.MppwApiClient):
                 ts["id"],
                 mppw_clients.MppwApiClient.OUTPUT,
             )
+
+        opc_pc_furl = furl.furl(fff_bucket["url_data"])
+        opc_pc_furl.path.add("opc_cloud")
+        opc_pc_furl.scheme = "mongodb+dbvox"
+
+        pc = api.create_artifact(
+            {
+                "type_urn": "urn:x-mfg:artifact:digital:point-cloud",
+                "name": "OPC Point Cloud",
+                "url_data": opc_pc_furl.url,
+            },
+            init=True,
+        )
+
+        api.add_operation_attachment(
+            fff_operation["id"],
+            [":toolpath-cloud"],
+            pc["id"],
+            mppw_clients.MppwApiClient.OUTPUT,
+        )
 
         return fff_operation
 
