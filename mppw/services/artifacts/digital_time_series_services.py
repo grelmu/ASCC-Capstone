@@ -1,4 +1,3 @@
-from audioop import avg
 import furl
 import pydantic
 import pymongo
@@ -35,11 +34,19 @@ class TimeSeriesServices(ArtifactServices):
         t: datetime.datetime
         ctx: Any
 
-    def sample(self, time_series_artifact: models.DigitalArtifact, t_bounds, limit, est_limit_bytes):
+    def sample(
+        self,
+        time_series_artifact: models.DigitalArtifact,
+        t_bounds,
+        limit,
+        est_limit_bytes,
+    ):
 
         series_furl = furl.furl(time_series_artifact.url_data)
         if series_furl.scheme in ["mongodb+ts", "mongodb", "mongodb+dbvox"]:
-            return self.sample_mongodb_ts(time_series_artifact, t_bounds, limit, est_limit_bytes)
+            return self.sample_mongodb_ts(
+                time_series_artifact, t_bounds, limit, est_limit_bytes
+            )
         else:
             raise UnkownTimeSeriesTypeException(
                 f"Unkown time series type for {series_furl.url}"
@@ -95,7 +102,9 @@ class TimeSeriesServices(ArtifactServices):
         )
 
         client = pymongo.MongoClient(base_url)
-        return client[ts_furl.path.segments[0]].command("collstats",colname)["avgObjSize"]
+        return client[ts_furl.path.segments[0]].command("collstats", colname)[
+            "avgObjSize"
+        ]
 
     class DbTimeSeriesMeta(pydantic.BaseModel):
         t_bounds: Optional[list]
@@ -203,28 +212,38 @@ class TimeSeriesServices(ArtifactServices):
         )
         return meta.t_bounds
 
-    def sample_mongodb_ts(self, time_series_artifact: models.DigitalArtifact, t_bounds, limit, est_limit_bytes):
+    def sample_mongodb_ts(
+        self,
+        time_series_artifact: models.DigitalArtifact,
+        t_bounds,
+        limit,
+        est_limit_bytes,
+    ):
 
         collection, meta = self.get_mdb_ts_collection_meta(time_series_artifact)
 
         # Converted the desired limit of bytes to a limit of docs
         # byte limit works same as the doc count limit: 0 => no limit
-        if(est_limit_bytes != 0):
-            avg_size = self.get_mdb_collection_avg_doc_size(time_series_artifact, collection.name)
+        if est_limit_bytes != 0:
+            avg_size = self.get_mdb_collection_avg_doc_size(
+                time_series_artifact, collection.name
+            )
 
             # this insures we round up if est_limit_bytes/avg_size < 1, without this it would set the limit to 0, which is no limit
             # alternatively could use math.ceil()
-            doc_limit_from_bytes = (est_limit_bytes // avg_size) + (est_limit_bytes % avg_size > 0) 
-            
+            doc_limit_from_bytes = (est_limit_bytes // avg_size) + (
+                est_limit_bytes % avg_size > 0
+            )
+
             # default limit == 0 means no limit to doc count in .find()
-            if(limit == 0):
+            if limit == 0:
                 limit = doc_limit_from_bytes
             else:
                 limit = min(limit, doc_limit_from_bytes)
 
         t_query = TimeSeriesServices.mdb_time_bounded_query(collection, meta, t_bounds)
 
-        docs = collection.find(t_query,limit=limit)
+        docs = collection.find(t_query, limit=limit)
         for doc in docs:
             # We've gotta wrap results in some standard format so the consumer can know
             # what time the event is at
