@@ -1,5 +1,5 @@
 <template>
-  <section v-if="artifact">
+  <section v-if="artifact && timeBounds">
     <div class="row">
       <o-tabs type = "boxed">
         <o-tab-item label="Elapsed Time">
@@ -11,7 +11,7 @@
             :max="sliderMax"
             :step="tstep">
           </o-slider>
-          <o-button v-if="!firstSelected" class="mt-3 text-end pcl-btns"
+          <o-button class="mt-3 text-end pcl-btns"
             @click="onFirstSelectorClick">
             Get Samples in Range
           </o-button>
@@ -73,7 +73,7 @@
         <o-tab-item v-if = "isImageDocs" label="Image">
           <div class="row">
             <o-carousel v-model="selectedImage" :arrow="true" :arrow-hover="true" :items-to-show="1" :items-to-list="sampleDocs.length < 10 ? 1 : Math.ceil(sampleDocs.length / 10)" :has-drag="true">
-              <o-carousel-item v-for="(sampleDoc, i) in sampleDocs" :key="i">
+              <o-carousel-item v-for="(sampleDoc, i) in sampleDocs" :key="sampleDoc['ctx']['frame_id']">
                 <base64-image :imageType="inferDocImage(sampleDoc)['imageType']" :imageDataBase64="inferDocImage(sampleDoc)['imageDataBase64']"></base64-image>
               </o-carousel-item>
             </o-carousel>
@@ -196,6 +196,10 @@ export default {
       return new Date(this.timeBounds[0].getTime() + (sliderPos * 1000)).toISOString();
     },
     onSliderChange(newSliderVal) {
+      // NOTE: Refreshing here makes big data sets inaccessible
+      // this.refreshFromSlider(newSliderVal);
+    },
+    refreshFromSlider(newSliderVal) {
       let sampleBounds = this.sliderToTimeBounds(newSliderVal);
       this.datetime = sampleBounds;
       return this.refreshSamples(sampleBounds,0,this.mibLimit*(1024**2)); // slider fetches documents by limiting the size
@@ -205,7 +209,7 @@ export default {
       this.sliderVal = this.timeBoundsToSlider(sampleBounds);
     },
     onFirstSelectorClick() {
-      return this.onSliderChange(this.sliderVal);
+      return this.refreshFromSlider(this.sliderVal);
     },
     onSelectorClick() {
       if (this.datetime[1] < this.datetime[0]) {
