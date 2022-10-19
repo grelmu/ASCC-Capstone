@@ -1,3 +1,11 @@
+# 0.7.1
+
+New Features:
+
+* API/UI for claiming artifacts
+* General UI icon improvements
+* Bugfixes for time-series
+
 # 0.7.0
 
 New Features:
