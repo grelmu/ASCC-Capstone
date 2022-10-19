@@ -410,6 +410,18 @@ class AttachmentGraph(networkx.MultiDiGraph):
             self.remove_node(descendant_node)
         self.remove_node(node)
 
+    def replace_attachment_node(self, old_node, new_node):
+
+        if old_node not in self.nodes() or new_node.__eq__(old_node):
+            return
+
+        self.add_attachment_node(new_node)
+        for node_from, _, relation in self.in_edges(old_node, keys=True):
+            self.add_edge(node_from, new_node, relation)
+        for _, node_to, relation in self.out_edges(old_node, keys=True):
+            self.add_edge(new_node, node_to, relation)
+        self.remove_node(old_node)
+
     def add_relation(self, node_from, node_to, relation: AttachmentRelation):
         return self.add_edge(node_from, node_to, relation)
 

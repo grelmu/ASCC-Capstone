@@ -699,6 +699,27 @@ export default {
         );
       });
     },
+    apiClaimArtifact(opId, kindPath, artifactId, attachmentMode) {
+      let attachment = {
+        kind_path: kindPath,
+        artifact_id: artifactId,
+        attachment_mode: attachmentMode,
+      };
+
+      return this.apiFetch("operations/" + opId + "/artifacts/claim", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(attachment),
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when claiming attachment"
+        );
+      });
+    },
     apiDetachArtifact(opId, kindPath, artifactId, attachmentMode) {
       let attachment = {
         kind_path: kindPath,

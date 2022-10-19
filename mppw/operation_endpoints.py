@@ -300,6 +300,25 @@ def create_router(app):
             ),
         )
 
+    @router.post("/{id}/artifacts/claim", response_model=bool)
+    def claim_artifact(
+        id: str,
+        attachment: models.AttachmentGraph.AttachmentNode,
+        user: security.ScopedUser = Security(
+            request_user(app), scopes=[PROVENANCE_SCOPE]
+        ),
+        service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
+    ):
+
+        operation: models.Operation = read(id, user, service_layer.repo_layer)
+        services = service_layer.operation_services_for(operation)
+        claimed = services.claim(operation, attachment)
+
+        if not claimed:
+            raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
+
+        return True
+
     @router.delete("/{id}/artifacts/", response_model=bool)
     def detach_artifact(
         id: str,

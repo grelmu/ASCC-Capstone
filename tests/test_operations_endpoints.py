@@ -134,3 +134,111 @@ def test_basic_process_creation(api_pytest_client: mppw_clients.MppwApiClient):
     api.default_tags = None
     assert 1 == len(api.find_operations(tags=["test_basic_process_creation_build"]))
     assert 1 == len(api.find_artifacts(tags=["test_basic_process_creation_build"]))
+
+
+def test_basic_artifact_reclaim(api_pytest_client: mppw_clients.MppwApiClient):
+
+    """
+    Basic test of attached artifact reclamation - attaches an artifact to two
+    operations and then swaps ownership.
+    """
+
+    api = api_pytest_client
+
+    op_a = api.create_operation(
+        {"type_urn": ":default", "name": "Test Operation A"}, init=False
+    )
+
+    op_b = api.create_operation(
+        {"type_urn": ":default", "name": "Test Operation B"}, init=False
+    )
+
+    part = api.create_artifact({"type_urn": ":material:part", "name": "Test Part"})
+
+    file_a = api.create_artifact({"type_urn": ":digital:file", "name": "Test File A"})
+
+    file_b = api.create_artifact({"type_urn": ":digital:file", "name": "Test File B"})
+
+    api.add_operation_attachment(
+        op_a["id"], [":first"], part["id"], mppw_clients.MppwApiClient.INPUT
+    )
+
+    api.add_operation_attachment(
+        op_a["id"],
+        [":first", part["id"], ":second"],
+        file_a["id"],
+        mppw_clients.MppwApiClient.OUTPUT,
+    )
+
+    api.add_operation_attachment(
+        op_b["id"], [":first"], part["id"], mppw_clients.MppwApiClient.INPUT
+    )
+
+    api.add_operation_attachment(
+        op_a["id"], [":other-first"], part["id"], mppw_clients.MppwApiClient.INPUT
+    )
+
+    api.add_operation_attachment(
+        op_b["id"],
+        [":first", part["id"], ":second"],
+        file_b["id"],
+        mppw_clients.MppwApiClient.OUTPUT,
+    )
+
+    op_a, op_b = api.get_operation(op_a["id"]), api.get_operation(op_b["id"])
+
+    assert (
+        mppw_clients.MppwApiClient.INPUT
+        == api.find_operation_attachment(op_a, [":first"])[2]
+    )
+    assert (
+        mppw_clients.MppwApiClient.INPUT
+        == api.find_operation_attachment(op_a, [":other-first"])[2]
+    )
+    assert (
+        mppw_clients.MppwApiClient.INPUT
+        == api.find_operation_attachment(op_b, [":first"])[2]
+    )
+
+    assert api.claim_operation_attachment(op_a, [":first"])
+
+    op_a, op_b = api.get_operation(op_a["id"]), api.get_operation(op_b["id"])
+
+    assert (
+        mppw_clients.MppwApiClient.OUTPUT
+        == api.find_operation_attachment(op_a, [":first"])[2]
+    )
+    assert (
+        mppw_clients.MppwApiClient.INPUT
+        == api.find_operation_attachment(op_a, [":other-first"])[2]
+    )
+    assert (
+        mppw_clients.MppwApiClient.INPUT
+        == api.find_operation_attachment(op_b, [":first"])[2]
+    )
+
+    assert api.claim_operation_attachment(op_b, [":first"])
+
+    op_a, op_b = api.get_operation(op_a["id"]), api.get_operation(op_b["id"])
+
+    assert (
+        mppw_clients.MppwApiClient.INPUT
+        == api.find_operation_attachment(op_a, [":first"])[2]
+    )
+    assert (
+        mppw_clients.MppwApiClient.INPUT
+        == api.find_operation_attachment(op_a, [":other-first"])[2]
+    )
+    assert (
+        mppw_clients.MppwApiClient.OUTPUT
+        == api.find_operation_attachment(op_b, [":first"])[2]
+    )
+
+    assert (
+        mppw_clients.MppwApiClient.OUTPUT
+        == api.find_operation_attachment(op_a, [":first", part["id"], ":second"])[2]
+    )
+    assert (
+        mppw_clients.MppwApiClient.OUTPUT
+        == api.find_operation_attachment(op_b, [":first", part["id"], ":second"])[2]
+    )

@@ -14,6 +14,9 @@
             >
               <o-icon :icon="'link'"></o-icon>
             </router-link>
+            <a v-if="attachment['attachment_mode'] == 'input' && !parentOp" class="card-header-icon">
+              <o-icon :icon="'link'" style="color: orangered;"></o-icon>
+            </a>
             <div class="card-header-title">
               <div style="flex-basis: 100%">
                 <div v-if="!artifact['name']">
@@ -47,10 +50,25 @@
                   </div>
                 </div>
               </div>
-              <router-link :to="'/artifacts/' + artifact['id']" class="fw-light"
-                >{{ artifact["id"] }}
-              </router-link>
             </div>
+            <a
+                v-if="attachment['attachment_mode'] == 'input'"
+                title="Claim artifact"
+                @click="onClickClaimArtifact"
+                class="card-header-icon"
+              >
+              <o-icon :icon="'selection-ellipse-arrow-inside'"></o-icon>
+            </a>
+            <router-link :to="'/artifacts/' + artifact['id']" :title="'Artifact Provenance'" class="card-header-icon"
+              >
+              <o-icon :icon="'family-tree'"></o-icon>
+            </router-link>
+            <a :title="JSON.stringify(artifact, ['project', 'id', 'type_urn', 'name', 'description', 'tags'], 2)"
+               @click="onClickLogJson"
+               class="card-header-icon"
+            >
+              <o-icon :icon="'code-braces'" style="color: black;"></o-icon>
+            </a>
             <a class="card-header-icon">
               <o-icon
                 :icon="
@@ -403,6 +421,26 @@ export default {
     onClickInputLink(event) {
       event.stopPropagation();
       event.target.closest("a").click();
+    },
+    onClickLogJson(event) {
+      event.stopPropagation();
+      console.log(JSON.parse(JSON.stringify(this.artifact)));
+    },
+    onClickClaimArtifact(event) {
+      event.stopPropagation();
+      if (
+        !confirm(
+          "Are you sure that you want to claim this artifact as originating in this operation?\n\nThis will change the attachment mode in all other operations to links."
+        )
+      )
+        return;
+
+      return this.$root
+      .apiClaimArtifact(this.opId, this.attachment["kind_path"], this.attachment["artifact_id"], this.attachment["attachment_mode"])
+      .finally(() => {
+        this.isEditingMeta = false;
+        return this.refreshArtifact();
+      });
     },
     onStartEditMeta() {
       this.newName = this.artifact["name"];

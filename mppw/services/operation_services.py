@@ -194,6 +194,72 @@ class OperationServices:
                     else None,
                 )
 
+    def claim(
+        self,
+        operation: models.Operation,
+        attachment: models.AttachmentGraph.AttachmentNode,
+    ) -> bool:
+
+        """
+        Tries to ensure that this operation attachment is the only "OUTPUT" attachment
+        for the particular artifact.
+
+        Iterates all the other operations with the same artifact attached and sets them
+        to "INPUT", then rewrites the current attachment as "OUTPUT" mode.
+        """
+
+        if attachment not in operation.attachments.nodes():
+            return False
+
+        artifact_id = attachment.artifact_id
+
+        def unclaim_artifact(operation: models.Operation):
+
+            for other_attachment in list(
+                operation.attachments.find_nodes_by_artifact(
+                    artifact_id=artifact_id,
+                    attachment_mode=models.AttachmentMode.OUTPUT,
+                )
+            ):
+                operation.attachments.replace_attachment_node(
+                    other_attachment,
+                    models.AttachmentGraph.AttachmentNode.build(
+                        other_attachment.kind_path,
+                        other_attachment.artifact_id,
+                        models.AttachmentMode.INPUT,
+                    ),
+                )
+
+            return operation
+
+        for other_operation in self.repo_layer.operations.query_by_attached(
+            output_artifact_id=artifact_id
+        ):
+            other_operation: models.Operation
+            if other_operation.id == operation.id:
+                continue
+
+            self.repo_layer.operations.partial_update(
+                other_operation.id, unclaim_artifact
+            )
+
+        def claim_artifact(operation: models.Operation):
+
+            operation = unclaim_artifact(operation)
+
+            operation.attachments.replace_attachment_node(
+                attachment,
+                models.AttachmentGraph.AttachmentNode.build(
+                    attachment.kind_path,
+                    attachment.artifact_id,
+                    models.AttachmentMode.OUTPUT,
+                ),
+            )
+
+            return operation
+
+        return self.repo_layer.operations.partial_update(operation.id, claim_artifact)
+
     def detach(
         self,
         operation: models.Operation,
