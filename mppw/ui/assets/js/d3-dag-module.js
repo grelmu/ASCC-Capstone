@@ -3,15 +3,10 @@
 
 /*
 TODO:
-- [ ] Add discrete coloration to nodes
-- [ ] Dynamically assign icons
-- [ ] Fix off-by-one error that drops last node from graph
-- [*] Add hyperlinks inside nodes
-- [*] Add icons inside nodes
-- [*] Add tooltips to nodes
-- [*] Add properly sized text inside nodes 
-- [*] Get actual data 
-- [*] Change to Zherebko layout
+- [ ] Add arrows on links
+- [*] Fix off-by-one error that drops last node from graph
+- [*] Add discrete coloration to nodes
+- [*] Dynamically assign icons
 */
 
 /**
@@ -22,14 +17,45 @@ TODO:
  *     "parentIds": ["<NODE ID>", "<NODE ID>", ...]
  *   }]
  * @param {Object} network Object containing "links" and "nodes" properties
- * @param {Object} param2 Object containing google font icons
+ * @param {Object} param2 Object containing google font icons and nodegroup
  * @returns An array with the SVG width and height
  */
-function Dag(graphData, network, {icons=null}) {
-  console.log("Graph data: ", graphData);
-  console.log("Network: ", network);
-  const dag = d3.dagStratify()(graphData);
-  const nodeRadius = 70; // adjusting this seems to only impact the inner text size?
+function Dag(graphData, network, {
+  nodeGroup=null, // Given d in nodes, returns an (ordinal) value for color
+  icons=null,
+  nodeHighlight = null,
+  nodeHighlightColor = "red", // TODO: use this on final node?
+}) {
+  let dag = null;
+
+  function intern(value) {
+    return value !== null && typeof value === "object"
+      ? value.valueOf()
+      : value;
+  }
+
+  function getAndTruncateNodeText(targetNode, property, cutoff=Infinity) {
+      if (targetNode[property].length > cutoff) {
+        return "..." + targetNode[property].slice(targetNode[property]
+          .length - cutoff, targetNode[property].length)
+      } else {
+        return targetNode[property];
+      }
+  }
+
+  // For coloration of nodes:
+  const G = nodeGroup == null ? null : d3.map(network.nodes, nodeGroup).map(intern);
+  let nodeGroups;
+  let colors = d3.schemeTableau10;
+  // Construct the color scales.
+  if (G && nodeGroups === undefined) nodeGroups = d3.sort(G);
+  const color = nodeGroup == null ? null : d3.scaleOrdinal(nodeGroups, colors);
+
+  // Restructure dag data so it can be displayed
+  dag = graphData.length > 0 ? d3.dagStratify()(graphData) : null;
+  if (dag == null) return [0, 0];
+
+  const nodeRadius = 70; // Adjusting this seems to only impact the inner text size?
   const layout = d3
     .sugiyama() 
     .decross(d3.decrossOpt()) // minimize number of crossings
@@ -57,11 +83,11 @@ function Dag(graphData, network, {icons=null}) {
   svgSelection.attr("viewBox", [0, 0, width, height].join(" "));
   const defs = svgSelection.append("defs"); // For gradients
 
-  const steps = dag.size();
-  const interp = d3.interpolateRainbow; // TODO: change coloration
   const colorMap = new Map();
-  dag.descendants().forEach((node, i) => {
-    colorMap.set(node.data.id, interp(i / steps));
+  network.nodes.forEach((node, i) => {
+    // TODO: used "1-" below to switch all orange nodes to blue nodes. Need to
+    // verify that this yields correct operation coloration
+    colorMap.set(node.id, color(1-G[i]));
   })
 
   // Create edges
@@ -113,11 +139,11 @@ function Dag(graphData, network, {icons=null}) {
     .attr("transform", ({ x, y }) => `translate(${x}, ${y})`);
 
   // Plot node circles
-  nodes
+  const nodeCircles = nodes
     .append("circle")
     .attr("r", nodeRadius)
     .attr("fill", (n) => colorMap.get(n.data.id));
-
+  
   // Adds icon to circle
   nodes
     .append("text")
@@ -126,15 +152,16 @@ function Dag(graphData, network, {icons=null}) {
     .attr("dy", "-20px")
     .style("fill", "white")
     .style("text-anchor", "middle")
-    .text(() => icons[0]); 
+    .text((d, i) => icons[G[i]]);
   
   // Add text to circle
   nodes
     .append("text")
-    // Only show the final 9 characters + an ellipses
-    .text((d) => "..." + d.data.id.slice(
-      d.data.id.length - 9, d.data.id.length
-    ))
+    .text((d) => getAndTruncateNodeText(d.data, "id", 9))
+    .text(
+      (d) => network.nodes.filter(n => n.id == d.data.id).map(match => {
+        return getAndTruncateNodeText(match, "title", 15)})
+    )
     .attr("font-weight", "bold")
     .attr("font-family", "sans-serif")
     .attr("text-anchor", "middle")
@@ -144,7 +171,8 @@ function Dag(graphData, network, {icons=null}) {
     .on("mouseover", (d) => d3.select(d.target).attr("fill", "black"))
     .on("mouseout", (d) => d3.select(d.target).attr("fill", "white"))
     .append("title")
-    .text((d) => d.data.id)
+    .text((d) => network.nodes.filter(n => n.id == d.data.id).map(match => {
+        return getAndTruncateNodeText(match, "title")}))
 
   // Add link to part in circle
   nodes
@@ -156,13 +184,7 @@ function Dag(graphData, network, {icons=null}) {
     }))
     .text(
       (d) => network.nodes.filter(n => n.id == d.data.id).map(match => {
-        if (match.text.length > 9) {
-          return "..." + match.text.slice(match.text.length - 9, match.text.length)
-        } else {
-          return match.text;
-        }
-      })
-    )
+        return getAndTruncateNodeText(match, "text", 10)}))
     .attr("font-weight", "bold")
     .attr("font-family", "sans-serif")
     .attr("text-anchor", "middle")
@@ -172,9 +194,9 @@ function Dag(graphData, network, {icons=null}) {
     .on("mouseover", (d) => d3.select(d.target).attr("fill", "black"))
     .on("mouseout", (d) => d3.select(d.target).attr("fill", "white"))
     .append("title")
-    .text((d) => d.data.text)
+    .text((d) => network.nodes.filter(n => n.id == d.data.id).map(match => {
+          return match.text;}))
   
-  console.log("ICONS: ", icons);
   return [width, height];
 } 
 

@@ -172,12 +172,24 @@ export default {
       let parsedLinks = [];
       network.links.forEach(link => {
         let datapoint = {
-          id: nodeIdFor(link.edge.from_node),
+          id: link.source, 
           parentIds: network.links.filter(
-            ln => ln.target == nodeIdFor(link.edge.from_node)
+            ln => ln.target == link.source 
           ).map(l => {return l.source})
         }
         parsedLinks.push(datapoint);
+      })
+
+      // Collect any nodes with out degree 0
+      network.nodes.forEach(n => {
+        if (parsedLinks.filter(ln => ln.id == n.id).length == 0) {
+          parsedLinks.push(
+            {
+              id: n.id, parentIds: network.links.filter(ln => ln.target == n.id)
+                .map(l => {return l.source})
+            }
+          )
+        }
       })
 
       // Drop duplicates from parsedLinks:
@@ -187,7 +199,12 @@ export default {
         i1.push(l.id); i2.push(l)
       }});
 
-      let dagGraph = Dag(i2, network, {icons: ["\u{F01A6}", "\u{F072A}"]})
+      let dagGraph = Dag(i2, network, {
+        nodeGroup: (d) => d.group,
+        nodeHighlight: (d) => d.highlight,
+        nodeHighlightColor: "orange",
+        icons: ["\u{F01A6}", "\u{F072A}"]
+      })
 
       this.graphWidth = dagGraph[0];
       this.graphHeight = dagGraph[1];
