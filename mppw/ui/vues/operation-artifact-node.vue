@@ -1,7 +1,7 @@
 <template>
   <div>
     <div v-if="artifact">
-      <o-collapse class="card" animation="slide" :open="false">
+      <o-collapse class="card" animation="slide" :open="false" @open="onOpenArtifactCard">
         <template v-slot:trigger="trigger">
           <div class="card-header" role="button">
             <router-link
@@ -81,23 +81,30 @@
           </div>
         </template>
         <div class="card-content">
-          <div class="mb-4" v-if="artifact['description']">
-            {{ artifact["description"] || "" }}
+
+          <!-- NOTE: We need to make sure we don't actually populate until we get clicked at least once -->
+          <div v-if="wasOpened">
+
+            <div class="mb-4" v-if="artifact['description']">
+              {{ artifact["description"] || "" }}
+            </div>
+
+            <component
+              :is="artifactComponentFor(artifact['type_urn'])"
+              :opId="opId"
+              :artifactKind="artifactKind"
+              :artifactId="artifact['id']"
+            ></component>
+
+            <operation-attachments-node
+              :projectId="projectId"
+              :opId="opId"
+              :parentArtifactPath="artifactPath"
+              :attachmentKinds="(artifactType || {})['child_kinds'] || []"
+            ></operation-attachments-node>
+          
           </div>
 
-          <component
-            :is="artifactComponentFor(artifact['type_urn'])"
-            :opId="opId"
-            :artifactKind="artifactKind"
-            :artifactId="artifact['id']"
-          ></component>
-
-          <operation-attachments-node
-            :projectId="projectId"
-            :opId="opId"
-            :parentArtifactPath="artifactPath"
-            :attachmentKinds="(artifactType || {})['child_kinds'] || []"
-          ></operation-attachments-node>
         </div>
       </o-collapse>
     </div>
@@ -272,6 +279,7 @@ export default {
 
       // UI fields
       isCollapsed: true,
+      wasOpened: false,
 
       isEditingMeta: false,
       newName: null,
@@ -336,6 +344,9 @@ export default {
             this.artifact["type_urn"].replace("urn:x-mfg:artifact", "")
           );
         });
+    },
+    onOpenArtifactCard() {
+      this.wasOpened = true;
     },
     refreshParentFrameCandidates() {
       let currentFramePromise = (
