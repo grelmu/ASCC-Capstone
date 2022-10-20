@@ -12,7 +12,7 @@
           type="textarea"
           v-model="textJson"
           @change="onTextJsonChange"
-          style="height: 15em"
+          style="height: 15em; font-family: monospace;"
         ></o-input>
       </o-tab-item>
 
@@ -21,7 +21,7 @@
           type="textarea"
           v-model="textCsv"
           @change="onTextCsvChange"
-          style="height: 15em"
+          style="height: 15em; font-family: monospace;"
         ></o-input>
       </o-tab-item>
 
@@ -254,6 +254,9 @@ export default {
   font-size: 1em;
   color: black;
 }
+.auto-js-form .genFormItem {
+  display: flex;
+}
 .auto-js-form .fieldGroupWrap .fieldGroupWrap_title {
   font-size: 1em;
   font-weight: normal;
@@ -266,6 +269,8 @@ export default {
 
 .auto-js-form .fieldGroupWrap_box div.fieldGroupWrap_box {
   padding-left: 1em;
+  margin-left: 0.25em;
+  border-left: 2px solid #eeeeee;
 }
 
 .auto-js-form div.arrayOrderList {
@@ -289,7 +294,7 @@ export default {
 .auto-js-form p.arrayOrderList_bottomAddBtn {
   text-align: left;
   padding: 1em 1em 0px;
-  border-top: 1px solid gray;
+  border-top: 2px solid #eeeeee;
 }
 
 .auto-js-form button.bottomAddBtn {
@@ -304,6 +309,18 @@ export default {
 
 .auto-js-form .el-form-item--default {
   margin-bottom: 0.2em;
+}
+
+.auto-js-form .el-input {
+  display: flex;
+}
+
+.auto-js-form .el-input input {
+  font-family: monospace;
+}
+
+.auto-js-form .el-input input[type=text] {
+  width: max-content;
 }
 
 section.digital-document-content {
