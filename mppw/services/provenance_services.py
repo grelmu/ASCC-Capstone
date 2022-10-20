@@ -368,7 +368,7 @@ class ProvenanceServices:
             next_artifact_node = fringe.pop()
 
             artifact_operations = operations_repo.query_by_attached(
-                artifact_id=next_artifact_node.artifact_id
+                artifact_id=next_artifact_node.artifact_id, active=True
             )
 
             for operation in artifact_operations:

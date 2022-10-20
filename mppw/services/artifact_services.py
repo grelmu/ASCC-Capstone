@@ -28,7 +28,8 @@ class ArtifactServices:
 
     def operation_parents(self, artifact: models.AnyArtifact) -> List[models.Operation]:
         return self.repo_layer.operations.query_by_attached(
-            output_artifact_id=str(artifact.id), project_ids=[str(artifact.project)]
+            output_artifact_id=str(artifact.id),
+            active=True,
         )
 
     def operation_parent(
