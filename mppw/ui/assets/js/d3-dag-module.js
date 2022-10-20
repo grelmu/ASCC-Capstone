@@ -1,14 +1,6 @@
 // Based on example from: https://codepen.io/brinkbot/pen/oNZJXqK?editors=1010
 // Other helpful resources: https://observablehq.com/@erikbrinkman/d3-dag-topological
 
-/*
-TODO:
-- [ ] Add arrows on links
-- [*] Fix off-by-one error that drops last node from graph
-- [*] Add discrete coloration to nodes
-- [*] Dynamically assign icons
-*/
-
 /**
  * 
  * @param {Array} graphData An array of objects in the form:
@@ -97,6 +89,29 @@ function Dag(graphData, network, {
     .x((d) => d.x)
     .y((d) => d.y);
 
+  // Arrowhead marker variables
+  const markerBoxWidth = 6;
+  const markerBoxHeight = 6;
+  // +31 to position arrow further "back" on the edge
+  const refX = (markerBoxWidth / 2) + 31;
+  const refY = markerBoxHeight / 2;
+  const arrowPoints = [[0, 0], [0, 6], [6, 3]];
+
+  // Style and size of arrowhead markers
+  svgSelection
+    .append('defs')
+    .append('marker')
+    .attr('id', 'arrow')
+    .attr('viewBox', [0, 0, markerBoxWidth, markerBoxHeight])
+    .attr('refX', refX)
+    .attr('refY', refY)
+    .attr('markerWidth', markerBoxWidth)
+    .attr('markerHeight', markerBoxHeight)
+    .attr('orient', 'auto-start-reverse')
+    .append('path')
+    .attr('d', d3.line()(arrowPoints))
+    .attr("fill", "#9E9E9E");
+
   // Plot edges
   svgSelection
     .append("g")
@@ -105,29 +120,10 @@ function Dag(graphData, network, {
     .enter()
     .append("path")
     .attr("d", ({ points }) => line(points))
-    .attr("fill", "none")
-    .attr("stroke-width", 3)
-    .attr("stroke", ({ source, target }) => {
-      // encodeURIComponents for spaces, hope id doesn't have a `--` in it
-      const gradId = encodeURIComponent(`${source.data.id}--${target.data.id}`);
-      const grad = defs
-        .append("linearGradient")
-        .attr("id", gradId)
-        .attr("gradientUnits", "userSpaceOnUse")
-        .attr("x1", source.x)
-        .attr("x2", target.x)
-        .attr("y1", source.y)
-        .attr("y2", target.y);
-      grad
-        .append("stop")
-        .attr("offset", "0%")
-        .attr("stop-color", colorMap.get(source.data.id));
-      grad
-        .append("stop")
-        .attr("offset", "100%")
-        .attr("stop-color", colorMap.get(target.data.id));
-      return `url(#${gradId})`;
-    });
+    .attr("stroke-width", 2.5)
+    .attr("stroke", "#c0c0c0")
+    // Add arrowheads
+    .attr('marker-end', 'url(#arrow)');
 
   // Select nodes
   const nodes = svgSelection
