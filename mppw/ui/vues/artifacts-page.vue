@@ -173,14 +173,13 @@ export default {
       network.links.forEach(link => {
         let datapoint = {
           id: link.source, 
-          parentIds: network.links.filter(
-            ln => ln.target == link.source 
-          ).map(l => {return l.source})
+          parentIds: network.links.filter(ln => ln.target == link.source)
+            .map(l => l.source)
         }
         parsedLinks.push(datapoint);
       })
 
-      // Collect any nodes with out degree 0
+      // Collect any nodes with an out degree of 0
       network.nodes.forEach(n => {
         if (parsedLinks.filter(ln => ln.id == n.id).length == 0) {
           parsedLinks.push(
@@ -201,8 +200,6 @@ export default {
 
       let dagGraph = Dag(i2, network, {
         nodeGroup: (d) => d.group,
-        nodeHighlight: (d) => d.highlight,
-        nodeHighlightColor: "orange",
         icons: ["\u{F01A6}", "\u{F072A}"]
       })
 

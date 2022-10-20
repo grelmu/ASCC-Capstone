@@ -9,14 +9,13 @@
  *     "parentIds": ["<NODE ID>", "<NODE ID>", ...]
  *   }]
  * @param {Object} network Object containing "links" and "nodes" properties
- * @param {Object} param2 Object containing google font icons and nodegroup
+ * @param {Object} param3 Object containing google font icons and nodegroup
+ * 
  * @returns An array with the SVG width and height
  */
 function Dag(graphData, network, {
   nodeGroup=null, // Given d in nodes, returns an (ordinal) value for color
-  icons=null,
-  nodeHighlight = null,
-  nodeHighlightColor = "red", // TODO: use this on final node?
+  icons=null
 }) {
   let dag = null;
 
@@ -148,7 +147,7 @@ function Dag(graphData, network, {
     .attr("dy", "-20px")
     .style("fill", "white")
     .style("text-anchor", "middle")
-    .text((d, i) => icons[G[i]]);
+    .text((d, i) => icons[G[i]]); // TODO: does this work as expected?
   
   // Add text to circle
   nodes
@@ -170,7 +169,7 @@ function Dag(graphData, network, {
     .text((d) => network.nodes.filter(n => n.id == d.data.id).map(match => {
         return getAndTruncateNodeText(match, "title")}))
 
-  // Add link to part in circle
+  // Add href to part name in circle
   nodes
     .append("text")
     .attr("dy", "20px")
