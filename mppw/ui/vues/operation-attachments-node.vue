@@ -401,11 +401,16 @@ export default {
           );
 
           this.selectedOperationCandidates = listing.filter(
-            (c) => typeUrns.indexOf(c.type_urn) >= 0
+            (c) => this.isSubtypeOf(c.type_urn, typeUrns)
           );
         });
     },
-
+    isSubtypeOf(typeUrn, typeUrns) {
+      for (let nextUrn of typeUrns) {
+        if (typeUrn == nextUrn || typeUrn.startsWith(nextUrn + ":")) return true;
+      }
+      return false;
+    },
     onAttachArtifactSubmit() {
       if (this.newAttachType == "output")
         return this.onAttachOutputArtifactSubmit();
