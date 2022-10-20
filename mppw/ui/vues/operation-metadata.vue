@@ -122,9 +122,11 @@ export default {
   },
   methods: {
     parseLocalAsUTC(val) {
+      if (val == null) return val;
       return new Date(val.substring(0, 19) + "Z");
     },
     dumpUTCAsLocal(dt) {
+      if (dt == null) return dt;
       return dt.toISOString().substring(0, 19);
     },
     checkChanges(id) {
