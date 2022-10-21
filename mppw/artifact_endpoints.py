@@ -525,7 +525,7 @@ def create_router(app):
         )
 
         point_cursor = services.sample(artifact, space_bounds, time_bounds)
-        return list(point_cursor)
+        return endpoints.StreamingJsonResponse(point_cursor)
 
     @router.get("/{id}/services/point-cloud/bounds")
     def point_cloud_bounds(
@@ -616,7 +616,7 @@ def create_router(app):
         time_bounds = tuple(arrow.get(bound).datetime for bound in time_bounds)
 
         cursor = services.sample(artifact, time_bounds, limit, est_limit_bytes)
-        return cursor
+        return endpoints.StreamingJsonResponse(cursor)
 
     @router.get("/{id}/services/time-series/bounds")
     def time_series_bounds(
