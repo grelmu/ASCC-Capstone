@@ -17,6 +17,15 @@
         >Delete Selected</o-button
       >
     </div>
+
+    <o-loading
+        :full-page="true"
+        :active="isUploading"
+        :can-cancel="false"
+      >
+        <o-icon icon="file-upload" size="large" spin> </o-icon>
+    </o-loading>
+
   </div>
 </template>
 
@@ -34,6 +43,7 @@ export default {
       artifact: null,
       root: null,
       isDeleting: false,
+      isUploading: false,
     };
   },
   props: {
@@ -99,9 +109,11 @@ export default {
       return nodes;
     },
     onUploadFileSelect(event) {
+      this.isUploading = true;
       return this.$root
         .apiUploadFile(this.artifactId, event.path, event.file)
         .finally(() => {
+          this.isUploading = false;
           return this.refreshArtifact();
         });
     },
