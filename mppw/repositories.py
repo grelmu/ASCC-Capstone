@@ -661,6 +661,8 @@ class OperationRepository(MongoDBRepository):
         output_artifact_id: str = None,
         artifact_id: str = None,
         project_ids: List[str] = None,
+        tags: Optional[List[str]] = None,
+        active: Optional[bool] = None,
     ):
 
         if artifact_id is not None:
@@ -671,6 +673,8 @@ class OperationRepository(MongoDBRepository):
                         self._query_doc_for(
                             project_ids=project_ids,
                             input_artifact_id=artifact_id,
+                            tags=tags,
+                            active=active,
                         )
                     )
                 )
@@ -679,6 +683,8 @@ class OperationRepository(MongoDBRepository):
                         self._query_doc_for(
                             project_ids=project_ids,
                             output_artifact_id=artifact_id,
+                            tags=tags,
+                            active=active,
                         )
                     )
                 ),
@@ -692,6 +698,8 @@ class OperationRepository(MongoDBRepository):
                         project_ids=project_ids,
                         input_artifact_id=input_artifact_id,
                         output_artifact_id=output_artifact_id,
+                        tags=tags,
+                        active=active,
                     )
                 )
             ),

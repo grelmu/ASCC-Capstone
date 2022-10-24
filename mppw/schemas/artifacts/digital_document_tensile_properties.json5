@@ -6,10 +6,6 @@
     $schema: "https://json-schema.org/draft/2020-12/schema",
     type: "object",
     properties: {
-      orientation: {
-        title: "Orientation",
-        type: "string",
-      },
       width: {
         title: "Width",
         type: "object",

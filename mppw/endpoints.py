@@ -1,3 +1,5 @@
+import fastapi
+import fastapi.encoders
 import pydantic
 import typing
 from typing import List, Tuple, Union, Any
@@ -112,3 +114,36 @@ class ArtifactFramePathModel(models.BaseJsonModel):
             )
 
         return model
+
+
+class StreamingJsonResponse(fastapi.responses.StreamingResponse):
+    @staticmethod
+    def gen_to_json_bytes_gen(gen):
+
+        renderer = fastapi.responses.JSONResponse()
+
+        yield "[".encode("utf-8")
+
+        try:
+
+            i = 0
+            while True:
+                next_bytes = renderer.render(fastapi.encoders.jsonable_encoder(next(gen)))
+                if i > 0:
+                    next_bytes = ",".encode("utf-8") + next_bytes
+                yield next_bytes
+                i += 1
+
+        except StopIteration:
+            pass
+
+        yield "]".encode("utf-8")
+
+    def __init__(self, gen, *args, **kwargs):
+        bytes_gen = StreamingJsonResponse.gen_to_json_bytes_gen(gen)
+        super().__init__(
+            bytes_gen,
+            media_type=fastapi.responses.JSONResponse.media_type,
+            *args,
+            **kwargs
+        )

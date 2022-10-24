@@ -36,22 +36,24 @@
     <div class="row">
       <div class="col">
         <o-field label="Start Date & Time">
-          <o-input
+          <o-datetimepicker
             v-model="edit['start_at']"
+            v-on:update:modelValue="checkChanges('start_at')"
             icon="clock"
-            type="datetime-local"
-            v-on:change="checkChanges('start_at')"
-          ></o-input>
+            placeholder="Click to select..."
+            :timepicker="{ enableSeconds : true }"
+          ></o-datetimepicker>
         </o-field>
       </div>
       <div class="col">
         <o-field label="End Date & Time">
-          <o-input
+          <o-datetimepicker
             v-model="edit['end_at']"
+            v-on:update:modelValue="checkChanges('end_at')"
             icon="clock"
-            type="datetime-local"
-            v-on:change="checkChanges('end_at')"
-          ></o-input>
+            placeholder="Click to select..."
+            :timepicker="{ enableSeconds : true }"
+          ></o-datetimepicker>
         </o-field>
       </div>
     </div>
@@ -119,14 +121,31 @@ export default {
     metadata: null,
   },
   methods: {
+    parseLocalAsUTC(val) {
+      if (val == null) return val;
+      return new Date(val.substring(0, 19) + "Z");
+    },
+    dumpUTCAsLocal(dt) {
+      if (dt == null) return dt;
+      return dt.toISOString().substring(0, 19);
+    },
     checkChanges(id) {
-      if (this.edit[id] != this.metadata[id]) {
+
+      let addChange = this.edit[id] != this.metadata[id];
+      let addChangeValue = this.edit[id];
+      if (["start_at", "end_at"].includes(id)) {
+        addChange = (this.edit[id] != this.parseLocalAsUTC(this.metadata[id]));
+        addChangeValue = this.dumpUTCAsLocal(this.edit[id]);
+      }
+
+      if (addChange) {
         this.changes.push({
           op: "replace",
           path: id,
-          value: this.edit[id],
+          value: addChangeValue,
         });
       }
+
       this.submitButton = true;
     },
     onMetadataSubmit() {
@@ -141,6 +160,10 @@ export default {
   },
   created() {
     this.edit = Object.assign({}, this.metadata);
+    for (let dtf of ["start_at", "end_at"]) {
+      if (!(dtf in this.edit)) continue;
+      this.edit[dtf] = this.parseLocalAsUTC(this.edit[dtf]);
+    }
     return true;
   },
 };

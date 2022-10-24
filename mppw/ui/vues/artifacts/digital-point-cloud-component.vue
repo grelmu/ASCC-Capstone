@@ -1,5 +1,14 @@
 <template>
   <div v-if="artifact">
+
+    <o-loading
+        :full-page="false"
+        :active="isLoadingSampleDocs"
+        :can-cancel="false"
+      >
+        <o-icon icon="star-four-points" size="large" spin> </o-icon>
+    </o-loading>
+
     <section>
       <o-collapse :open="true" class="card col-12" animation="slide" padding-botton="5px" style="margin-bottom: 5px;">
         <template #trigger="props">
@@ -147,6 +156,7 @@ export default {
       response: null,
       tbChunks: [],
       visualizePoints: false,
+      isLoadingSampleDocs: false,
       pointSelector: '',
       displayValue: '',
       showSelectors: true
@@ -270,6 +280,7 @@ export default {
       this.visualizePoints = false;
       // Clear style on previously clicked chunk buttons:
       document.querySelectorAll('.clicked-dl-btn').forEach(item => {item.classList.remove('clicked-dl-btn')})
+      this.isLoadingSampleDocs = true;
       return this.$root.apiFetchPointcloud(
         this.artifactId,
         this.formData).then((result) => {
@@ -280,8 +291,10 @@ export default {
             new Date(this.timeBoundsEnd),
             // This means chunks contain 1 minute of data: 
             1
-          );
-      });
+          )
+        }).finally(() => {
+            this.isLoadingSampleDocs = false;
+        });
     },
     // Get point cloud, but for a chunk not the whole range 
     getPointCloudChunk(e, chunk) {

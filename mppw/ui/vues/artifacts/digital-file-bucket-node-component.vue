@@ -12,22 +12,30 @@
             >&nbsp;
             <o-icon :icon="trigger.open ? 'folder-open' : 'folder'"></o-icon
             >&nbsp;&nbsp;{{ baseName(node) }}&nbsp;&nbsp;&nbsp;
-            <o-upload @update:modelValue="onUploadFileSelect">
-              <o-button tag="a" variant="primary" class="small-button"
-                ><o-icon icon="upload" size="small"></o-icon
-              ></o-button>
-            </o-upload>
-
             <!-- o-icon :icon="trigger.open ? 'arrow-up-drop-circle' : 'arrow-down-drop-circle'"> </o-icon-->
           </div>
         </template>
 
         <div
-          v-for="(child, index) of getChildren(node)"
+          v-for="(child, index) of (getChildren(node).concat([null]))"
           :key="index"
           style="padding-left: 2em"
         >
-          <digital-file-bucket-node-component
+          <div v-if="child == null">
+            <div role="button">
+              <o-checkbox
+                :disabled="true"
+              ></o-checkbox
+              >&nbsp;
+              <o-upload v-if="child == null" 
+                @update:modelValue="onUploadFileSelect">
+                <o-icon :icon="'file-upload'" style="color: gray;"></o-icon>
+            </o-upload>
+            &nbsp;&nbsp;<span class="text-muted">Upload New File</span>
+            </div>
+          </div>
+
+          <digital-file-bucket-node-component v-if="child != null"
             :artifactId="artifactId"
             :node="child"
             :selectable="selectable && childrenSelectable"

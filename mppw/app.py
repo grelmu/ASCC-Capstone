@@ -2,6 +2,7 @@ import os
 import types
 import fastapi
 import fastapi.staticfiles
+import fastapi.middleware.gzip
 
 from mppw import logger, RELEASE_NOTES
 from mppw import __version__ as __mppw_version__
@@ -30,6 +31,9 @@ def create_app(storage_layer):
     #
     # Setup core endpoints
     #
+
+    # Enable compression when client supports it
+    app.add_middleware(fastapi.middleware.gzip.GZipMiddleware, minimum_size=10 * 1024)
 
     @app.get("/")
     def root():

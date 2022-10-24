@@ -1,5 +1,14 @@
 <template>
   <section v-if="artifact && timeBounds">
+
+    <o-loading
+        :full-page="false"
+        :active="isLoadingSampleDocs"
+        :can-cancel="false"
+      >
+        <o-icon icon="star-three-points" size="large" spin> </o-icon>
+    </o-loading>
+
     <div class="row">
       <o-tabs type = "boxed">
         <o-tab-item label="Elapsed Time">
@@ -56,14 +65,6 @@
         </o-tab-item>
       </o-tabs>
     </div>
-
-    <o-loading
-        :full-page="true"
-        :active="isLoadingSampleDocs"
-        :can-cancel="false"
-      >
-        <o-icon icon="loading" size="large" spin> </o-icon>
-    </o-loading>
 
     <div class="row" v-if="sampleDocs">
       <o-tabs type="boxed">
