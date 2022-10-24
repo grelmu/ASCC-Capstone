@@ -1,3 +1,11 @@
+# 0.8.0
+
+New Features:
+
+* Improved file-bucket upload UI
+* Fully streaming and compressed sample API for point cloud and time series artifacts
+* Compute operations for modeling digital artifact relationships
+
 # 0.7.1
 
 New Features:
