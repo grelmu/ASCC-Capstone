@@ -1,46 +1,47 @@
 {
-  type_urn: "urn:x-mfg:operation:fff",
-  name: "FFF Manufacture",
-  description: "FFF or FDM manufacturing operation",
-  parent_urns: ["urn:x-mfg:operation:default"],
+  type_urn: 'urn:x-mfg:operation:fff',
+  name: 'FFF Manufacture',
+  description: 'FFF or FDM manufacturing operation',
+  parent_urns: ['urn:x-mfg:operation:default'],
   attachments: {
-    ":toolpath": [":digital:file"],
-    ":input-materials": [":material:batch"],
-    ":output-parts": [
+    ':toolpath': [':digital:file'],
+    ':input-materials': [':material:batch'],
+    ':output-parts': [
       [
-        ":material:part",
+        ':material:part',
         {
-          ":part-geometry": [
-            ":digital:fiducial-points",
-            ":digital:point-cloud",
-            ":digital:mesh",
+          ':part-geometry': [
+            ':digital:fiducial-points',
+            ':digital:document:bounding-box',
+            ':digital:point-cloud',
+            ':digital:mesh'
           ],
-          ":images": [":digital:file"],
-        },
-      ],
+          ':images': [':digital:file']
+        }
+      ]
     ],
-    ":toolpath-cloud": [":digital:point-cloud"],
-    ":thermal-cloud": [":digital:point-cloud"],
+    ':toolpath-cloud': [':digital:point-cloud'],
+    ':thermal-cloud': [':digital:point-cloud']
   },
   provenance: {
     steps: [
       {
-        from_artifacts: [":input-materials.*", ":toolpath.*"],
+        from_artifacts: [':input-materials.*', ':toolpath.*'],
         to_artifacts: [
-          ":output-parts.*",
-          ":toolpath-cloud.*",
-          ":thermal-cloud.*",
-          ":operator-notes.*",
-          ":process-data.*",
-          ":attachments.*",
-        ],
+          ':output-parts.*',
+          ':toolpath-cloud.*',
+          ':thermal-cloud.*',
+          ':operator-notes.*',
+          ':process-data.*',
+          ':attachments.*'
+        ]
       },
       {
-        name: ":measurements",
-        context: ":output-parts.*",
-        from_artifacts: ["."],
-        to_artifacts: [".:part-geometry.*", ".:images.*"],
-      },
-    ],
-  },
+        name: ':measurements',
+        context: ':output-parts.*',
+        from_artifacts: ['.'],
+        to_artifacts: ['.:part-geometry.*', '.:images.*']
+      }
+    ]
+  }
 }
