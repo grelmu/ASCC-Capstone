@@ -177,6 +177,7 @@ export default {
     findPropertyPaths(obj, path=''){
       if (path.charAt(0) == '.') path = path.slice(1);
       let successfulArray = [];
+      if (obj == null) return successfulArray;
       if (["x","y","z"].every(key => Object.keys(obj).includes(key))){
         successfulArray.push(path);
         if (!this.pointSelector) this.pointSelector = path;
@@ -190,7 +191,7 @@ export default {
     findBooleanPaths(obj, path=''){
       if (path.charAt(0) == '.') path = path.slice(1);
       let successfulArray = [];
-
+      if (obj == null) return successfulArray;
       Object.getOwnPropertyNames(obj).forEach(key => {
         if(typeof obj[key] == "boolean")
           successfulArray.push(path + '.' + key);
