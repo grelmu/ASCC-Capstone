@@ -1,0 +1,47 @@
+{
+  type_urn: 'urn:x-mfg:artifact:digital:document:bounding-box',
+  name: 'Bounding Box',
+  description: 'Axis-aligned bounding box',
+  json_schema: {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    type: 'object',
+    properties: {
+      min: {
+        title: 'Min Point',
+        type: 'object',
+        properties: {
+          x: {
+            type: 'number',
+            title: 'X'
+          },
+          y: {
+            type: 'number',
+            title: 'Y'
+          },
+          z: {
+            type: 'number',
+            title: 'Z'
+          }
+        }
+      },
+      max: {
+        title: 'Max Point',
+        type: 'object',
+        properties: {
+          x: {
+            type: 'number',
+            title: 'X'
+          },
+          y: {
+            type: 'number',
+            title: 'Y'
+          },
+          z: {
+            type: 'number',
+            title: 'Z'
+          }
+        }
+      }
+    }
+  }
+}
