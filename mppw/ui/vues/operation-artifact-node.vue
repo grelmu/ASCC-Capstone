@@ -129,6 +129,18 @@
         <o-input v-model="newDescription"></o-input>
       </o-field>
 
+      <div class="row">
+        <div class="col-auto">
+          <o-field label="Tags">
+            <o-inputitems
+              v-model="newTags"
+              icon="tag"
+              placeholder="Add tags"
+            ></o-inputitems>
+          </o-field>
+        </div>
+      </div>
+
       <div v-if="isDigitalArtifact()">
         <h3>Spatial Frame</h3>
 
@@ -284,6 +296,7 @@ export default {
       isEditingMeta: false,
       newName: null,
       newDescription: null,
+      newTags: null,
 
       isTextQueryingOperations: false,
       operationsTextQuery: null,
@@ -456,6 +469,7 @@ export default {
     onStartEditMeta() {
       this.newName = this.artifact["name"];
       this.newDescription = this.artifact["description"];
+      this.newTags = this.artifact["tags"];
       this.isEditingMeta = true;
 
       this.isTextQueryingOperations = false;
@@ -545,6 +559,11 @@ export default {
         op: "replace",
         path: "description",
         value: this.newDescription,
+      });
+      changes.push({
+        op: "replace",
+        path: "tags",
+        value: this.newTags,
       });
 
       if (this.isDigitalArtifact()) {
