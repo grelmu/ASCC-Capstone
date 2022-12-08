@@ -41,9 +41,14 @@ black = {version = "^22.3.0", allow-prereleases = true}
 
 
 [tool.poetry.scripts]
+# TODO: remove
 mppw-docker = "scripts.docker:main"
 mppw-migrations = "scripts.migrations:main"
 mppw-app = "scripts.app:main"
+# END remove
+mppw_docker = "scripts.docker:main"
+mppw_migrations = "scripts.migrations:main"
+mppw_app = "scripts.app:main"
 
 [tool.poetry.group.dev.dependencies]
 requests-toolbelt = "^0.9.1"
