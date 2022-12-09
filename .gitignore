@@ -6,3 +6,4 @@
 .env*
 *id_rsa*
 pytestdebug.log
+.history
