@@ -249,3 +249,96 @@ def test_provenance_permissions_basic(api_pytest_client: mppw_clients.MppwApiCli
             assert False
         except requests.exceptions.HTTPError as ex:
             assert ex.response.status_code == 401
+
+
+def test_provenance_permissions_legacy(api_pytest_client: mppw_clients.MppwApiClient):
+
+    """
+    Tests that legacy provenance permissions work as expected
+    """
+
+    api = api_pytest_client
+
+    #
+    # Read/Write user
+    #
+
+    user = api.create_user(
+        {
+            "username": "dep_user",
+            "allowed_scopes": [
+                mppw.security._DEPRECATED_PROVENANCE_SCOPE,
+            ],
+            "local_claims": api.default_claims,
+            "password": "password",
+        }
+    )
+
+    admin_headers = api.headers
+    api.login("dep_user", "password")
+
+    successes = [
+        lambda: api.find_projects(),
+        lambda: api.find_artifacts(),
+        lambda: api.find_operations(),
+        lambda: api.create_artifact(
+            {
+                "name": "Security Artifact",
+                "type_urn": "urn:x-mfg:artifact:digital:document",
+            }
+        ),
+        lambda: api.create_artifact(
+            {
+                "name": "Editable Security Artifact",
+                "type_urn": "urn:x-mfg:artifact:digital:document",
+            }
+        ),
+        lambda: api.create_artifact(
+            {
+                "name": "Temp Security Artifact",
+                "type_urn": "urn:x-mfg:artifact:digital:document",
+            }
+        ),
+        lambda: api.delete_artifact(
+            api.find_artifact(name="Temp Security Artifact")["id"]
+        ),
+        lambda: api.create_operation(
+            {
+                "name": "Security Operation",
+                "type_urn": "urn:x-mfg:operation:default",
+            },
+            init=True,
+        ),
+        lambda: api.create_operation(
+            {
+                "name": "Editable Security Operation",
+                "type_urn": "urn:x-mfg:operation:default",
+            },
+            init=True,
+        ),
+        lambda: api.create_operation(
+            {
+                "name": "Temp Security Operation",
+                "type_urn": "urn:x-mfg:operation:default",
+            },
+            init=True,
+        ),
+        lambda: api.delete_operation(
+            api.find_operation(name="Temp Security Operation")["id"]
+        ),
+    ]
+
+    failures = [
+        lambda: api.create_project({"name": "Invalid Project"}),
+    ]
+
+    for success in successes:
+        success()
+
+    for failure in failures:
+        try:
+            failure()
+            # Should not succeed
+            assert False
+        except requests.exceptions.HTTPError as ex:
+            assert ex.response.status_code == 401
