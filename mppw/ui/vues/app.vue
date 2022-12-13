@@ -16,8 +16,17 @@
       <header
         class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow"
       >
-        <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#"
-          >MPPWarehouse</a
+        <a class="navbar-brand col-sm-2 col-md-2 col-lg-1 me-0 px-2" href="#"
+          ><img src="favicon.ico" style="height: 30px" />&nbsp;&nbsp;
+          <span
+            style="
+              position: relative;
+              top: 0.6em;
+              left: -1.25em;
+              font-size: 0.9em;
+            "
+            >MPPW</span
+          ></a
         >
         <button
           class="navbar-toggler position-absolute d-md-none collapsed"
@@ -31,7 +40,7 @@
           <span class="navbar-toggler-icon"></span>
         </button>
         <input
-          class="form-control form-control-dark w-100"
+          class="form-control form-control-dark"
           type="text"
           placeholder="Search"
           aria-label="Search"
@@ -54,7 +63,7 @@
         <div class="row">
           <nav
             id="sidebarMenu"
-            class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse"
+            class="col-md-2 col-lg-1 d-md-block bg-light sidebar collapse"
           >
             <div class="position-sticky pt-3">
               <ul class="nav flex-column">
@@ -94,7 +103,7 @@
             </div>
           </nav>
 
-          <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 mt-4">
+          <main class="col-sm-auto col-md-10 col-lg-11 ms-md-auto px-4 mt-4">
             <router-view></router-view>
           </main>
         </div>
@@ -179,16 +188,27 @@ export default {
     },
     isModifyProvenanceUser() {
       if (!this.currentUser) return false;
-      return this.isAdminUser() || this.currentUser["scopes"].includes("modify:provenance");
+      return (
+        this.isAdminUser() ||
+        this.currentUser["scopes"].includes("modify:provenance")
+      );
     },
     isModifyArtifactUser() {
       if (!this.currentUser) return false;
-      console.log(this.currentUser)
-      return this.isAdminUser() || this.isModifyProvenanceUser() || this.currentUser["scopes"].includes("modify:artifact");
+      console.log(this.currentUser);
+      return (
+        this.isAdminUser() ||
+        this.isModifyProvenanceUser() ||
+        this.currentUser["scopes"].includes("modify:artifact")
+      );
     },
     isModifyOperationUser() {
       if (!this.currentUser) return false;
-      return this.isAdminUser() || this.isModifyProvenanceUser() || this.currentUser["scopes"].includes("modify:operation");
+      return (
+        this.isAdminUser() ||
+        this.isModifyProvenanceUser() ||
+        this.currentUser["scopes"].includes("modify:operation")
+      );
     },
     apiUrl(input) {
       return location.origin + "/api/" + input;
@@ -477,10 +497,10 @@ export default {
         );
       });
     },
-    apiFetchTimeSeriesBounds(id){
+    apiFetchTimeSeriesBounds(id) {
       // Obtain the bounds of a time series
       return this.apiFetch(`artifacts/${id}/services/time-series/bounds`, {
-        method:"GET",
+        method: "GET",
       }).then((response) => {
         if (response.status == 200) return response.json();
         this.throwApiResponseError(
@@ -870,6 +890,7 @@ export default {
   z-index: 100; /* Behind the navbar */
   padding: 48px 0 0; /* Height of navbar */
   box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.1);
+  min-width: 100px;
 }
 
 @media (max-width: 767.98px) {
@@ -889,7 +910,9 @@ export default {
 
 .sidebar .nav-link {
   font-weight: 500;
+
   color: #333;
+  padding: 0.5rem 0.75rem;
 }
 
 .sidebar .nav-link .feather {
@@ -918,14 +941,14 @@ export default {
 .navbar-brand {
   padding-top: 0.75rem;
   padding-bottom: 0.75rem;
-  font-size: 1rem;
-  background-color: rgba(0, 0, 0, 0.25);
   box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.25);
+  text-align: center;
+  min-width: 100px;
 }
 
 .navbar .navbar-toggler {
-  top: 0.25rem;
-  right: 1rem;
+  top: 0.5rem;
+  right: 0.5rem;
 }
 
 .navbar .form-control {

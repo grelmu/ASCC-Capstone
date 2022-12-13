@@ -1,10 +1,14 @@
 <template>
   <div class="form-body text-center">
-
     <div class="form-signin">
       <form>
-        <h1><img src="favicon.ico" class="p-1" />MPPW</h1>
-        <h1 class="h3 mb-3 fw-normal">Please sign in</h1>
+        <h1>
+          <img src="favicon.ico" class="p-1" /><span
+            style="vertical-align: middle; padding-left: 0.1em"
+            >MPPW<span style="font-size: 0.75em">arehouse</span></span
+          >
+        </h1>
+        <h1 class="h3 mb-3 fw-normal mt-4">Please sign in</h1>
 
         <div class="form-floating">
           <input
