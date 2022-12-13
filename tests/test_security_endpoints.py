@@ -98,6 +98,13 @@ def test_provenance_permissions_basic(api_pytest_client: mppw_clients.MppwApiCli
         ),
         lambda: api.create_operation(
             {
+                "name": "Editable Security Operation",
+                "type_urn": "urn:x-mfg:operation:default",
+            },
+            init=True,
+        ),
+        lambda: api.create_operation(
+            {
                 "name": "Temp Security Operation",
                 "type_urn": "urn:x-mfg:operation:default",
             },
@@ -182,27 +189,31 @@ def test_provenance_permissions_basic(api_pytest_client: mppw_clients.MppwApiCli
             assert ex.response.status_code == 401
 
     #
-    # Artifact-only user
+    # Modify-only user
     #
 
     api.headers = admin_headers
     user = api.create_user(
         {
-            "username": "artifact_user",
+            "username": "mo_user",
             "allowed_scopes": [
                 mppw.security.READ_PROVENANCE_SCOPE,
                 mppw.security.MODIFY_ARTIFACT_SCOPE,
+                mppw.security.MODIFY_OPERATION_SCOPE,
             ],
             "local_claims": api.default_claims,
             "password": "password",
         }
     )
 
-    api.login("artifact_user", "password")
+    api.login("mo_user", "password")
 
     successes = [
         lambda: api.update_artifact(
             api.find_artifact(name="Editable Security Artifact")
+        ),
+        lambda: api.update_operation(
+            api.find_operation(name="Editable Security Operation")
         ),
     ]
 
@@ -213,7 +224,19 @@ def test_provenance_permissions_basic(api_pytest_client: mppw_clients.MppwApiCli
                 "type_urn": "urn:x-mfg:artifact:digital:document",
             }
         ),
-        lambda: api.delete_artifact(api.find_artifact(name="Security Artifact")["id"]),
+        lambda: api.delete_artifact(
+            api.find_artifact(name="Editable Security Artifact")["id"]
+        ),
+        lambda: api.create_operation(
+            {
+                "name": "Security Operation",
+                "type_urn": "urn:x-mfg:operation:default",
+            },
+            init=True,
+        ),
+        lambda: api.delete_operation(
+            api.find_operation(name="Editable Security Operation")["id"]
+        ),
     ]
 
     for success in successes:
