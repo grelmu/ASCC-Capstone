@@ -28,7 +28,7 @@
                       )
                     }}
                     &nbsp;&nbsp;
-                    <a @click="onStartEditMeta" style="cursor: pointer"
+                    <a v-if="$root.isModifyArtifactUser()" @click="onStartEditMeta" style="cursor: pointer"
                       ><o-icon icon="circle-edit-outline"></o-icon
                     ></a>
                   </div>
@@ -36,7 +36,7 @@
                 <div v-if="artifact['name']">
                   <div class="fs-4">
                     {{ artifact["name"] || "" }}&nbsp;&nbsp;
-                    <a @click="onStartEditMeta" style="cursor: pointer"
+                    <a v-if="$root.isModifyArtifactUser()" @click="onStartEditMeta" style="cursor: pointer"
                       ><o-icon icon="circle-edit-outline"></o-icon
                     ></a>
                   </div>
@@ -52,7 +52,7 @@
               </div>
             </div>
             <a
-                v-if="attachment['attachment_mode'] == 'input'"
+                v-if="(attachment['attachment_mode'] == 'input') && $root.isModifyProvenanceUser()"
                 title="Claim artifact"
                 @click="onClickClaimArtifact"
                 class="card-header-icon"

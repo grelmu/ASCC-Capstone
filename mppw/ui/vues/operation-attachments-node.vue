@@ -1,7 +1,7 @@
 <template>
   <div v-if="(attachmentNodes || []).length > 0 || attachmentKinds.length > 0">
     <div class="mt-4 row">
-      <div class="col-auto">
+      <div class="col-auto" v-if="$root.isModifyProvenanceUser()">
         <o-button
           @click="onAttachArtifactBegin()"
           class="text-end"
@@ -44,7 +44,7 @@
               :attachmentKind="attachmentKindFor(attachmentNode['kind_urn'])"
             ></operation-artifact-node>
           </div>
-          <div class="col-auto my-auto">
+          <div v-if="$root.isModifyProvenanceUser()" class="col-auto my-auto">
             <o-icon
               :icon="
                 artifactNode['attachment_mode'] == 'input'

@@ -173,6 +173,23 @@ export default {
           return this.resetApiCredentials();
         });
     },
+    isAdminUser() {
+      if (!this.currentUser) return false;
+      return this.currentUser["scopes"].includes("*");
+    },
+    isModifyProvenanceUser() {
+      if (!this.currentUser) return false;
+      return this.isAdminUser() || this.currentUser["scopes"].includes("modify:provenance");
+    },
+    isModifyArtifactUser() {
+      if (!this.currentUser) return false;
+      console.log(this.currentUser)
+      return this.isAdminUser() || this.isModifyProvenanceUser() || this.currentUser["scopes"].includes("modify:artifact");
+    },
+    isModifyOperationUser() {
+      if (!this.currentUser) return false;
+      return this.isAdminUser() || this.isModifyProvenanceUser() || this.currentUser["scopes"].includes("modify:operation");
+    },
     apiUrl(input) {
       return location.origin + "/api/" + input;
     },

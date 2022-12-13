@@ -17,7 +17,7 @@
         </option>
       </o-select>
 
-      <o-button @click="onNewProject()">New Project</o-button>
+      <o-button v-if="$root.isAdminUser()" @click="onNewProject()">New Project</o-button>
     </o-field>
 
     <o-modal v-model:active="isCreatingNewProject">
@@ -35,7 +35,7 @@
 
     <div v-if="projectId" class="mt-5">
       <div class="mt-3 text-end">
-        <o-button @click="onNewOp()">New Operation</o-button>
+        <o-button v-if="$root.isModifyProvenanceUser()" @click="onNewOp()">New Operation</o-button>
       </div>
 
       <o-modal v-model:active="isCreatingNewOp">
