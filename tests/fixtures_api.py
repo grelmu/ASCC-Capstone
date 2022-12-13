@@ -63,18 +63,22 @@ def api_pytest_client(
 
     operations = api_client.find_operations(tags=[test_tag])
     artifacts = api_client.find_artifacts(tags=[test_tag])
+    users = api_client.find_users(local_claim_name=test_tag)
 
     print(
-        f"Deleting {len(operations)} operations and {len(artifacts)} artifacts with tag {test_tag}..."
+        f"Deleting {len(operations)} operations,  {len(artifacts)} artifacts, and {len(users)} users with tag {test_tag}..."
     )
     for operation in operations:
         api_client.delete_operation(operation["id"], preserve_data=False)
     for artifact in artifacts:
         api_client.delete_artifact(artifact["id"], preserve_data=False)
-    print(f"Done deleting operations and artifacts with tag {test_tag}.")
+    for user in users:
+        api_client.delete_user(user["id"], preserve_data=False)
+    print(f"Done deleting operations, artifacts, and users with tag {test_tag}.")
 
     api_client.default_project = project
     api_client.default_tags = [test_tag]
+    api_client.default_claims = {"projects": [project["id"]], test_tag: True}
 
     return api_client
 

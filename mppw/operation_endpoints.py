@@ -14,7 +14,12 @@ from .repositories import request_repo_layer
 from . import services
 from .services import request_service_layer
 from . import security
-from .security import request_user, PROVENANCE_SCOPE
+from .security import (
+    request_user,
+    READ_PROVENANCE_SCOPE,
+    MODIFY_PROVENANCE_SCOPE,
+    MODIFY_OPERATION_SCOPE,
+)
 from . import project_endpoints
 from . import endpoints
 
@@ -40,7 +45,7 @@ def create_router(app):
     def create(
         operation: models.Operation,
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[MODIFY_PROVENANCE_SCOPE]
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
@@ -53,7 +58,7 @@ def create_router(app):
     def read(
         id: str,
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
@@ -76,7 +81,7 @@ def create_router(app):
         fulltext_query: str = fastapi.Query(None),
         limit: int = fastapi.Query(None),
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
@@ -118,7 +123,7 @@ def create_router(app):
         sort_col: str = fastapi.Query(None),
         sort_dir: str = fastapi.Query(None),
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
@@ -157,7 +162,7 @@ def create_router(app):
         id: str,
         operation: models.Operation,
         current_user: models.User = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[MODIFY_OPERATION_SCOPE]
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
@@ -180,7 +185,7 @@ def create_router(app):
         id: str,
         changes: List[endpoints.Change],
         current_user: models.User = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[MODIFY_OPERATION_SCOPE]
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
@@ -210,7 +215,7 @@ def create_router(app):
         id: str,
         preserve_data: bool = True,
         current_user: models.User = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[MODIFY_PROVENANCE_SCOPE]
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
@@ -234,7 +239,9 @@ def create_router(app):
     def init(
         id: str,
         args: dict = {},
-        user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+        user: models.User = Security(
+            request_user(app), scopes=[MODIFY_OPERATION_SCOPE]
+        ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
 
@@ -247,7 +254,7 @@ def create_router(app):
         id: str,
         attachment: models.AttachmentGraph.AttachmentNode,
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[MODIFY_PROVENANCE_SCOPE]
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
@@ -273,7 +280,7 @@ def create_router(app):
         attachment_mode: models.AttachmentMode = None,
         parent_artifact_path: str = None,
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
@@ -305,7 +312,7 @@ def create_router(app):
         id: str,
         attachment: models.AttachmentGraph.AttachmentNode,
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[MODIFY_PROVENANCE_SCOPE]
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
@@ -324,7 +331,7 @@ def create_router(app):
         id: str,
         attachment: models.AttachmentGraph.AttachmentNode,
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[MODIFY_PROVENANCE_SCOPE]
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
@@ -349,7 +356,7 @@ def create_router(app):
     def all_artifacts(
         id: str,
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
@@ -369,7 +376,7 @@ def create_router(app):
         kind_path: str = None,
         artifact_id: str = None,
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
@@ -398,7 +405,7 @@ def create_router(app):
     def get_default_attachments(
         id: str,
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
@@ -420,7 +427,7 @@ def create_router(app):
     def get_provenance_steps(
         id: str,
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):

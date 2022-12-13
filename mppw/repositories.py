@@ -168,14 +168,26 @@ class UserRepository(MongoDBRepository):
     def collection(self) -> pymongo.collection.Collection:
         return self.db.get_collection("users", codec_options=mdb_codec_options)
 
-    def _query_doc_for(self, id: str = None, username: str = None, active: bool = None):
+    def _query_doc_for(
+        self,
+        id: str = None,
+        username: str = None,
+        allowed_scopes: List[str] = None,
+        local_claim_name: str = None,
+        active: bool = None,
+    ):
         query_doc = {}
         if id is not None:
             query_doc["_id"] = coerce_doc_id(id)
         if username is not None:
             query_doc["username"] = username
+        if allowed_scopes is not None:
+            query_doc["allowed_scopes"] = allowed_scopes
+        if local_claim_name is not None:
+            query_doc[f"local_claims.{local_claim_name}"] = {"$exists": True}
         if active is not None:
             query_doc["active"] = {"$ne": False} if active else False
+        
         return query_doc
 
     def create(self, user: models.User):
@@ -183,14 +195,28 @@ class UserRepository(MongoDBRepository):
         user.id = models.ObjectDbId(result.inserted_id)
         return user
 
-    def query(self, id=None, username=None, active=None):
-        logger.warn(self._query_doc_for(id=id, username=username, active=active))
+    def query(
+        self,
+        id=None,
+        username=None,
+        allowed_scopes=None,
+        local_claim_name=None,
+        active=None,
+    ):
+        query_doc = self._query_doc_for(
+                id=id,
+                username=username,
+                allowed_scopes=allowed_scopes,
+                local_claim_name=local_claim_name,
+                active=active,
+            )
+
+        logger.warn(query_doc)
+
         return map(
             lambda doc: doc_to_model(doc, models.User),
             list(
-                self.collection.find(
-                    self._query_doc_for(id=id, username=username, active=active)
-                )
+                self.collection.find(query_doc)
             ),
         )
 

@@ -31,10 +31,54 @@ LOCAL_JWT_ALGORITHM = "HS256"
 LOCAL_ACCESS_TOKEN_EXPIRE_MINUTES = 300
 LOCAL_TOKEN_ENDPOINT = "token"
 
-ADMIN_SCOPE, ADMIN_SCOPE_NAME = "*", "Admin Scope"
-PROVENANCE_SCOPE, PROVENANCE_SCOPE_NAME = "provenance", "Provenance Scope"
+# TODO: Move scopes to dedicated module
 
-SCOPES = {ADMIN_SCOPE: ADMIN_SCOPE_NAME, PROVENANCE_SCOPE: PROVENANCE_SCOPE_NAME}
+ADMIN_SCOPE, ADMIN_SCOPE_NAME = "*", "Admin Scope"
+
+READ_PROVENANCE_SCOPE, READ_PROVENANCE_SCOPE_NAME = (
+    "read:provenance",
+    "Read Provenance Scope",
+)
+MODIFY_PROVENANCE_SCOPE, MODIFY_PROVENANCE_SCOPE_NAME = (
+    "modify:provenance",
+    "Modify Provenance Scope",
+)
+
+MODIFY_OPERATION_SCOPE, MODIFY_OPERATION_SCOPE_NAME = (
+    "modify:operation",
+    "Modify Operation Scope",
+)
+MODIFY_ARTIFACT_SCOPE, MODIFY_ARTIFACT_SCOPE_NAME = (
+    "modify:artifact",
+    "Modify Artifact Scope",
+)
+
+_DEPRECATED_PROVENANCE_SCOPE = "provenance"
+
+SCOPES = {
+    ADMIN_SCOPE: ADMIN_SCOPE_NAME,
+    READ_PROVENANCE_SCOPE: READ_PROVENANCE_SCOPE_NAME,
+    MODIFY_PROVENANCE_SCOPE: MODIFY_PROVENANCE_SCOPE_NAME,
+    MODIFY_OPERATION_SCOPE: MODIFY_OPERATION_SCOPE_NAME,
+    MODIFY_ARTIFACT_SCOPE: MODIFY_ARTIFACT_SCOPE_NAME,
+}
+
+
+def _normalize_client_scopes(client_scopes):
+    normal_scopes = []
+    for scope in client_scopes:
+        if scope == _DEPRECATED_PROVENANCE_SCOPE or scope == MODIFY_PROVENANCE_SCOPE:
+            normal_scopes.extend(
+                [
+                    READ_PROVENANCE_SCOPE,
+                    MODIFY_PROVENANCE_SCOPE,
+                    MODIFY_ARTIFACT_SCOPE,
+                    MODIFY_OPERATION_SCOPE,
+                ]
+            )
+        else:
+            normal_scopes.append(scope)
+    return normal_scopes
 
 
 class JwtUser(models.DocModel):
@@ -223,6 +267,9 @@ def create_router(app):
             if user is None:
                 raise credentials_exception
 
+            # Upgrade any deprecated scopes
+            current_scopes = _normalize_client_scopes(current_scopes)
+
             if ADMIN_SCOPE not in current_scopes:
                 for scope in required_scopes.scopes:
                     if scope not in current_scopes:
@@ -324,8 +371,6 @@ def create_router(app):
 
     @router.get("/users/me", response_model=ScopedUser)
     def me(current_user: ScopedUser = Security(request_user(app))):
-
-        logger.warn(current_user)
         return current_user
 
     @router.get("/users/{id}", response_model=models.SafeUser)
@@ -345,6 +390,9 @@ def create_router(app):
 
     @router.get("/users/", response_model=typing.List[models.SafeUser])
     def query(
+        username: str = None,
+        allowed_scopes: List[str] = None,
+        local_claim_name: str = None,
         active: bool = fastapi.Query(True),
         current_user: ScopedUser = Security(
             request_user(app), scopes=[ADMIN_SCOPE_NAME]
@@ -355,7 +403,12 @@ def create_router(app):
         return list(
             map(
                 lambda u: models.SafeUser(**u.dict()),
-                repo_layer.users.query(active=active),
+                repo_layer.users.query(
+                    username=username,
+                    allowed_scopes=allowed_scopes,
+                    local_claim_name=local_claim_name,
+                    active=active,
+                ),
             )
         )
 

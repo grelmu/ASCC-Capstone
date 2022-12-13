@@ -16,7 +16,12 @@ from . import models
 from . import repositories
 from .repositories import request_repo_layer
 from . import security
-from .security import request_user, PROVENANCE_SCOPE
+from .security import (
+    request_user,
+    READ_PROVENANCE_SCOPE,
+    MODIFY_PROVENANCE_SCOPE,
+    MODIFY_ARTIFACT_SCOPE,
+)
 from . import project_endpoints
 from . import services
 from .services import request_service_layer
@@ -39,7 +44,7 @@ def create_router(app):
     def create(
         artifact: models.AnyArtifact,
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[MODIFY_PROVENANCE_SCOPE]
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
@@ -53,7 +58,7 @@ def create_router(app):
     def read(
         id: str,
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
@@ -74,7 +79,7 @@ def create_router(app):
         tags: List[str] = fastapi.Query(None),
         active: bool = fastapi.Query(True),
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
@@ -108,7 +113,7 @@ def create_router(app):
         sort_col: str = fastapi.Query(None),
         sort_dir: str = fastapi.Query(None),
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
@@ -144,7 +149,7 @@ def create_router(app):
         id: str,
         artifact: models.AnyArtifact,
         current_user: models.User = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[MODIFY_ARTIFACT_SCOPE]
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
@@ -167,7 +172,7 @@ def create_router(app):
         id: str,
         changes: List[endpoints.Change],
         current_user: models.User = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[MODIFY_ARTIFACT_SCOPE]
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
@@ -197,7 +202,7 @@ def create_router(app):
         id: str,
         preserve_data: bool = True,
         current_user: models.User = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[MODIFY_PROVENANCE_SCOPE]
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
@@ -221,7 +226,7 @@ def create_router(app):
     def init(
         id: str,
         args: dict = {},
-        user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+        user: models.User = Security(request_user(app), scopes=[MODIFY_ARTIFACT_SCOPE]),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
 
@@ -232,7 +237,7 @@ def create_router(app):
     @router.get("/{id}/services/artifact/parent", response_model=models.Operation)
     def parent(
         id: str,
-        user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+        user: models.User = Security(request_user(app), scopes=[READ_PROVENANCE_SCOPE]),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
         artifact: models.Artifact = read(id, user, service_layer.repo_layer)
@@ -245,7 +250,7 @@ def create_router(app):
     )
     def json_schema(
         id: str,
-        user: models.User = Security(request_user(app), scopes=[PROVENANCE_SCOPE]),
+        user: models.User = Security(request_user(app), scopes=[READ_PROVENANCE_SCOPE]),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
         artifact: models.Artifact = read(id, user, service_layer.repo_layer)
@@ -264,7 +269,7 @@ def create_router(app):
         id: str,
         strategy: str = None,
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
@@ -283,7 +288,7 @@ def create_router(app):
         id: str,
         strategy: str = None,
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
@@ -302,7 +307,7 @@ def create_router(app):
         id: str,
         to_id: str,
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
@@ -321,7 +326,7 @@ def create_router(app):
     def file_download(
         id: str,
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
@@ -350,7 +355,7 @@ def create_router(app):
         id: str,
         path: str,
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
@@ -394,7 +399,7 @@ def create_router(app):
         file: fastapi.UploadFile = fastapi.File(None),
         replace: bool = fastapi.Body(None),
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[MODIFY_ARTIFACT_SCOPE]
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
@@ -418,7 +423,7 @@ def create_router(app):
         id: str,
         path: str = None,
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
@@ -437,7 +442,7 @@ def create_router(app):
     def database_bucket(
         id: str,
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
@@ -458,7 +463,7 @@ def create_router(app):
         id: str,
         rename_paths: RenamePaths,
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[MODIFY_ARTIFACT_SCOPE]
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
@@ -478,7 +483,7 @@ def create_router(app):
         id: str,
         path: str = fastapi.Body(None),
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[MODIFY_ARTIFACT_SCOPE]
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
@@ -510,7 +515,7 @@ def create_router(app):
         time_bounds: str = None,
         coerce_dt_bounds: bool = False,
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
@@ -531,7 +536,7 @@ def create_router(app):
     def point_cloud_bounds(
         id: str,
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
@@ -552,7 +557,7 @@ def create_router(app):
         coerce_dt_bounds: bool = False,
         format: str = "pcd",
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
@@ -602,7 +607,7 @@ def create_router(app):
         limit: int = 0,
         est_limit_bytes: int = 0,
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
@@ -622,7 +627,7 @@ def create_router(app):
     def time_series_bounds(
         id: str,
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):

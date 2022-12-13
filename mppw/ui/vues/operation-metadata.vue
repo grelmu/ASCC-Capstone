@@ -98,7 +98,7 @@
       </div>
       <div class="col-auto" v-show="submitButton">
         <o-field>
-          <o-button @click="onMetadataSubmit()" class="mt-4"
+          <o-button @click="onMetadataSubmit()" :disabled="!($root.isModifyOperationUser())" class="mt-4"
             >Save Changes</o-button
           >
         </o-field>
