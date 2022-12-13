@@ -21,8 +21,8 @@
           <span
             style="
               position: relative;
-              top: 0.6em;
-              left: -1.25em;
+              top: 0.4em;
+              left: -1.1em;
               font-size: 0.9em;
             "
             >MPPW</span
