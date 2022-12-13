@@ -13,7 +13,7 @@ from .repositories import request_repo_layer
 from . import services
 from .services import request_service_layer
 from . import security
-from .security import request_user, ADMIN_SCOPE, PROVENANCE_SCOPE
+from .security import request_user, ADMIN_SCOPE, READ_PROVENANCE_SCOPE
 
 
 def create_router(app):
@@ -25,9 +25,7 @@ def create_router(app):
     )
     def create(
         project: models.Project,
-        user: security.ScopedUser = Security(
-            request_user(app), scopes=[ADMIN_SCOPE, PROVENANCE_SCOPE]
-        ),
+        user: security.ScopedUser = Security(request_user(app), scopes=[ADMIN_SCOPE]),
         repo_layer=Depends(request_repo_layer(app)),
     ):
 
@@ -39,7 +37,7 @@ def create_router(app):
     def read(
         id: str,
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
@@ -57,7 +55,7 @@ def create_router(app):
         name: str = fastapi.Query(None),
         active: bool = fastapi.Query(True),
         user: security.ScopedUser = Security(
-            request_user(app), scopes=[PROVENANCE_SCOPE]
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
@@ -69,9 +67,7 @@ def create_router(app):
     def delete(
         id: str,
         preserve_data: bool = True,
-        user: security.ScopedUser = Security(
-            request_user(app), scopes=[ADMIN_SCOPE, PROVENANCE_SCOPE]
-        ),
+        user: security.ScopedUser = Security(request_user(app), scopes=[ADMIN_SCOPE]),
         repo_layer=Depends(request_repo_layer(app)),
     ):
 
@@ -92,7 +88,7 @@ def create_router(app):
 def project_claims_for_user(user: security.ScopedUser):
     if security.has_admin_scope(user):
         return None
-    return list(map(str, user.claims["projects"]))
+    return list(map(str, user.claims.get("projects", [])))
 
 
 def check_project_claims_for_user(user: security.ScopedUser, project_ids: List[str]):
