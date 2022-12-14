@@ -939,8 +939,8 @@ export default {
  */
 
 .navbar-brand {
-  padding-top: 0.75rem;
-  padding-bottom: 0.75rem;
+  padding-top: 0.5rem;
+  padding-bottom: 1rem;
   box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.25);
   text-align: center;
   min-width: 100px;
