@@ -968,3 +968,37 @@ export default {
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.25);
 }
 </style>
+
+<style>
+
+.o-modal {
+  z-index: 1030; 
+}
+
+.o-modal__content {
+  overflow: visible;
+  max-height: fit-content;
+}
+
+.o-modal__content h2 {
+  font-size: 1.5em;
+}
+
+.o-modal__content h3 {
+  font-size: 1.25em;
+}
+
+.o-modal--mobile .o-modal__content {
+  width: 95%;
+}
+
+.o-modal__close {
+  top: -5px;
+  right: 5px;
+}
+
+select:disabled {
+  opacity: 0.5;
+}
+
+</style>

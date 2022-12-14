@@ -1,7 +1,12 @@
 <template>
   <div>
     <div v-if="artifact">
-      <o-collapse class="card" animation="slide" :open="false" @open="onOpenArtifactCard">
+      <o-collapse
+        class="card"
+        animation="slide"
+        :open="false"
+        @open="onOpenArtifactCard"
+      >
         <template v-slot:trigger="trigger">
           <div class="card-header" role="button">
             <router-link
@@ -14,8 +19,11 @@
             >
               <o-icon :icon="'link'"></o-icon>
             </router-link>
-            <a v-if="attachment['attachment_mode'] == 'input' && !parentOp" class="card-header-icon">
-              <o-icon :icon="'link'" style="color: orangered;"></o-icon>
+            <a
+              v-if="attachment['attachment_mode'] == 'input' && !parentOp"
+              class="card-header-icon"
+            >
+              <o-icon :icon="'link'" style="color: orangered"></o-icon>
             </a>
             <div class="card-header-title">
               <div style="flex-basis: 100%">
@@ -28,7 +36,10 @@
                       )
                     }}
                     &nbsp;&nbsp;
-                    <a v-if="$root.isModifyArtifactUser()" @click="onStartEditMeta" style="cursor: pointer"
+                    <a
+                      v-if="$root.isModifyArtifactUser()"
+                      @click="onStartEditMeta"
+                      style="cursor: pointer"
                       ><o-icon icon="circle-edit-outline"></o-icon
                     ></a>
                   </div>
@@ -36,7 +47,10 @@
                 <div v-if="artifact['name']">
                   <div class="fs-4">
                     {{ artifact["name"] || "" }}&nbsp;&nbsp;
-                    <a v-if="$root.isModifyArtifactUser()" @click="onStartEditMeta" style="cursor: pointer"
+                    <a
+                      v-if="$root.isModifyArtifactUser()"
+                      @click="onStartEditMeta"
+                      style="cursor: pointer"
                       ><o-icon icon="circle-edit-outline"></o-icon
                     ></a>
                   </div>
@@ -52,22 +66,35 @@
               </div>
             </div>
             <a
-                v-if="(attachment['attachment_mode'] == 'input') && $root.isModifyProvenanceUser()"
-                title="Claim artifact"
-                @click="onClickClaimArtifact"
-                class="card-header-icon"
-              >
+              v-if="
+                attachment['attachment_mode'] == 'input' &&
+                $root.isModifyProvenanceUser()
+              "
+              title="Claim artifact"
+              @click="onClickClaimArtifact"
+              class="card-header-icon"
+            >
               <o-icon :icon="'selection-ellipse-arrow-inside'"></o-icon>
             </a>
-            <router-link :to="'/artifacts/' + artifact['id']" :title="'Artifact Provenance'" class="card-header-icon"
-              >
+            <router-link
+              :to="'/artifacts/' + artifact['id']"
+              :title="'Artifact Provenance'"
+              class="card-header-icon"
+            >
               <o-icon :icon="'family-tree'"></o-icon>
             </router-link>
-            <a :title="JSON.stringify(artifact, ['project', 'id', 'type_urn', 'name', 'description', 'tags'], 2)"
-               @click="onClickLogJson"
-               class="card-header-icon"
+            <a
+              :title="
+                JSON.stringify(
+                  artifact,
+                  ['project', 'id', 'type_urn', 'name', 'description', 'tags'],
+                  2
+                )
+              "
+              @click="onClickLogJson"
+              class="card-header-icon"
             >
-              <o-icon :icon="'code-braces'" style="color: black;"></o-icon>
+              <o-icon :icon="'code-braces'" style="color: black"></o-icon>
             </a>
             <a class="card-header-icon">
               <o-icon
@@ -81,10 +108,8 @@
           </div>
         </template>
         <div class="card-content">
-
           <!-- NOTE: We need to make sure we don't actually populate until we get clicked at least once -->
           <div v-if="wasOpened">
-
             <div class="mb-4" v-if="artifact['description']">
               {{ artifact["description"] || "" }}
             </div>
@@ -102,9 +127,7 @@
               :parentArtifactPath="artifactPath"
               :attachmentKinds="(artifactType || {})['child_kinds'] || []"
             ></operation-attachments-node>
-          
           </div>
-
         </div>
       </o-collapse>
     </div>
@@ -129,8 +152,20 @@
         <o-input v-model="newDescription"></o-input>
       </o-field>
 
+      <div class="row">
+        <div class="col-auto">
+          <o-field label="Tags">
+            <o-inputitems
+              v-model="newTags"
+              icon="tag"
+              placeholder="Add tags"
+            ></o-inputitems>
+          </o-field>
+        </div>
+      </div>
+
       <div v-if="isDigitalArtifact()">
-        <h3>Spatial Frame</h3>
+        <h2 class="mt-4">Spatial Frame</h2>
 
         <o-field label="Parent Frame Artifact">
           <o-autocomplete
@@ -154,10 +189,11 @@
           </o-autocomplete>
         </o-field>
 
-        <o-field v-if="selectedOperation || newSpatialFrame.parent_frame">
+        <o-field>
           <o-select
             placeholder="Select a spatial parent artifact"
             v-model="newSpatialFrame.parent_frame"
+            :disabled="!(selectedOperation || newSpatialFrame.parent_frame)"
           >
             <option
               v-for="candidate in parentFrameCandidates || []"
@@ -284,6 +320,7 @@ export default {
       isEditingMeta: false,
       newName: null,
       newDescription: null,
+      newTags: null,
 
       isTextQueryingOperations: false,
       operationsTextQuery: null,
@@ -447,15 +484,21 @@ export default {
         return;
 
       return this.$root
-      .apiClaimArtifact(this.opId, this.attachment["kind_path"], this.attachment["artifact_id"], this.attachment["attachment_mode"])
-      .finally(() => {
-        this.isEditingMeta = false;
-        return this.refreshArtifact();
-      });
+        .apiClaimArtifact(
+          this.opId,
+          this.attachment["kind_path"],
+          this.attachment["artifact_id"],
+          this.attachment["attachment_mode"]
+        )
+        .finally(() => {
+          this.isEditingMeta = false;
+          return this.refreshArtifact();
+        });
     },
     onStartEditMeta() {
       this.newName = this.artifact["name"];
       this.newDescription = this.artifact["description"];
+      this.newTags = this.artifact["tags"];
       this.isEditingMeta = true;
 
       this.isTextQueryingOperations = false;
@@ -545,6 +588,11 @@ export default {
         op: "replace",
         path: "description",
         value: this.newDescription,
+      });
+      changes.push({
+        op: "replace",
+        path: "tags",
+        value: this.newTags,
       });
 
       if (this.isDigitalArtifact()) {
