@@ -68,7 +68,8 @@
           "element-plus": "https://cdn.jsdelivr.net/npm/element-plus@2.1.1/dist/index.full.mjs",
           "three": "https://unpkg.com/three@0.138.0/build/three.module.js",
           "OrbitControls": "https://unpkg.com/three@0.138.0/examples/jsm/controls/OrbitControls.js",
-          "client-zip": "https://cdn.jsdelivr.net/npm/client-zip@2.2.2/index.min.js"
+          "client-zip": "https://cdn.jsdelivr.net/npm/client-zip@2.2.2/index.min.js",
+          "TransformControls": "https://unpkg.com/three@0.138.0/examples/jsm/controls/TransformControls.js"
         }
       }
     </script>
@@ -83,14 +84,16 @@
       import * as ElementPlus from "element-plus";
       import ForceGraph from "./assets/js/d3-force-graph-module.js";
       import { OrbitControls, MapControls } from "OrbitControls";
-      import { downloadZip } from "client-zip"
+      import { downloadZip } from "client-zip";
+      import { TransformControls } from "TransformControls";
 
       window["JsonSchemaFormComponent"] = JsonSchemaFormComponent;
       window["RemoteVue"] = RemoteVue;
       window["ForceGraph"] = ForceGraph;
       window["OrbitControls"] = OrbitControls;
-      window["THREE"] = THREE;
       window["downloadZip"] = downloadZip;
+      window["TransformControls"] = TransformControls;
+      window["THREE"] = THREE;     
 
       RemoteVue.component("vues/app.vue").then((root) => {
         const router = VueRouter.createRouter({
