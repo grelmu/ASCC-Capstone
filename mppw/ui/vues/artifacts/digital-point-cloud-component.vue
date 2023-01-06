@@ -26,7 +26,13 @@
             <o-field label="space_bounds">
               <!-- e.g.: [[-100000, -100000, -100000], [100000, 100000, 100000]] -->
               <o-input placeholder="[[x1, y1, z1], [x2, y2, z2]]"
-                v-model="formData.space_bounds"></o-input>
+                v-model="formData.space_bounds">
+              </o-input>
+              <transition name="fade">
+                <button class="reset-button hidden" @click="resetSpaceBounds()" v-if="formData.space_bounds == '' || formData.space_bounds != originalBounds.formDataSpaceBounds">
+                  <span class="o-icon reset-button"><i class="mdi mdi-refresh mdi-24px"></i></span>
+                </button>
+              </transition>
             </o-field>
             <o-field label="time_bounds_start">
               <!-- e.g.: ["2022-02-04T16:02:47.633000", "2022-02-04T16:02:47.90"] -->
@@ -34,27 +40,23 @@
                 rounded placeholder="Click to select..." :timepicker="{ enableSeconds, hourFormat }"
                 icon="calendar" v-model="timeBoundsStart" @update:modelValue="normalizeTimeBounds">
               </o-datetimepicker>
+              <transition name="fade">
+                <button class="reset-button" @click="resetBoundsStart()" v-if="timeBoundsStart != originalBounds.timeBoundsStart">
+                  <span class="o-icon reset-button"><i class="mdi mdi-refresh mdi-24px"></i></span>
+                </button>
+              </transition>
             </o-field>
             <o-field label="time_bounds_end">
               <o-datetimepicker
                 rounded placeholder="Click to select..." :timepicker="{ enableSeconds, hourFormat }"
                 icon="calendar" v-model="timeBoundsEnd" @update:modelValue="normalizeTimeBounds">
               </o-datetimepicker>
+              <transition name="fade">
+                <button class="reset-button" @click="resetBoundsEnd()" v-if="timeBoundsEnd != originalBounds.timeBoundsEnd">
+                  <span class="o-icon reset-button"><i class="mdi mdi-refresh mdi-24px"></i></span>
+                </button>
+              </transition>
             </o-field>
-
-            <select v-if="response[0] && showSelectors" v-model="pointSelector">
-              <option 
-                v-for="option in findPropertyPaths(response[0])"
-                :key="option"
-              >{{ option }}</option>
-            </select>
-            <select v-if="response[0] && pointSelector && showSelectors" v-model="displayValue">
-              <option value="">No filter value</option>
-              <option 
-                v-for="option in getBooleanOptions()"
-                :key="option"
-              >{{ option }}</option>
-            </select>
 
             <div class="mt-3 text-end pcl-btns">
               <o-button @click="getPointCloud()"
@@ -127,7 +129,10 @@
           </div>
 
           <div :id="'three-parent-container-' + $.uid" class="three-parent-container">
-            <scatter-plot v-if="response[0]" :importData=response :displayValue=displayValue :pointSelector=pointSelector :key=response></scatter-plot>
+            <scatter-plot v-if="response[0]" 
+                          :importData=response 
+                          :key=response
+                          @newBounds="updateBounds"></scatter-plot>
           </div>
         </div>
       </o-collapse>
@@ -145,21 +150,24 @@ export default {
       artifact: null,
       enableSeconds: true,
       formData: {
-        'space_bounds': '',
-        'time_bounds': '',
+        'space_bounds': null,
+        'time_bounds': null,
         'coerce_dt_bounds': true,
       },
       hourFormat: '24',
       locale: undefined,
       timeBoundsStart: null,
       timeBoundsEnd: null,
+      originalBounds: {},
       response: null,
       tbChunks: [],
       visualizePoints: false,
       isLoadingSampleDocs: false,
-      pointSelector: '',
+      pointSelector: 'ctx',
+      sliderSelector: 'prestamp',
       displayValue: '',
-      showSelectors: true
+      showSelectors: true,
+      isLoading: false,
     };
   },
   props: {
@@ -167,39 +175,61 @@ export default {
     artifactId: String,
   },
   methods: {
-    getBooleanOptions(){
-      this.response[0].ctx.testBool = true; 
+    updateBounds(newValues){
+      this.formData.space_bounds = newValues;
+    },
+    findPointSelectorPaths(obj, path=''){
+      let successfulArray = [];
+      Object.getOwnPropertyNames(obj).forEach(key => {
+        if(typeof obj[key] == "object"){
+          successfulArray.push(path + key);
+          if (!this.pointSelector) this.pointSelector = path + key;
+          successfulArray = successfulArray.concat(this.findPointSelectorPaths(obj[key], path + key + '.' ));
+        }
+      });
+      return successfulArray;
+    },
+    getDisplayValueOptions(){
       let obj = this.pointSelector.split('.').reduce(function(p,prop) { return p[prop] }, this.response[0]);
-      let arr = this.findBooleanPaths(obj, this.pointSelector);
+      let arr = this.findDisplayValuePaths(obj, this.pointSelector + '.');
       if (!arr.includes(this.displayValue)) this.displayValue = '';
       return arr;
     },
-    findPropertyPaths(obj, path=''){
-      if (path.charAt(0) == '.') path = path.slice(1);
+    findDisplayValuePaths(obj, path=''){
       let successfulArray = [];
       if (obj == null) return successfulArray;
       if (["x","y","z"].every(key => Object.keys(obj).includes(key))){
         successfulArray.push(path);
         if (!this.pointSelector) this.pointSelector = path;
       }
-      Object.getOwnPropertyNames(obj).forEach(key => {
-        if(typeof obj[key] == "object")
-          successfulArray = successfulArray.concat(this.findPropertyPaths(obj[key], path + "." + key ));
-      });
-      return successfulArray;
-    },
-    findBooleanPaths(obj, path=''){
-      if (path.charAt(0) == '.') path = path.slice(1);
-      let successfulArray = [];
-      if (obj == null) return successfulArray;
+      
       Object.getOwnPropertyNames(obj).forEach(key => {
         if(typeof obj[key] == "boolean")
-          successfulArray.push(path + '.' + key);
+          successfulArray.push(path + key);
         if(typeof obj[key] == "object")
-          successfulArray = successfulArray.concat(this.findBooleanPaths(obj[key], path + "." + key ));
+          successfulArray = successfulArray.concat(this.findDisplayValuePaths(obj[key], path + key + '.' ));
       });
 
       return successfulArray;
+    },
+    getSliderSelectorOptions(){
+      let obj = this.pointSelector.split('.').reduce(function(p,prop) { return p[prop] }, this.response[0]);
+      let arr = this.findSliderSelectorPaths(obj, this.pointSelector + '.');
+      if (!arr.includes(this.sliderSelector)) this.sliderSelector = '';
+      return arr;
+    },
+    findSliderSelectorPaths(obj,path='',comparator){
+      let successfulArray = [];
+      if (obj == null) return successfulArray;
+      Object.getOwnPropertyNames(obj).forEach(key => {
+        if(['number', 'string', 'bigint'].includes(typeof obj[key]))
+          successfulArray.push(path + key);
+        if(typeof obj[key] == "object")
+          successfulArray = successfulArray.concat(this.findSliderSelectorPaths(obj[key], path + key + '.'));
+      });
+
+      return successfulArray;
+
     },
     toggleThree(){
       this.visualizePoints ? this.hideThree() : this.showThree();
@@ -216,8 +246,9 @@ export default {
     },
     refreshArtifact() {
       this.artifact = null;
-      this.timeBoundsStart = new Date();
-      this.timeBoundsEnd = new Date();
+      // Reset button appears quickly when component loads
+      // this.timeBoundsStart = new Date();
+      // this.timeBoundsEnd = new Date();
       return this.$root.apiFetchArtifact(this.artifactId).then((artifact) => {
         this.artifact = artifact;
         this.response ||= {};
@@ -238,8 +269,26 @@ export default {
 
           this.formData.time_bounds = JSON.stringify(this.incTimeBounds(time_bounds));
           this.formData.space_bounds = JSON.stringify(this.incSpaceBounds(bounds));
+
+          // Store original values used for reset button
+          this.originalBounds = {
+            timeBoundsStart: this.timeBoundsStart,
+            timeBoundsEnd: this.timeBoundsEnd,
+            formDataSpaceBounds: this.formData.space_bounds
+          }
           
         });
+    },
+    resetSpaceBounds(){
+      this.formData.space_bounds = this.originalBounds.formDataSpaceBounds;
+    },
+    resetBoundsStart(){
+      this.timeBoundsStart = this.originalBounds.timeBoundsStart;
+      this.normalizeTimeBounds();
+    },
+    resetBoundsEnd(){
+      this.timeBoundsEnd = this.originalBounds.timeBoundsEnd;
+      this.normalizeTimeBounds();
     },
     incSpaceBounds(bounds) {
       let incBounds = [[], []]
@@ -278,6 +327,7 @@ export default {
       );
     },
     getPointCloud() {
+      this.isLoading = true;
       this.visualizePoints = false;
       // Clear style on previously clicked chunk buttons:
       document.querySelectorAll('.clicked-dl-btn').forEach(item => {item.classList.remove('clicked-dl-btn')})
@@ -295,6 +345,7 @@ export default {
           )
         }).finally(() => {
             this.isLoadingSampleDocs = false;
+            this.isLoading = false;
         });
     },
     // Get point cloud, but for a chunk not the whole range 
@@ -540,9 +591,23 @@ export default {
   z-index: 1000;
   right: 0px;
 }
-
 .three-parent-container.three-show {
   display: block;
 }
+.o-ctrl-input, .o-dpck {
+  flex: 1;
+}
+.reset-button {
+  border: none;
+  background: white;
+  padding: 0px 5px;
+}
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.5s;
+}
+.fade-enter-from, .fade-leave-to {
+  transition: opacity 0.3s;
+}
+
 </style>
 
