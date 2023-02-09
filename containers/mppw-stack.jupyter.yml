@@ -1,0 +1,10 @@
+version: "3.8"
+services:
+
+  mppw:
+    image: ubuntu:20.04
+    command: "tail -f /dev/null"
+
+  mongodb:
+    image: ubuntu:20.04
+    command: "tail -f /dev/null"

@@ -54,6 +54,28 @@ def build(*args):
         )
 
     if not args or "jupyterhub" in args or "mppw-jupyterhub" in args:
+
+        jupyterhub_dist_dir = os.path.join(containers_dir, "mppw-jupyterhub", "dist")
+        shutil.rmtree(
+            jupyterhub_dist_dir, ignore_errors=True
+        )
+
+        fff_analysis_dir = os.path.join(root_dir, "fff_analysis")
+        subprocess.run(["poetry", "build"], cwd=fff_analysis_dir)
+
+        shutil.copytree(
+            os.path.join(fff_analysis_dir, "dist"),
+            jupyterhub_dist_dir, dirs_exist_ok=True,
+        )
+
+        mat_analysis_dir = os.path.join(root_dir, "mat_analysis")
+        subprocess.run(["poetry", "build"], cwd=mat_analysis_dir)
+
+        shutil.copytree(
+            os.path.join(mat_analysis_dir, "dist"),
+            jupyterhub_dist_dir, dirs_exist_ok=True
+        )
+
         subprocess.run(
             [
                 "docker",
@@ -72,32 +94,14 @@ def build(*args):
 
         subprocess.run(["poetry", "build"])
 
-        fff_analysis_dir = os.path.join(root_dir, "fff_analysis")
-        subprocess.run(["poetry", "build"], cwd=fff_analysis_dir)
+        # mppw_clients_dir = os.path.join(root_dir, "mppw_clients")
+        # subprocess.run(["poetry", "build"], cwd=mppw_clients_dir)
 
-        shutil.rmtree(os.path.join(dist_dir, "fff_analysis"), ignore_errors=True)
-        shutil.copytree(
-            os.path.join(fff_analysis_dir, "dist"),
-            os.path.join(dist_dir, "fff_analysis"),
-        )
-
-        mat_analysis_dir = os.path.join(root_dir, "mat_analysis")
-        subprocess.run(["poetry", "build"], cwd=mat_analysis_dir)
-
-        shutil.rmtree(os.path.join(dist_dir, "mat_analysis"), ignore_errors=True)
-        shutil.copytree(
-            os.path.join(mat_analysis_dir, "dist"),
-            os.path.join(dist_dir, "mat_analysis"),
-        )
-
-        mppw_clients_dir = os.path.join(root_dir, "mppw_clients")
-        subprocess.run(["poetry", "build"], cwd=mppw_clients_dir)
-
-        shutil.rmtree(os.path.join(dist_dir, "mppw_clients"), ignore_errors=True)
-        shutil.copytree(
-            os.path.join(mppw_clients_dir, "dist"),
-            os.path.join(dist_dir, "mppw_clients"),
-        )
+        # shutil.rmtree(os.path.join(dist_dir, "mppw_clients"), ignore_errors=True)
+        # shutil.copytree(
+        #     os.path.join(mppw_clients_dir, "dist"),
+        #     os.path.join(dist_dir, "mppw_clients"),
+        # )
 
         shutil.rmtree(
             os.path.join(containers_dir, project_name, "dist"), ignore_errors=True
@@ -105,6 +109,14 @@ def build(*args):
         shutil.copytree(dist_dir, os.path.join(containers_dir, project_name, "dist"))
         shutil.copy(
             os.path.join(containers_dir, f"{project_name}-stack.yml"),
+            os.path.join(containers_dir, project_name, "dist"),
+        )
+        shutil.copy(
+            os.path.join(containers_dir, f"{project_name}-stack.dev.yml"),
+            os.path.join(containers_dir, project_name, "dist"),
+        )
+        shutil.copy(
+            os.path.join(containers_dir, f"{project_name}-stack.jupyter.yml"),
             os.path.join(containers_dir, project_name, "dist"),
         )
 
@@ -164,6 +176,28 @@ def compose_dev():
         + sys.argv[2:]
     )
 
+def compose_jupyter(is_dev):
+
+    os.environ.setdefault("MPPW_EXTERNAL_PORT", "8000")
+    os.environ.setdefault("MONGODB_EXTERNAL_PORT", "27027")
+    os.environ.setdefault("MONGODB_ADMIN_USERNAME", "admin")
+    os.environ.setdefault("MONGODB_ADMIN_PASSWORD", "password")
+    os.environ.setdefault(
+        "MPPW_LOCAL_PACKAGE_DIR", os.path.abspath(os.path.join(root_dir, "mppw"))
+    )
+
+    subprocess.run(
+        [
+            "docker-compose",
+            "-p",
+            "mppw-jupyter" if not is_dev else "mppw-jupyter-dev",
+            "-f",
+            os.path.join(containers_dir, "mppw-stack.yml"),
+        ]
+        + (["-f", os.path.join(containers_dir, "mppw-stack.dev.yml"),] if is_dev else [])
+        + (["-f", os.path.join(containers_dir, "mppw-stack.jupyter.yml"),])
+        + sys.argv[2:]
+    )
 
 def tunnel():
 
@@ -195,6 +229,10 @@ def main():
         compose()
     elif sys.argv[1] == "compose-dev":
         compose_dev()
+    elif sys.argv[1] == "compose-jupyter":
+        compose_jupyter(is_dev=False)
+    elif sys.argv[1] == "compose-jupyter-dev":
+        compose_jupyter(is_dev=True)
     else:
         parser.dispatch()
 

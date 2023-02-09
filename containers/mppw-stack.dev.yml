@@ -11,11 +11,11 @@ services:
       - "${MPPW_LOCAL_PACKAGE_DIR:-./mppw}:/local/mppw"
     command: "bash -c 'cd local && uvicorn --host 0.0.0.0 mppw.main:app --debug'"
 
-  # jupyterhub:
-  #   ports:
-  #     - "${JUPYTERHUB_EXTERNAL_PORT:-9000}:9000"
-  #   environment:
-  #     ADMIN_PASSWORD: password
+  jupyterhub:
+    ports:
+      - "${JUPYTERHUB_EXTERNAL_PORT:-9000}:8000"
+    environment:
+      ADMIN_PASSWORD: password
 
   mongodb:
     environment:
