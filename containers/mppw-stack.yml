@@ -35,8 +35,7 @@ services:
       - data_notebooks:/home
     environment:
       ADMIN_USERNAME: ${JUPYTERHUB_ADMIN_USERNAME:-admin}
-      ADMIN_PASSWORD: ${MONGODB_ADMIN_PASSWORD}
-      AUTHENTICATOR_MPPW_URL: ${AUTHENTICATOR_MPPW_URL:-"http://mppw:8000/api"}
+      AUTHENTICATOR_MPPW_URL: ${AUTHENTICATOR_MPPW_URL:-http://mppw:8000/api}
 
   nginx:
     image: ascc/mppw-nginx:${MPPW_VERSION:-dev}
@@ -49,6 +48,11 @@ services:
     environment:
       PROXY_PASS: http://mppw:8000
       PROXY_PASS_JUPYTERHUB: http://jupyterhub:8000
+      # Set to docker dns to allow for partial service spinup
+      # https://stackoverflow.com/questions/42720618/docker-nginx-stopped-emerg-11-host-not-found-in-upstream
+      PROXY_RESOLVER: "${PROXY_RESOLVER:-resolver 127.0.0.11 valid=30s; resolver_timeout 3s;}"
+      MPPW_PROXY_ENABLED: ${MPPW_PROXY_ENABLED:-1}
+      JUPYTERHUB_PROXY_ENABLED: ${JUPYTERHUB_PROXY_ENABLED:-1}
 
 volumes:
   data_db:

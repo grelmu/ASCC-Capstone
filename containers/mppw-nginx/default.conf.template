@@ -45,7 +45,15 @@ server {
 
     client_max_body_size 0;
 
-    proxy_pass ${PROXY_PASS};
+    set $mppw_proxy_enabled ${MPPW_PROXY_ENABLED};
+    if ($mppw_proxy_enabled = 0) {
+      return 503;
+    }
+    
+    ${PROXY_RESOLVER}
+    set $proxy_pass ${PROXY_PASS};
+    proxy_pass $proxy_pass;
+    
     proxy_redirect off;
 
     proxy_connect_timeout 75;
@@ -62,9 +70,17 @@ server {
 
   location /jupyter/ {
 
-    client_max_body_size 0;
+    client_max_body_size 0;     
 
-    proxy_pass ${PROXY_PASS_JUPYTERHUB};
+    set $jupyterhub_proxy_enabled ${JUPYTERHUB_PROXY_ENABLED};
+    if ($jupyterhub_proxy_enabled = 0) {
+      return 503;
+    }
+
+    ${PROXY_RESOLVER}
+    set $proxy_pass_jupyterhub ${PROXY_PASS_JUPYTERHUB};
+    proxy_pass $proxy_pass_jupyterhub;
+
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

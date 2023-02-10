@@ -115,10 +115,6 @@ def build(*args):
             os.path.join(containers_dir, f"{project_name}-stack.dev.yml"),
             os.path.join(containers_dir, project_name, "dist"),
         )
-        shutil.copy(
-            os.path.join(containers_dir, f"{project_name}-stack.jupyter.yml"),
-            os.path.join(containers_dir, project_name, "dist"),
-        )
 
         subprocess.run(
             [
@@ -176,29 +172,6 @@ def compose_dev():
         + sys.argv[2:]
     )
 
-def compose_jupyter(is_dev):
-
-    os.environ.setdefault("MPPW_EXTERNAL_PORT", "8000")
-    os.environ.setdefault("MONGODB_EXTERNAL_PORT", "27027")
-    os.environ.setdefault("MONGODB_ADMIN_USERNAME", "admin")
-    os.environ.setdefault("MONGODB_ADMIN_PASSWORD", "password")
-    os.environ.setdefault(
-        "MPPW_LOCAL_PACKAGE_DIR", os.path.abspath(os.path.join(root_dir, "mppw"))
-    )
-
-    subprocess.run(
-        [
-            "docker-compose",
-            "-p",
-            "mppw-jupyter" if not is_dev else "mppw-jupyter-dev",
-            "-f",
-            os.path.join(containers_dir, "mppw-stack.yml"),
-        ]
-        + (["-f", os.path.join(containers_dir, "mppw-stack.dev.yml"),] if is_dev else [])
-        + (["-f", os.path.join(containers_dir, "mppw-stack.jupyter.yml"),])
-        + sys.argv[2:]
-    )
-
 def tunnel():
 
     tunnel_furl = furl.furl(os.environ.get("DOCKER_HOST", ""))
@@ -229,10 +202,6 @@ def main():
         compose()
     elif sys.argv[1] == "compose-dev":
         compose_dev()
-    elif sys.argv[1] == "compose-jupyter":
-        compose_jupyter(is_dev=False)
-    elif sys.argv[1] == "compose-jupyter-dev":
-        compose_jupyter(is_dev=True)
     else:
         parser.dispatch()
 

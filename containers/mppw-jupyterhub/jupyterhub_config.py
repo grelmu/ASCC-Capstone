@@ -1048,11 +1048,6 @@ c.JupyterHub.base_url = '/jupyter'
 #  path! They can do so with many other means.
 #  Default: ''
 
-import os
-c.JupyterHub.api_tokens = {
-    os.environ["ADMIN_TOKEN"]: "admin",
-}
-
 c.LocalAuthenticator.create_system_users = True
 c.Spawner.notebook_dir = "~/notebooks"
 
@@ -1210,7 +1205,9 @@ c.Spawner.notebook_dir = "~/notebooks"
 #  
 #  Defaults to an empty set, in which case no user has admin access.
 #  Default: set()
-c.Authenticator.admin_users = [ "admin" ]
+
+import os
+c.Authenticator.admin_users = [ os.environ.get("ADMIN_USERNAME") ]
 
 ## Set of usernames that are allowed to log in.
 #  
