@@ -22,3 +22,9 @@ COPY jupyterhub_config.py ./jupyterhub_config.py
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT /entrypoint.sh
+
+RUN pip install jupyterlab-git
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && apt-get install -y nodejs
+
+RUN chmod 0750 /srv/jupyterhub
+RUN cat /etc/adduser.conf | sed -e 's/DIR_MODE=0755/DIR_MODE=0750/' > /etc/adduser.conf.tmp && mv /etc/adduser.conf.tmp /etc/adduser.conf
