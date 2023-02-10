@@ -5,7 +5,7 @@ import importlib
 import os
 
 def main():
-    for wheel in [pkginfo.Wheel(f) for f in glob.glob('dist/*.whl')]:
+    for wheel in [pkginfo.Wheel(f) for f in glob.glob('/root/dist/*.whl')]:
         mod_name = wheel.name.replace('-', '_')
         mod = importlib.import_module(mod_name)
         mod_notebook_dir = os.path.join(os.path.dirname(mod.__file__), "notebooks")

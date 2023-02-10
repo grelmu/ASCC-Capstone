@@ -3,21 +3,21 @@ FROM jupyterhub/jupyterhub:2.1.1
 RUN apt-get update
 RUN apt-get install git vim -y
 
-COPY dist ./dist
+COPY dist /root/dist
 RUN mkdir -p /root/.ssh
 COPY ssh_config /root/.ssh/config
-RUN --mount=type=ssh ["bash", "-c", "pip install dist/*.whl"]
+RUN --mount=type=ssh ["bash", "-c", "pip install /root/dist/*.whl"]
 
 RUN pip install pkginfo
 RUN mkdir -p /etc/skel/notebooks
 RUN touch /etc/skel/notebooks/.touch
-COPY skel_notebooks.py ./skel_notebooks.py
-RUN python3 ./skel_notebooks.py
+COPY skel_notebooks.py /root/dist/skel_notebooks.py
+RUN python3 /root/dist/skel_notebooks.py
 
-COPY mppwauth ./mppwauth
-RUN pip install ./mppwauth
+COPY mppwauth /root/mppwauth
+RUN pip install /root/mppwauth
 
-COPY jupyterhub_config.py jupyterhub_config.py
+COPY jupyterhub_config.py ./jupyterhub_config.py
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

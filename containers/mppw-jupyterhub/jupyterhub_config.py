@@ -939,7 +939,9 @@ c.JupyterHub.base_url = '/jupyter'
 #  process's environment (such as `CONFIGPROXY_AUTH_TOKEN`) is not passed to the
 #  single-user server's process.
 #  Default: ['PATH', 'PYTHONPATH', 'CONDA_ROOT', 'CONDA_DEFAULT_ENV', 'VIRTUAL_ENV', 'LANG', 'LC_ALL', 'JUPYTERHUB_SINGLEUSER_APP']
-# c.Spawner.env_keep = ['PATH', 'PYTHONPATH', 'CONDA_ROOT', 'CONDA_DEFAULT_ENV', 'VIRTUAL_ENV', 'LANG', 'LC_ALL', 'JUPYTERHUB_SINGLEUSER_APP']
+import os
+os.environ["DEFAULT_MPPW_URL"] = os.environ.get("AUTHENTICATOR_MPPW_URL")
+c.Spawner.env_keep = ['AUTHENTICATOR_MPPW_URL', 'DEFAULT_MPPW_URL', 'PATH', 'PYTHONPATH', 'CONDA_ROOT', 'CONDA_DEFAULT_ENV', 'VIRTUAL_ENV', 'LANG', 'LC_ALL', 'JUPYTERHUB_SINGLEUSER_APP']
 
 ## Extra environment variables to set for the single-user server's process.
 #  
@@ -1208,6 +1210,8 @@ c.Spawner.notebook_dir = "~/notebooks"
 
 import os
 c.Authenticator.admin_users = [ os.environ.get("ADMIN_USERNAME") ]
+
+os.environ["JUPYTERHUB_AUTHENTICATOR_MPPW_URL"] = os.environ.get("AUTHENTICATOR_MPPW_URL")
 
 ## Set of usernames that are allowed to log in.
 #  

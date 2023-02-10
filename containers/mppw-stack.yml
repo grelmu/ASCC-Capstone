@@ -32,6 +32,7 @@ services:
     image: ascc/mppw-jupyterhub:${MPPW_VERSION:-dev}
     restart: unless-stopped
     volumes:
+      - data_hub:/srv/jupyterhub
       - data_notebooks:/home
     environment:
       ADMIN_USERNAME: ${JUPYTERHUB_ADMIN_USERNAME:-admin}
@@ -58,4 +59,5 @@ volumes:
   data_db:
   data_configdb:
   data_notebooks:
+  data_hub:
   certificates:
