@@ -28,3 +28,9 @@ RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && apt-get install
 
 RUN chmod 0750 /srv/jupyterhub
 RUN cat /etc/adduser.conf | sed -e 's/DIR_MODE=0755/DIR_MODE=0750/' > /etc/adduser.conf.tmp && mv /etc/adduser.conf.tmp /etc/adduser.conf
+
+# Extra tools
+# MongoDB Shell
+RUN apt-get install mongodb-clients
+# Pytorch (CPU)
+RUN pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cpu
