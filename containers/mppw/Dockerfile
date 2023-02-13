@@ -28,7 +28,6 @@ RUN --mount=type=ssh pip install $PACKAGE_NAME-$PACKAGE_VERSION-py3-none-any.whl
 
 COPY dist/$PACKAGE_NAME-stack.yml compose.yml
 COPY dist/$PACKAGE_NAME-stack.yml compose.dev.yml
-COPY dist/$PACKAGE_NAME-stack.yml compose.jupyter.yml
 RUN pip install docker-compose==1.29.2
 ENV COMPOSE_PROJECT_NAME=$PACKAGE_NAME-stack
 
