@@ -31,6 +31,6 @@ RUN cat /etc/adduser.conf | sed -e 's/DIR_MODE=0755/DIR_MODE=0750/' > /etc/addus
 
 # Extra tools
 # MongoDB Shell
-RUN apt-get install mongodb-clients
+RUN apt-get install mongodb-clients -y
 # Pytorch (CPU)
 RUN pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cpu
