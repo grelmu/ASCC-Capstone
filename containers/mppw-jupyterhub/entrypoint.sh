@@ -1,12 +1,12 @@
 #!/bin/bash
 
-mkdir -p /etc/skel/notebooks
-touch /etc/skel/notebooks/.touch
+if [ -f jupyterhub_crypt_key ]; then
+    echo "Using existing jupyterhub_crypt_key..."
+else
+    echo "Generating new jupyterhub_crypt_key..."
+    openssl rand -hex 32 > jupyterhub_crypt_key
+fi
 
-useradd -m "$ADMIN_USERNAME"
-echo "$ADMIN_USERNAME:$ADMIN_PASSWORD" | chpasswd
-export ADMIN_TOKEN="$ADMIN_PASSWORD"
+export JUPYTERHUB_CRYPT_KEY=$(cat jupyterhub_crypt_key)
 
-cp jupyterhub_config.py "/home/$ADMIN_USERNAME/jupyterhub_config.py"
-cd "/home/$ADMIN_USERNAME"
 exec jupyterhub "$@"

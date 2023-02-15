@@ -1,0 +1,19 @@
+version: "3.8"
+services:
+
+  registry:
+    image: ascc/mppw-registry:${MPPW_VERSION:-dev}
+    restart: unless-stopped
+    ports:
+      - "${MPPW_REGISTRY_EXTERNAL_PORT:-5000}:5000"
+    volumes:
+      - certificates:/etc/certificates
+      - data_images:/var/lib/registry
+    environment:
+      MPPW_REGISTRY_ADMIN_USERNAME: ${MPPW_REGISTRY_ADMIN_USERNAME:-admin}
+      MPPW_REGISTRY_ADMIN_PASSWORD: ${MPPW_REGISTRY_ADMIN_PASSWORD?MONGODB_REGISTRY_ADMIN_PASSWORD is required.}
+      MPPW_REGISTRY_USERNAMES_PASSWORDS: ${MPPW_REGISTRY_USERNAMES_PASSWORDS:-}
+
+volumes:
+  data_images:
+  certificates:

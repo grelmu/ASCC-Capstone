@@ -54,6 +54,28 @@ def build(*args):
         )
 
     if not args or "jupyterhub" in args or "mppw-jupyterhub" in args:
+
+        jupyterhub_dist_dir = os.path.join(containers_dir, "mppw-jupyterhub", "dist")
+        shutil.rmtree(
+            jupyterhub_dist_dir, ignore_errors=True
+        )
+
+        fff_analysis_dir = os.path.join(root_dir, "fff_analysis")
+        subprocess.run(["poetry", "build"], cwd=fff_analysis_dir)
+
+        shutil.copytree(
+            os.path.join(fff_analysis_dir, "dist"),
+            jupyterhub_dist_dir, dirs_exist_ok=True,
+        )
+
+        mat_analysis_dir = os.path.join(root_dir, "mat_analysis")
+        subprocess.run(["poetry", "build"], cwd=mat_analysis_dir)
+
+        shutil.copytree(
+            os.path.join(mat_analysis_dir, "dist"),
+            jupyterhub_dist_dir, dirs_exist_ok=True
+        )
+
         subprocess.run(
             [
                 "docker",
@@ -72,32 +94,14 @@ def build(*args):
 
         subprocess.run(["poetry", "build"])
 
-        fff_analysis_dir = os.path.join(root_dir, "fff_analysis")
-        subprocess.run(["poetry", "build"], cwd=fff_analysis_dir)
+        # mppw_clients_dir = os.path.join(root_dir, "mppw_clients")
+        # subprocess.run(["poetry", "build"], cwd=mppw_clients_dir)
 
-        shutil.rmtree(os.path.join(dist_dir, "fff_analysis"), ignore_errors=True)
-        shutil.copytree(
-            os.path.join(fff_analysis_dir, "dist"),
-            os.path.join(dist_dir, "fff_analysis"),
-        )
-
-        mat_analysis_dir = os.path.join(root_dir, "mat_analysis")
-        subprocess.run(["poetry", "build"], cwd=mat_analysis_dir)
-
-        shutil.rmtree(os.path.join(dist_dir, "mat_analysis"), ignore_errors=True)
-        shutil.copytree(
-            os.path.join(mat_analysis_dir, "dist"),
-            os.path.join(dist_dir, "mat_analysis"),
-        )
-
-        mppw_clients_dir = os.path.join(root_dir, "mppw_clients")
-        subprocess.run(["poetry", "build"], cwd=mppw_clients_dir)
-
-        shutil.rmtree(os.path.join(dist_dir, "mppw_clients"), ignore_errors=True)
-        shutil.copytree(
-            os.path.join(mppw_clients_dir, "dist"),
-            os.path.join(dist_dir, "mppw_clients"),
-        )
+        # shutil.rmtree(os.path.join(dist_dir, "mppw_clients"), ignore_errors=True)
+        # shutil.copytree(
+        #     os.path.join(mppw_clients_dir, "dist"),
+        #     os.path.join(dist_dir, "mppw_clients"),
+        # )
 
         shutil.rmtree(
             os.path.join(containers_dir, project_name, "dist"), ignore_errors=True
@@ -105,6 +109,10 @@ def build(*args):
         shutil.copytree(dist_dir, os.path.join(containers_dir, project_name, "dist"))
         shutil.copy(
             os.path.join(containers_dir, f"{project_name}-stack.yml"),
+            os.path.join(containers_dir, project_name, "dist"),
+        )
+        shutil.copy(
+            os.path.join(containers_dir, f"{project_name}-stack.dev.yml"),
             os.path.join(containers_dir, project_name, "dist"),
         )
 
@@ -126,6 +134,21 @@ def build(*args):
             ]
         )
 
+    if not args or "registry" in args or "mppw-registry" in args:
+        
+        subprocess.run(
+            [
+                "docker",
+                "build",
+                "--ssh",
+                "default",
+                os.path.join(containers_dir, f"{project_name}-registry"),
+                "--tag",
+                f"ascc/{project_name}-registry:dev",
+                "--tag",
+                f"ascc/{project_name}-registry:{project_version}",
+            ]
+        )
 
 def compose():
 
@@ -164,6 +187,45 @@ def compose_dev():
         + sys.argv[2:]
     )
 
+def compose_registry(dev=True):
+
+    subprocess.run(
+        [
+            "docker-compose",
+            "-p",
+            "mppw-registry" + ("-dev" if dev else ""),
+            "-f",
+            os.path.join(containers_dir, "mppw-registry.yml"),
+        ] +
+        ([
+            "-f",
+            os.path.join(containers_dir, "mppw-registry.dev.yml"),
+        ] if dev else [])
+        + sys.argv[2:]
+    )
+
+def push(repository: str, *images):
+
+    project = None
+    with open("pyproject.toml") as f:
+        project = toml.load(f)
+
+    project_name = project["tool"]["poetry"]["name"]
+    project_version = project["tool"]["poetry"]["version"]
+
+    for image in ["mppw", "mongodb", "nginx", "jupyterhub", "registry"]:
+        
+        if images and (image not in images and f"mppw-{image}" not in images):
+            continue
+
+        image = f"ascc/mppw-{image}" if image != "mppw" else f"ascc/{image}"
+
+        for tag in ["dev", project_version]:
+
+            subprocess.run(["docker", "image", "tag",
+                f"{image}:{tag}", f"{repository}/{image}:{tag}"])
+
+            subprocess.run(["docker", "image", "push", f"{repository}/{image}:{tag}"])
 
 def tunnel():
 
@@ -186,7 +248,7 @@ def tunnel():
 
 
 parser = argh.ArghParser()
-parser.add_commands([build, tunnel])  # , compose])
+parser.add_commands([build, push, tunnel])  # , compose])
 
 
 def main():
@@ -195,6 +257,10 @@ def main():
         compose()
     elif sys.argv[1] == "compose-dev":
         compose_dev()
+    elif sys.argv[1] == "compose-registry":
+        compose_registry(dev=False)
+    elif sys.argv[1] == "compose-registry-dev":
+        compose_registry(dev=True)
     else:
         parser.dispatch()
 

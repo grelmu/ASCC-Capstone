@@ -63,7 +63,7 @@
 #  
 #          Users should be properly informed if this is enabled.
 #  Default: False
-# c.JupyterHub.admin_access = False
+c.JupyterHub.admin_access = True
 
 ## DEPRECATED since version 0.7.2, use Authenticator.admin_users instead.
 #  Default: set()
@@ -123,7 +123,7 @@
 #    - null: jupyterhub.auth.NullAuthenticator
 #    - pam: jupyterhub.auth.PAMAuthenticator
 #  Default: 'jupyterhub.auth.PAMAuthenticator'
-# c.JupyterHub.authenticator_class = 'jupyterhub.auth.PAMAuthenticator'
+c.JupyterHub.authenticator_class = 'mppwauth.MppwAuthenticator'
 
 ## The base URL of the entire application.
 #  
@@ -939,7 +939,9 @@ c.JupyterHub.base_url = '/jupyter'
 #  process's environment (such as `CONFIGPROXY_AUTH_TOKEN`) is not passed to the
 #  single-user server's process.
 #  Default: ['PATH', 'PYTHONPATH', 'CONDA_ROOT', 'CONDA_DEFAULT_ENV', 'VIRTUAL_ENV', 'LANG', 'LC_ALL', 'JUPYTERHUB_SINGLEUSER_APP']
-# c.Spawner.env_keep = ['PATH', 'PYTHONPATH', 'CONDA_ROOT', 'CONDA_DEFAULT_ENV', 'VIRTUAL_ENV', 'LANG', 'LC_ALL', 'JUPYTERHUB_SINGLEUSER_APP']
+import os
+os.environ["DEFAULT_MPPW_URL"] = os.environ.get("AUTHENTICATOR_MPPW_URL")
+c.Spawner.env_keep = ['AUTHENTICATOR_MPPW_URL', 'DEFAULT_MPPW_URL', 'PATH', 'PYTHONPATH', 'CONDA_ROOT', 'CONDA_DEFAULT_ENV', 'VIRTUAL_ENV', 'LANG', 'LC_ALL', 'JUPYTERHUB_SINGLEUSER_APP']
 
 ## Extra environment variables to set for the single-user server's process.
 #  
@@ -1047,11 +1049,6 @@ c.JupyterHub.base_url = '/jupyter'
 #  Note that this does *not* prevent users from accessing files outside of this
 #  path! They can do so with many other means.
 #  Default: ''
-
-import os
-c.JupyterHub.api_tokens = {
-    os.environ["ADMIN_TOKEN"]: "admin",
-}
 
 c.LocalAuthenticator.create_system_users = True
 c.Spawner.notebook_dir = "~/notebooks"
@@ -1210,7 +1207,11 @@ c.Spawner.notebook_dir = "~/notebooks"
 #  
 #  Defaults to an empty set, in which case no user has admin access.
 #  Default: set()
-c.Authenticator.admin_users = [ "admin" ]
+
+import os
+c.Authenticator.admin_users = [ os.environ.get("ADMIN_USERNAME") ]
+
+os.environ["JUPYTERHUB_AUTHENTICATOR_MPPW_URL"] = os.environ.get("AUTHENTICATOR_MPPW_URL")
 
 ## Set of usernames that are allowed to log in.
 #  
@@ -1310,7 +1311,7 @@ c.Authenticator.admin_users = [ "admin" ]
 #  
 #          New in JupyterHub 0.8
 #  Default: False
-# c.Authenticator.enable_auth_state = False
+c.Authenticator.enable_auth_state = True
 
 ## An optional hook function that you can implement to do some bootstrapping work
 #  during authentication. For example, loading user account details from an

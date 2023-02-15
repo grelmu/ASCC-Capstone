@@ -1,0 +1,6 @@
+version: "3.8"
+services:
+
+  registry:
+    environment:
+      MPPW_REGISTRY_ADMIN_PASSWORD: ${MPPW_REGISTRY_ADMIN_PASSWORD:-password}
