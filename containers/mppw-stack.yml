@@ -2,7 +2,7 @@ version: "3.8"
 services:
 
   mppw:
-    image: ascc/mppw:${MPPW_VERSION:-dev}
+    image: ${MPPW_REPOSITORY_PREFIX}ascc/mppw:${MPPW_VERSION:-dev}
     restart: unless-stopped
     environment:
       MPPW_ADMIN_USERNAME: ${MPPW_ADMIN_USERNAME:-}
@@ -12,7 +12,7 @@ services:
       MONGODB_ADMIN_PASSWORD: ${MONGODB_ADMIN_PASSWORD}
 
   mongodb:
-    image: ascc/mppw-mongodb:${MPPW_VERSION:-dev}
+    image: ${MPPW_REPOSITORY_PREFIX}ascc/mppw-mongodb:${MPPW_VERSION:-dev}
     restart: unless-stopped
     volumes:
       - certificates:/etc/certificates
@@ -29,7 +29,7 @@ services:
     command: ["mongod", "--tlsMode", "preferTLS", "--tlsCertificateKeyFile", "/etc/certificates/mongodb/key-cert.pem", "--replSet", "${MONGODB_INITRS_NAME:-mppw0}", "--keyFile", "/etc/certificates/mongodb/root-password-keyfile.key"]
 
   jupyterhub:
-    image: ascc/mppw-jupyterhub:${MPPW_VERSION:-dev}
+    image: ${MPPW_REPOSITORY_PREFIX}ascc/mppw-jupyterhub:${MPPW_VERSION:-dev}
     restart: unless-stopped
     volumes:
       - data_hub:/srv/jupyterhub
@@ -39,7 +39,7 @@ services:
       AUTHENTICATOR_MPPW_URL: ${AUTHENTICATOR_MPPW_URL:-http://mppw:8000/api}
 
   nginx:
-    image: ascc/mppw-nginx:${MPPW_VERSION:-dev}
+    image: ${MPPW_REPOSITORY_PREFIX}ascc/mppw-nginx:${MPPW_VERSION:-dev}
     restart: unless-stopped
     volumes:
       - certificates:/etc/certificates

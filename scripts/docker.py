@@ -134,6 +134,21 @@ def build(*args):
             ]
         )
 
+    if not args or "registry" in args or "mppw-registry" in args:
+        
+        subprocess.run(
+            [
+                "docker",
+                "build",
+                "--ssh",
+                "default",
+                os.path.join(containers_dir, f"{project_name}-registry"),
+                "--tag",
+                f"ascc/{project_name}-registry:dev",
+                "--tag",
+                f"ascc/{project_name}-registry:{project_version}",
+            ]
+        )
 
 def compose():
 
@@ -172,6 +187,46 @@ def compose_dev():
         + sys.argv[2:]
     )
 
+def compose_registry(dev=True):
+
+    subprocess.run(
+        [
+            "docker-compose",
+            "-p",
+            "mppw-registry" + ("-dev" if dev else ""),
+            "-f",
+            os.path.join(containers_dir, "mppw-registry.yml"),
+        ] +
+        ([
+            "-f",
+            os.path.join(containers_dir, "mppw-registry.dev.yml"),
+        ] if dev else [])
+        + sys.argv[2:]
+    )
+
+def push(repository: str, *images):
+
+    project = None
+    with open("pyproject.toml") as f:
+        project = toml.load(f)
+
+    project_name = project["tool"]["poetry"]["name"]
+    project_version = project["tool"]["poetry"]["version"]
+
+    for image in ["mppw", "mongodb", "nginx", "jupyterhub", "registry"]:
+        
+        if images and (image not in images and f"mppw-{image}" not in images):
+            continue
+
+        image = f"ascc/mppw-{image}" if image != "mppw" else f"ascc/{image}"
+
+        for tag in ["dev", project_version]:
+
+            subprocess.run(["docker", "image", "tag",
+                f"{image}:{tag}", f"{repository}/{image}:{tag}"])
+
+            subprocess.run(["docker", "image", "push", f"{repository}/{image}:{tag}"])
+
 def tunnel():
 
     tunnel_furl = furl.furl(os.environ.get("DOCKER_HOST", ""))
@@ -193,7 +248,7 @@ def tunnel():
 
 
 parser = argh.ArghParser()
-parser.add_commands([build, tunnel])  # , compose])
+parser.add_commands([build, push, tunnel])  # , compose])
 
 
 def main():
@@ -202,6 +257,10 @@ def main():
         compose()
     elif sys.argv[1] == "compose-dev":
         compose_dev()
+    elif sys.argv[1] == "compose-registry":
+        compose_registry(dev=False)
+    elif sys.argv[1] == "compose-registry-dev":
+        compose_registry(dev=True)
     else:
         parser.dispatch()
 
