@@ -1,3 +1,16 @@
+# 0.9.0
+
+New Features:
+
+* **Improved point-cloud UI**
+  * Bounding box selection
+  * Secondary property selection
+* More granular security controls
+  * Read-only users
+  * Data-only users
+* Artifact tagging support
+* **JupyterHub** analysis service
+
 # 0.8.0
 
 New Features:
