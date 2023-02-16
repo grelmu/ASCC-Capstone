@@ -358,6 +358,48 @@ export default {
         );
       });
     },
+    apiCreateProject(project) {
+      return this.apiFetch("projects/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(project),
+      }).then((response) => {
+        if (response.status == 201) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when creating project"
+        );
+      });
+    },
+    apiPatchProject(id, changes) {
+      return this.apiFetch("projects/" + id, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(changes),
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when patching project"
+        );
+      });
+    },
+    apiDeleteProject(id) {
+      return this.apiFetch("projects/" + id, {
+        method: "DELETE",
+      }).then((response) => {
+        if (response.status == 200 || response.status == 204)
+          return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when deleting project"
+        );
+      });
+    },
     apiFetchProjects() {
       return this.apiFetch("projects/", {
         method: "GET",

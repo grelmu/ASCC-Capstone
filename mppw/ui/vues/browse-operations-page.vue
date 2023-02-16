@@ -211,23 +211,6 @@ export default {
   },
   methods: {
     // TODO: Move to $root app.vue
-    apiCreateProject(project) {
-      return this.$root
-        .apiFetch("projects/", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(project),
-        })
-        .then((response) => {
-          if (response.status == 201) return response.json();
-          this.$root.throwApiResponseError(
-            response,
-            "Unknown response when creating project"
-          );
-        });
-    },
     apiFetchProjectOps(project_id) {
       return this.$root
         .apiFetch("operations/?project_ids=" + this.projectId, {
@@ -357,7 +340,7 @@ export default {
       this.newProject = {};
     },
     onNewProjectSubmit() {
-      this.apiCreateProject(this.newProject).finally(() => {
+      this.$root.apiCreateProject(this.newProject).finally(() => {
         this.isCreatingNewProject = false;
         this.refreshProjects();
       });
