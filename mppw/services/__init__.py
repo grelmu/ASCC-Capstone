@@ -6,6 +6,7 @@ from .service_layer import ServiceLayer
 from .operation_services import OperationServices
 from .artifact_services import ArtifactServices
 from .provenance_services import ProvenanceServices
+from .schema_services import SchemaServices, ResolvedSchema
 
 
 def init_request_service_layer(app: fastapi.FastAPI):

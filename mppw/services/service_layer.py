@@ -9,6 +9,7 @@ from .. import schemas
 from .artifact_services import ArtifactServices
 from .operation_services import OperationServices
 from .provenance_services import ProvenanceServices
+from .schema_services import SchemaServices
 
 
 class ServiceLayer:
@@ -104,3 +105,6 @@ class ServiceLayer:
 
     def provenance_services(self):
         return ProvenanceServices(self)
+
+    def schema_services(self):
+        return SchemaServices(self)

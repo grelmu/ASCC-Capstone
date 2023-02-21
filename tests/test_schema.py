@@ -3,6 +3,8 @@ import json
 
 from mppw import schemas
 
+from .fixtures_services import ServiceLayerContext
+
 """
 Unit tests of schemas for operations and artifacts
 """
@@ -164,3 +166,29 @@ def test_load_artifact_schema():
         == "mppw.services.artifacts.digital_file_services:FileServices"
     )
     assert schema.name == "File"
+
+
+def test_load_module_schema():
+
+    """
+    Test that we can load a schema from a module
+    """
+
+    assert "mppw" in schemas.get_schema_module_names()
+
+    mod_schemas = list(schemas.load_artifact_schemas_in_module("mppw"))
+
+    print(mod_schemas[0])
+
+
+def test_load_module_schemas_to_repository(storage_layer):
+
+    """
+    Test that we can load module schemas into a repository
+    """
+
+    with ServiceLayerContext(storage_layer) as service_layer:
+
+        service_layer.repo_layer.init_module_schemas()
+
+        print(list(service_layer.repo_layer.module_schemas.query())[0])

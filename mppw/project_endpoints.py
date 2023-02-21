@@ -107,6 +107,78 @@ def create_router(app):
         security.reload_project_claims(app)
         return True
 
+    @router.get(
+        "/{id}/services/project/schema/", response_model=List[services.ResolvedSchema]
+    )
+    def query_project_schemas(
+        id: str,
+        type_urn: str = None,
+        type_urns: List[str] = None,
+        type_urn_prefix: str = None,
+        active: bool = True,
+        current: bool = True,
+        user: security.ScopedUser = Security(
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
+        ),
+        service_layer=Depends(request_service_layer(app)),
+    ):
+        if id is not None:
+            check_project_claims_for_user(user, [id])
+
+        result = service_layer.schema_services().query_resolved_project_schemas(
+            id,
+            type_urns=([type_urn] if type_urn is not None else type_urns),
+            type_urn_prefix=type_urn_prefix,
+            active=active,
+            current=True,
+        )
+
+        return list(result)
+
+    @router.get(
+        "/{id}/services/project/schema/operations/",
+        response_model=List[services.ResolvedSchema],
+    )
+    def query_project_operations_schemas(
+        id: str,
+        active: bool = True,
+        current: bool = True,
+        user: security.ScopedUser = Security(
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
+        ),
+        service_layer=Depends(request_service_layer(app)),
+    ):
+        return query_project_schemas(
+            id,
+            type_urn_prefix="urn:x-mfg:operation:",
+            active=active,
+            current=current,
+            user=user,
+            service_layer=service_layer,
+        )
+
+    @router.get(
+        "/{id}/services/project/schema/artifacts/",
+        response_model=List[services.ResolvedSchema],
+    )
+    def query_project_artifacts_schemas(
+        id: str,
+        active: bool = True,
+        current: bool = True,
+        user: security.ScopedUser = Security(
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
+        ),
+        service_layer=Depends(request_service_layer(app)),
+    ):
+        return query_project_schemas(
+            id,
+            type_urn_prefix="urn:x-mfg:artifact:",
+            active=active,
+            current=current,
+            user=user,
+            service_layer=service_layer,
+        )
+
     return router
 
 

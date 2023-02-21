@@ -204,7 +204,6 @@ export default {
     },
     isModifyArtifactUser() {
       if (!this.currentUser) return false;
-      console.log(this.currentUser);
       return (
         this.isAdminUser() ||
         this.isModifyProvenanceUser() ||
@@ -411,10 +410,13 @@ export default {
         );
       });
     },
-    apiFetchOpTypes() {
-      return this.apiFetch("schema/operations/", {
-        method: "GET",
-      }).then((response) => {
+    apiFetchProjectOperationSchemas(projectId) {
+      return this.apiFetch(
+        "projects/" + projectId + "/services/project/schema/operations/",
+        {
+          method: "GET",
+        }
+      ).then((response) => {
         if (response.status == 200) return response.json();
         this.throwApiResponseError(
           response,
@@ -422,34 +424,32 @@ export default {
         );
       });
     },
-    apiFetchArtifactTypes() {
-      return this.apiFetch("schema/artifacts/", {
-        method: "GET",
-      }).then((response) => {
-        if (response.status == 200) return response.json();
-        this.throwApiResponseError(
-          response,
-          "Unknown response when querying for artifact types"
-        );
-      });
-    },
-    apiFetchOperationType(type_urn) {
+    apiFetchProjectSchemaByType(projectId, type_urn) {
       return this.apiFetch(
-        "schema/operations/by_type?type_urn=" + encodeURIComponent(type_urn),
+        "projects/" +
+          projectId +
+          "/services/project/schema/?type_urn=" +
+          encodeURIComponent(type_urn),
         {
           method: "GET",
         }
       ).then((response) => {
-        if (response.status == 200) return response.json();
+        if (response.status == 200) {
+          return response
+            .json()
+            .then((response_arr) =>
+              response_arr.length > 0 ? response_arr[0] : null
+            );
+        }
         this.throwApiResponseError(
           response,
           "Unknown response when querying for operation type"
         );
       });
     },
-    apiFetchArtifactType(type_urn) {
+    apiFetchDigitalArtifactJsonSchema(id) {
       return this.apiFetch(
-        "schema/artifacts/by_type?type_urn=" + encodeURIComponent(type_urn),
+        "artifacts/" + id + "/services/artifact/digital/json_schema",
         {
           method: "GET",
         }
@@ -457,7 +457,7 @@ export default {
         if (response.status == 200) return response.json();
         this.throwApiResponseError(
           response,
-          "Unknown response when querying for artifact type"
+          "Unknown response when retrieving json schema for artifact"
         );
       });
     },
@@ -510,20 +510,6 @@ export default {
         this.throwApiResponseError(
           response,
           "Unknown response when retrieving parent of artifact"
-        );
-      });
-    },
-    apiFetchDigitalArtifactJsonSchema(id) {
-      return this.apiFetch(
-        "artifacts/" + id + "/services/artifact/digital/json_schema",
-        {
-          method: "GET",
-        }
-      ).then((response) => {
-        if (response.status == 200) return response.json();
-        this.throwApiResponseError(
-          response,
-          "Unknown response when retrieving json schema for artifact"
         );
       });
     },

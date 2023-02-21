@@ -249,6 +249,37 @@ def create_router(app):
         services = service_layer.operation_services_for(operation)
         return services.init(operation, **args)
 
+    #
+    # Schema
+    #
+
+    @router.get(
+        "/{id}/services/operation/schema",
+        response_model=services.ResolvedSchema,
+    )
+    def get_schema(
+        id: str,
+        user: models.User = Security(request_user(app), scopes=[READ_PROVENANCE_SCOPE]),
+        service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
+    ):
+        operation: models.Operation = read(id, user, service_layer.repo_layer)
+
+        schemas = service_layer.schema_services().query_resolved_project_schemas(
+            operation.project,
+            type_urns=[operation.type_urn],
+            active=True,
+            current=True,
+        )
+
+        if not schemas:
+            raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
+
+        return schemas[0]
+
+    #
+    # Artifact attachments
+    #
+
     @router.post("/{id}/artifacts/", response_model=bool)
     def attach_artifact(
         id: str,
