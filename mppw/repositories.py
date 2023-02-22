@@ -108,6 +108,7 @@ class MongoDBRepositoryLayer:
                     type_urn=mod_schema.module_schema_model.type_urn,
                     module=module_name,
                     tags=[f"module:{module_name}"],
+                    active=(not mod_schema.module_schema_model.is_abstract),
                     storage_schema_json=mod_schema.module_schema_model.json(),
                     storage_schema_json5=mod_schema.module_schema_json5,
                     storage_schema_yaml=mod_schema.module_schema_yaml,
@@ -1482,37 +1483,22 @@ class SchemaRepository(MongoDBRepository):
             if txn:
                 self.session.abort_transaction()
 
-    def plugin_schema_replace(self, plugin_schema: models.StoredSchema):
-        txn = self.session.start_transaction()
-        try:
-            was_active = False
-            for old_plugin_schema in self.query(
-                type_urns=[plugin_schema.type_urn], is_plugin_schema=True
-            ):
-                if old_plugin_schema.active:
-                    was_active = True
-                if not self.delete(old_plugin_schema.id):
-                    raise FailureToReplaceSchemaException()
-
-            plugin_schema.active = was_active
-            result = self.create(plugin_schema)
-            self.session.commit_transaction()
-            txn = None
-            return result
-        finally:
-            if txn:
-                self.session.abort_transaction()
-
-    def deactivate(self, id: str):
+    def deactivate(self, id: str, project_ids: List[str] = None):
         return (
             self.collection.update_one(
-                self._query_doc_for(id=id), {"$set": {"active": False}}
+                self._query_doc_for(id=id, project_ids=project_ids),
+                {"$set": {"active": False}},
             ).modified_count
             == 1
         )
 
-    def delete(self, id: str):
-        return self.collection.delete_one(self._query_doc_for(id=id)).deleted_count == 1
+    def delete(self, id: str, project_ids: List[str] = None):
+        return (
+            self.collection.delete_one(
+                self._query_doc_for(id=id, project_ids=project_ids)
+            ).deleted_count
+            == 1
+        )
 
 
 class SchemaCache(SchemaRepository):

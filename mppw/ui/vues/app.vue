@@ -72,6 +72,11 @@
                     Browse Operations
                   </router-link>
                 </li>
+                <li class="nav-item">
+                  <router-link to="/schema" class="nav-link">
+                    Browse Schema
+                  </router-link>
+                </li>
                 <li v-if="isAdminUser()" class="nav-item mt-3">
                   <router-link to="/config" class="nav-link text-secondary">
                     Configure
@@ -123,6 +128,10 @@ const routes = [
   {
     path: "/",
     component: RemoteVue.lazyComponent("vues/browse-operations-page.vue"),
+  },
+  {
+    path: "/schema",
+    component: RemoteVue.lazyComponent("vues/browse-schema-page.vue"),
   },
   { path: "/about", component: RemoteVue.lazyComponent("vues/about-page.vue") },
   {
@@ -410,6 +419,20 @@ export default {
         );
       });
     },
+    apiFetchProjectSchemas(projectId) {
+      return this.apiFetch(
+        "projects/" + projectId + "/services/project/schema/",
+        {
+          method: "GET",
+        }
+      ).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when querying for project schemas"
+        );
+      });
+    },
     apiFetchProjectOperationSchemas(projectId) {
       return this.apiFetch(
         "projects/" + projectId + "/services/project/schema/operations/",
@@ -420,7 +443,7 @@ export default {
         if (response.status == 200) return response.json();
         this.throwApiResponseError(
           response,
-          "Unknown response when querying for operation types"
+          "Unknown response when querying for project operation schemas"
         );
       });
     },
@@ -443,7 +466,7 @@ export default {
         }
         this.throwApiResponseError(
           response,
-          "Unknown response when querying for operation type"
+          "Unknown response when querying for project schema by type"
         );
       });
     },
@@ -458,6 +481,53 @@ export default {
         this.throwApiResponseError(
           response,
           "Unknown response when retrieving json schema for artifact"
+        );
+      });
+    },
+    apiCreateUserSchema(schema) {
+      return this.apiFetch("schemas/user/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(schema),
+      }).then((response) => {
+        if (response.status == 201) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when creating user schema"
+        );
+      });
+    },
+    apiDeleteUserSchema(id) {
+      return this.apiFetch("schemas/user/" + id, {
+        method: "DELETE",
+      }).then((response) => {
+        if (response.status == 200 || response.status == 204)
+          return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when deleting user schema"
+        );
+      });
+    },
+    apiFetchModuleSchemaByType(type_urn) {
+      return this.apiFetch(
+        "schemas/module/?type_urn=" + encodeURIComponent(type_urn),
+        {
+          method: "GET",
+        }
+      ).then((response) => {
+        if (response.status == 200) {
+          return response
+            .json()
+            .then((response_arr) =>
+              response_arr.length > 0 ? response_arr[0] : null
+            );
+        }
+        this.throwApiResponseError(
+          response,
+          "Unknown response when querying for module schema by type"
         );
       });
     },

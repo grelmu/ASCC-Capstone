@@ -26,62 +26,120 @@ from .security import (
 
 def create_router(app):
 
-    router = fastapi.APIRouter(prefix="/api/schema")
+    router = fastapi.APIRouter(prefix="/api/schemas")
 
-    for repo_name, repo_fn in [
-        ("user", lambda r: r.user_schemas),
-        ("module", lambda r: r.module_schemas),
-    ]:
+    @router.post(
+        "/user/",
+        response_model=models.StoredSchema,
+        status_code=fastapi.status.HTTP_201_CREATED,
+    )
+    def create(
+        stored_schema: models.StoredSchema,
+        user: security.ScopedUser = Security(request_user(app), scopes=[ADMIN_SCOPE]),
+        repo_layer=Depends(request_repo_layer(app)),
+    ):
 
-        @router.get("/" + repo_name + "/{id}", response_model=models.StoredSchema)
-        def read(
-            id: str,
-            user: security.ScopedUser = Security(
-                request_user(app), scopes=[READ_PROVENANCE_SCOPE]
-            ),
-            repo_layer=Depends(request_repo_layer(app)),
-            repo_fn=repo_fn,
-        ):
-            result = repo_fn(repo_layer).query_one(
-                id=id, project_ids=project_endpoints.project_claims_for_user(user)
-            )
+        project_endpoints.check_project_claims_for_user(
+            user, [str(stored_schema.project)]
+        )
 
-            if result is None:
-                raise fastapi.HTTPException(
-                    status_code=fastapi.status.HTTP_404_NOT_FOUND
-                )
+        return repo_layer.user_schemas.create(stored_schema)
 
-            return result
+    @router.get("/user/{id}", response_model=models.StoredSchema)
+    def read(
+        id: str,
+        user: security.ScopedUser = Security(
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
+        ),
+        repo_layer=Depends(request_repo_layer(app)),
+    ):
+        result = repo_layer.user_schemas.query_one(
+            id=id, project_ids=project_endpoints.project_claims_for_user(user)
+        )
 
-        @router.get("/" + repo_name + "/", response_model=List[models.StoredSchema])
-        def query(
-            project_ids: List[str] = fastapi.Query(None),
-            type_urn: str = None,
-            type_urns: List[str] = None,
-            type_urn_prefix: str = None,
-            name: str = fastapi.Query(None),
-            tags: List[str] = fastapi.Query(None),
-            active: bool = fastapi.Query(True),
-            user: security.ScopedUser = Security(
-                request_user(app), scopes=[READ_PROVENANCE_SCOPE]
-            ),
-            repo_layer=Depends(request_repo_layer(app)),
-            repo_fn=repo_fn,
-        ):
-            if project_ids is None:
-                project_ids = project_endpoints.project_claims_for_user(user)
-            else:
-                project_endpoints.check_project_claims_for_user(user, project_ids)
+        if result is None:
+            raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
 
-            result = repo_fn(repo_layer).query(
-                project_ids=project_ids,
-                type_urns=([type_urn] if type_urn is not None else type_urns),
-                type_urn_prefix=type_urn_prefix,
-                name=name,
-                tags=tags,
-                active=active,
-            )
+        return result
 
-            return list(result)
+    @router.get("/user/", response_model=List[models.StoredSchema])
+    def query(
+        project_ids: List[str] = fastapi.Query(None),
+        type_urn: str = None,
+        type_urns: List[str] = None,
+        type_urn_prefix: str = None,
+        name: str = fastapi.Query(None),
+        tags: List[str] = fastapi.Query(None),
+        active: bool = fastapi.Query(True),
+        user: security.ScopedUser = Security(
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
+        ),
+        repo_layer=Depends(request_repo_layer(app)),
+    ):
+        if project_ids is None:
+            project_ids = project_endpoints.project_claims_for_user(user)
+        else:
+            project_endpoints.check_project_claims_for_user(user, project_ids)
+
+        result = repo_layer.user_schemas.query(
+            project_ids=project_ids,
+            type_urns=([type_urn] if type_urn is not None else type_urns),
+            type_urn_prefix=type_urn_prefix,
+            name=name,
+            tags=tags,
+            active=active,
+        )
+
+        return list(result)
+
+    @router.delete("/user/{id}", response_model=bool)
+    def delete(
+        id: str,
+        preserve_data: bool = True,
+        current_user: models.User = Security(
+            request_user(app), scopes=[MODIFY_PROVENANCE_SCOPE]
+        ),
+        repo_layer=Depends(request_repo_layer(app)),
+    ):
+
+        modified = (
+            repo_layer.user_schemas.deactivate
+            if preserve_data
+            else repo_layer.user_schemas.delete
+        )(id, project_ids=project_endpoints.project_claims_for_user(current_user))
+
+        if not modified:
+            raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
+
+        return True
+
+    #
+    # Module schemas
+    #
+
+    @router.get("/module/", response_model=List[models.StoredSchema])
+    def query(
+        module_names: List[str] = None,
+        type_urn: str = None,
+        type_urns: List[str] = None,
+        type_urn_prefix: str = None,
+        name: str = None,
+        tags: List[str] = None,
+        active: bool = None,
+        user: security.ScopedUser = Security(
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
+        ),
+        repo_layer=Depends(request_repo_layer(app)),
+    ):
+        result = repo_layer.module_schemas.query(
+            module_names=module_names,
+            type_urns=([type_urn] if type_urn is not None else type_urns),
+            type_urn_prefix=type_urn_prefix,
+            name=name,
+            tags=tags,
+            active=active,
+        )
+
+        return list(result)
 
     return router

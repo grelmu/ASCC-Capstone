@@ -90,6 +90,7 @@ class OperationSchema(pydantic.BaseModel):
 
     type_urn: str
     parent_urns: Optional[List[str]]
+    is_abstract: bool = False
     name: Optional[str]
     description: Optional[str]
     attachments: AttachmentsSchema = pydantic.Field(AttachmentsSchema())

@@ -119,6 +119,12 @@ class SchemaServices:
         project_schemas = self.query_project_schemas(project_id, *args, **kwargs)
         return self.resolve_project_schemas(project_id, project_schemas)
 
+    def query_resolved_project_schema(self, project_id, *args, **kwargs):
+        project_schemas = self.query_resolved_project_schemas(
+            project_id, *args, **kwargs
+        )
+        return (list(project_schemas) or [None])[0]
+
     def _find_project_schema_family(
         self, project_id, stored_schemas: typing.List[models.StoredSchema]
     ):

@@ -1,0 +1,37 @@
+{
+  type_urn: "urn:x-mfg:artifact:digital:template",
+  is_abstract: true,
+  name: "Template Digital Artifact",
+  description: "Template for some kind of digital artifact",
+  json_schema: {
+    $schema: "https://json-schema.org/draft/2020-12/schema",
+    type: "object",
+    properties: {
+      arrProp: {
+        title: "Array Property",
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            strItemProp: {
+              type: "string",
+              title: "String Item Property",
+            },
+            numItemProp: {
+              type: "number",
+              title: "Number Item Property",
+            },
+          },
+        },
+      },
+      strProp: {
+        type: "string",
+        title: "String Property",
+      },
+      numProp: {
+        type: "number",
+        title: "Number Property",
+      },
+    },
+  },
+}

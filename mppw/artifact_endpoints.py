@@ -260,17 +260,17 @@ def create_router(app):
     ):
         artifact: models.Artifact = read(id, user, service_layer.repo_layer)
 
-        schemas = service_layer.schema_services().query_resolved_project_schemas(
+        schema = service_layer.schema_services().query_resolved_project_schema(
             artifact.project,
             type_urns=[artifact.type_urn],
             active=True,
             current=True,
         )
 
-        if not schemas:
+        if not schema:
             raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
 
-        return schemas[0]
+        return schema
 
     @router.get(
         "/{id}/services/artifact/digital/json_schema",
@@ -283,8 +283,7 @@ def create_router(app):
     ):
         schema: services.ResolvedSchema = get_schema(id, user, service_layer)
 
-        schema_obj = json.loads(schema.schema_json)
-        return schema_obj.get("json_schema", None)
+        return schema.schema_model.json_schema
 
     #
     # Provenance

@@ -264,17 +264,17 @@ def create_router(app):
     ):
         operation: models.Operation = read(id, user, service_layer.repo_layer)
 
-        schemas = service_layer.schema_services().query_resolved_project_schemas(
+        schema = service_layer.schema_services().query_resolved_project_schema(
             operation.project,
             type_urns=[operation.type_urn],
             active=True,
             current=True,
         )
 
-        if not schemas:
+        if not schema:
             raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
 
-        return schemas[0]
+        return schema
 
     #
     # Artifact attachments
