@@ -477,8 +477,8 @@ def create_router(app):
 
         artifact: models.Artifact = read(id, user, service_layer.repo_layer)
 
-        service: services.DatabaseBucketServices = service_layer.artifact_service(
-            artifact.type_urn
+        service: services.DatabaseBucketServices = service_layer.artifact_services_for(
+            artifact
         )
         return service.stats(artifact)
 

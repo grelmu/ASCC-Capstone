@@ -499,6 +499,21 @@ export default {
         );
       });
     },
+    apiPatchUserSchema(id, changes) {
+      return this.apiFetch("schemas/user/" + id, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(changes),
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when patching user schema"
+        );
+      });
+    },
     apiDeleteUserSchema(id) {
       return this.apiFetch("schemas/user/" + id, {
         method: "DELETE",

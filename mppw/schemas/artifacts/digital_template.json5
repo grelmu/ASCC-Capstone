@@ -1,6 +1,5 @@
 {
   type_urn: "urn:x-mfg:artifact:digital:template",
-  is_abstract: true,
   name: "Template Digital Artifact",
   description: "Template for some kind of digital artifact",
   json_schema: {
@@ -34,4 +33,5 @@
       },
     },
   },
+  abstract: true,
 }

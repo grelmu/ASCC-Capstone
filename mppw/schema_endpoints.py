@@ -13,6 +13,7 @@ from .repositories import request_repo_layer
 from . import services
 from .services import request_service_layer
 from . import project_endpoints
+from . import endpoints
 
 from . import schemas
 from . import security
@@ -91,6 +92,44 @@ def create_router(app):
         )
 
         return list(result)
+
+    @router.patch("/user/{id}", response_model=bool)
+    def patch(
+        id: str,
+        changes: List[endpoints.Change],
+        current_user: models.User = Security(
+            request_user(app), scopes=[MODIFY_PROVENANCE_SCOPE]
+        ),
+        repo_layer=Depends(request_repo_layer(app)),
+    ):
+        def update_fn(schema: models.StoredSchema):
+
+            for change in changes:
+                if change.op == "replace":
+                    setattr(schema, change.path, change.value)
+                elif change.op == "remove":
+                    setattr(schema, change.path, None)
+                if change.path in ["storage_schema_json5", "storage_schema_yaml"]:
+                    schema.storage_schema_json = None
+                    schema.storage_schema_hash = None
+                if change.path in ["storage_schema_json"]:
+                    schema.storage_schema_hash = None
+                    schema.storage_schema_json5 = None
+                    schema.storage_schema_yaml = None
+
+            schema = models.StoredSchema(**schema.dict())
+            return schema
+
+        modified = repo_layer.user_schemas.partial_update(
+            id,
+            update_fn,
+            project_ids=project_endpoints.project_claims_for_user(current_user),
+        )
+
+        if not modified:
+            raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
+
+        return True
 
     @router.delete("/user/{id}", response_model=bool)
     def delete(

@@ -108,7 +108,7 @@ class MongoDBRepositoryLayer:
                     type_urn=mod_schema.module_schema_model.type_urn,
                     module=module_name,
                     tags=[f"module:{module_name}"],
-                    active=(not mod_schema.module_schema_model.is_abstract),
+                    active=(not mod_schema.module_schema_model.abstract),
                     storage_schema_json=mod_schema.module_schema_model.json(),
                     storage_schema_json5=mod_schema.module_schema_json5,
                     storage_schema_yaml=mod_schema.module_schema_yaml,
@@ -1459,26 +1459,34 @@ class SchemaRepository(MongoDBRepository):
             self.collection.find(query_doc).sort("_id", pymongo.DESCENDING),
         )
 
-    def _update(self, schema: models.StoredSchema):
+    def update(self, schema: models.StoredSchema, project_ids: List[str] = None):
         return (
             self.collection.replace_one(
-                self._query_doc_for(id=schema.id),
+                self._query_doc_for(ids=[schema.id], project_ids=project_ids),
                 model_to_doc(schema),
             ).modified_count
             == 1
         )
 
-    def replace(self, schema: models.StoredSchema):
+    def partial_update(self, id: str, update_fn, project_ids: List[str] = None):
+
         txn = self.session.start_transaction()
+
         try:
-            for same_type_schema in self.query(type_urns=[schema.type_urn]):
-                same_type_schema.active = False
-                if not self._update(same_type_schema):
-                    raise FailureToReplaceSchemaException()
-            result = self.create(schema)
+
+            schema = self.query_one(ids=[id], project_ids=project_ids)
+            if schema is None:
+                return False
+            schema = update_fn(schema)
+            if schema is None:
+                return False
+
+            result = self.update(schema, project_ids=project_ids)
             self.session.commit_transaction()
             txn = None
+
             return result
+
         finally:
             if txn:
                 self.session.abort_transaction()

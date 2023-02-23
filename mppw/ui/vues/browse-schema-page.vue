@@ -40,7 +40,7 @@
             <a
               title="Edit Schema"
               v-if="row['module'] == null"
-              @click="onEditSchema(row['id'])"
+              @click="onEditSchema(row)"
               style="cursor: pointer"
               ><o-icon icon="circle-edit-outline"></o-icon
             ></a>
@@ -74,7 +74,7 @@
         </o-table>
       </section>
 
-      <o-modal v-model:active="activeNewSchemaModal">
+      <o-modal v-model:active="activeNewSchema">
         <h2>Create a new schema</h2>
 
         <o-field label="Content">
@@ -86,6 +86,20 @@
         </o-field>
 
         <o-button @click="onNewSchemaSubmit">Submit</o-button>
+      </o-modal>
+
+      <o-modal v-model:active="activeEditSchema">
+        <h2>Edit Schema</h2>
+
+        <o-field label="Content">
+          <o-input
+            type="textarea"
+            v-model="editSchema.storage_schema_json5"
+            style="height: 15em; font-family: monospace; min-width: 30em"
+          ></o-input>
+        </o-field>
+
+        <o-button @click="onEditSchemaSubmit">Submit</o-button>
       </o-modal>
     </div>
   </div>
@@ -104,7 +118,10 @@ export default {
       projectSchemas: null,
 
       newSchema: null,
-      activeNewSchemaModal: false,
+      activeNewSchema: false,
+
+      editSchema: null,
+      activeEditSchema: false,
     };
   },
   methods: {
@@ -157,14 +174,14 @@ export default {
 
       return templateJson5
         .replace(baseSchema["type_urn"], newUrn)
-        .replace(/(.?is_abstract.?:)\strue/, "$1 false");
+        .replace(/(.?abstract.?:)\strue/, "$1 false");
     },
     onNewSchema(baseSchema) {
       this.newSchema = {
         project: this.projectId,
         storage_schema_json5: this.getTemplateJson5FromSchema(baseSchema),
       };
-      this.activeNewSchemaModal = true;
+      this.activeNewSchema = true;
     },
     onNewSchemaSubmit() {
       let apiSchema = JSON.parse(JSON.stringify(this.newSchema));
@@ -174,7 +191,41 @@ export default {
       return this.$root
         .apiCreateUserSchema(apiSchema)
         .then((schema) => {
-          this.activeNewSchemaModal = false;
+          this.activeNewSchema = false;
+        })
+        .finally(() => {
+          return this.refreshProjectSchemas();
+        });
+    },
+    onEditSchema(schema) {
+      this.editSchema = {
+        id: schema.id,
+        project: schema.project,
+        storage_schema_json5:
+          schema["storage_schema_json5"] || schema["storage_schema_json"],
+      };
+      this.activeEditSchema = true;
+    },
+    onEditSchemaSubmit() {
+      let changes = [
+        {
+          op: "replace",
+          path: "type_urn",
+          value: JSON5.parse(this.editSchema["storage_schema_json5"])[
+            "type_urn"
+          ],
+        },
+        {
+          op: "replace",
+          path: "storage_schema_json5",
+          value: this.editSchema["storage_schema_json5"],
+        },
+      ];
+
+      return this.$root
+        .apiPatchUserSchema(this.editSchema["id"], changes)
+        .then(() => {
+          this.activeEditSchema = false;
         })
         .finally(() => {
           return this.refreshProjectSchemas();

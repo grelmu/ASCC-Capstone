@@ -17,7 +17,7 @@ class ArtifactSchema(pydantic.BaseModel):
 
     type_urn: str
     parent_urns: Optional[List[str]]
-    is_abstract: bool = False
+    abstract: bool = False
     name: Optional[str]
     description: Optional[str]
     json_schema: Any

@@ -442,9 +442,7 @@ def create_router(app):
     ):
 
         op: models.Operation = read(id, user, service_layer.repo_layer)
-        service: services.OperationServices = service_layer.operation_service(
-            op.type_urn
-        )
+        service: services.OperationServices = service_layer.operation_services_for(op)
         return service.get_default_attachments_artifact(op)
 
     #

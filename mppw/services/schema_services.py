@@ -135,7 +135,7 @@ class SchemaServices:
         for next_stored_schema in stored_schemas:
             if next_stored_schema.type_urn not in schema_family.nodes():
                 next_schema_model = self._load_schema_model(
-                    next_stored_schema.storage_schema_json
+                    next_stored_schema.type_urn, next_stored_schema.storage_schema_json
                 )
                 schema_family.add_node(
                     next_stored_schema.type_urn,
@@ -163,7 +163,8 @@ class SchemaServices:
                     current=True,
                 ):
                     parent_schema_model = self._load_schema_model(
-                        parent_stored_schema.storage_schema_json
+                        parent_stored_schema.type_urn,
+                        parent_stored_schema.storage_schema_json,
                     )
                     schema_family.add_node(
                         parent_stored_schema.type_urn,
@@ -180,11 +181,12 @@ class SchemaServices:
     @functools.lru_cache(maxsize=1024)
     def _load_schema_model(
         self,
+        type_urn,
         schema_json,
     ):
         schema_obj = json.loads(schema_json)
-        if schema_obj["type_urn"].startswith(models.Artifact.URN_PREFIX):
-            return schemas.ArtifactSchema(**schema_obj)
+        if type_urn.startswith(models.Artifact.URN_PREFIX):
+            return schemas.ArtifactSchema.safe_parse_schema_dict(schema_obj, type_urn)
         elif schema_obj["type_urn"].startswith(models.Operation.URN_PREFIX):
-            return schemas.OperationSchema(**schema_obj)
+            return schemas.OperationSchema.safe_parse_schema_dict(schema_obj, type_urn)
         return None
