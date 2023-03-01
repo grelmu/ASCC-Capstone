@@ -105,7 +105,7 @@ export default {
 
       let nodeIdFor = function (node) {
         return (
-          node["artifact_id"] || node["operation_id"] 
+          node["artifact_id"] || node["operation_id"] + node["name"]
         );
       };
 
