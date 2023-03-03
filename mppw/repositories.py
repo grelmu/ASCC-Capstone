@@ -1391,7 +1391,7 @@ class FailureToReplaceSchemaException(Exception):
 class SchemaRepository(MongoDBRepository):
     @property
     def collection(self) -> pymongo.collection.Collection:
-        return self.db.get_collection("schemas", codec_options=mdb_codec_options)
+        return self.db.get_collection("user_schemas", codec_options=mdb_codec_options)
 
     def create(self, schema: models.StoredSchema):
         result = self.collection.insert_one(model_to_doc(schema))

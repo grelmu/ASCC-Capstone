@@ -164,16 +164,25 @@ export default {
           return this.projectSchemas;
         });
     },
+    getTemplatedUrn(type_urn) {
+      return type_urn
+        .replace(/(.*):([^:]+)$/, "$1:project-name:$2")
+        .replace(
+          /:template$/,
+          type_urn.indexOf(":operation:") > 0
+            ? ":new-operation"
+            : ":new-artifact"
+        );
+    },
     getTemplateJson5FromSchema(baseSchema) {
       let templateJson5 =
         baseSchema["storage_schema_json5"] || baseSchema["storage_schema_json"];
-      let newUrn =
-        baseSchema["type_urn"] +
-        ":" +
-        new Date().toISOString().replaceAll(/[^0-9]/g, "");
 
       return templateJson5
-        .replace(baseSchema["type_urn"], newUrn)
+        .replace(
+          baseSchema["type_urn"],
+          this.getTemplatedUrn(baseSchema["type_urn"])
+        )
         .replace(/(.?abstract.?:)\strue/, "$1 false");
     },
     onNewSchema(baseSchema) {
