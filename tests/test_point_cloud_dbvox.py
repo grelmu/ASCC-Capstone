@@ -8,6 +8,9 @@ import arrow
 import os
 import tempfile
 import dbvox
+import arrow
+
+from mppw_clients import mppw_clients
 
 from .fixtures_api import resolve_bucket_url, build_cloud_url
 
@@ -131,6 +134,77 @@ def test_basic_dt(api_client, api_project, api_bucket):
     for point in points:
         assert arrow.get("2022-01-01") <= arrow.get(point["p"][3])
         assert arrow.get(point["p"][3]) < arrow.get("2023-06-01")
+
+
+def test_basic_point_cloud_init(api_pytest_client: mppw_clients.MppwApiClient):
+
+    """
+    Test that we can initialize a point cloud attached to an operation
+    """
+
+    client = api_pytest_client
+
+    operation = client.create_operation(
+        {
+            "type_urn": "urn:x-mfg:operation:fff",
+            "name": "Test Basic Point Cloud Init",
+            "description": f"(for testing only)",
+        },
+        init=True,
+    )
+
+    cloud = client.create_artifact(
+        {
+            "type_urn": "urn:x-mfg:artifact:digital:point-cloud",
+        },
+        init=False,
+    )
+
+    client.add_operation_attachment(
+        operation["id"], [":thermal-cloud"], cloud["id"], client.OUTPUT
+    )
+
+    cloud = client.init_artifact(cloud["id"])
+
+    assert cloud["url_data"] is not None
+
+    #
+    # Load some basic data
+    #
+
+    points = []
+    for x in range(0, 10):
+        for y in range(0, 10):
+            for z in range(0, 10):
+                for t in [str(arrow.get("2020-01-01")), str(arrow.get("2021-01-01"))]:
+                    points.append({"p": [x, y, z, t], "ctx": {"val": x + y + z}})
+
+    client.post_json(
+        f"/artifacts/{cloud['id']}/services/point-cloud/insert", json=points
+    )
+
+    bounds = client.get_json(f"/artifacts/{cloud['id']}/services/point-cloud/bounds")
+
+    assert bounds is not None
+
+    points_query_furl = furl.furl(
+        f"/artifacts/{cloud['id']}/services/point-cloud/points"
+    )
+    points_query_furl.query.params["space_bounds"] = json.dumps(
+        [[-15, -15, -15], [15, 15, 15]]
+    )
+
+    points = client.get_json(points_query_furl.url)
+    assert len(points) == 2000
+
+    points_query_furl.query.params["space_bounds"] = json.dumps([[0, 0, 0], [5, 5, 5]])
+    points_query_furl.query.params["time_bounds"] = json.dumps(
+        ["2020-01-01", "2020-01-02"]
+    )
+    points_query_furl.query.params["coerce_dt_bounds"] = "true"
+
+    points = client.get_json(points_query_furl.url)
+    assert len(points) == 125
 
 
 def test_basic_cloudfile(api_client, api_project, api_bucket):

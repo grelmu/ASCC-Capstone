@@ -1,5 +1,6 @@
 import fastapi
 import fastapi.encoders
+import asyncio
 import pydantic
 import typing
 from typing import List, Tuple, Union, Any
@@ -116,6 +117,34 @@ class ArtifactFramePathModel(models.BaseJsonModel):
         return model
 
 
+async def sync_body_stream(request: fastapi.Request):
+
+    """
+    Creates a synchronous generator that produces request body data from the
+    standard FastAPI/Starlette async version.
+
+    DRAGONS: While the sync API call runs in a thread pool, the async generator
+    reads data from a separate async loop thread/pool.  These may not be the
+    same thread pools.
+
+    Usage: parameter = Depends(sync_body_stream)
+    """
+
+    main_loop = asyncio.get_running_loop()
+    stream = request.stream()
+
+    # Backward compatible sync generator
+    def gen_from_async_loop():
+        try:
+            while True:
+                future = asyncio.run_coroutine_threadsafe(stream.__anext__(), main_loop)
+                yield future.result(None)
+        except StopAsyncIteration:
+            return
+
+    return gen_from_async_loop()
+
+
 class StreamingJsonResponse(fastapi.responses.StreamingResponse):
     @staticmethod
     def gen_to_json_bytes_gen(gen):
@@ -128,7 +157,9 @@ class StreamingJsonResponse(fastapi.responses.StreamingResponse):
 
             i = 0
             while True:
-                next_bytes = renderer.render(fastapi.encoders.jsonable_encoder(next(gen)))
+                next_bytes = renderer.render(
+                    fastapi.encoders.jsonable_encoder(next(gen))
+                )
                 if i > 0:
                     next_bytes = ",".encode("utf-8") + next_bytes
                 yield next_bytes

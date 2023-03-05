@@ -536,6 +536,23 @@ def create_router(app):
         XyztPoint,
     )
 
+    @router.post("/{id}/services/point-cloud/insert", response_model=bool)
+    def point_cloud_insert(
+        id: str,
+        body_stream=fastapi.Depends(endpoints.sync_body_stream),
+        user: security.ScopedUser = Security(
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
+        ),
+        service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
+    ):
+        artifact: models.Artifact = read(id, user, service_layer.repo_layer)
+        services: PointCloudServices = service_layer.artifact_services_for(
+            artifact, PointCloudServices
+        )
+
+        services.insert(artifact, body_stream)
+        return True
+
     @router.get("/{id}/services/point-cloud/points", response_model=List[XyztPoint])
     def point_cloud_points(
         id: str,
