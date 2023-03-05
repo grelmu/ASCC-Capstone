@@ -49,6 +49,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/markdown-it/13.0.1/markdown-it.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.1.0/uuidv4.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/seikichi/tiff.js@master/tiff.min.js"></script>
+    <script src="https://unpkg.com/d3-dag@0.11.1"></script>
 
     <!-- Polyfill for importmap on all browsers -->
     <script
@@ -83,6 +84,7 @@
       import JsonSchemaFormComponent from "@lljj/vue3-form-element";
       import * as ElementPlus from "element-plus";
       import ForceGraph from "./assets/js/d3-force-graph-module.js";
+      import Dag from "./assets/js/d3-dag-module.js";
       import { OrbitControls, MapControls } from "OrbitControls";
       import { downloadZip } from "client-zip";
       import { TransformControls } from "TransformControls";
@@ -90,6 +92,7 @@
       window["JsonSchemaFormComponent"] = JsonSchemaFormComponent;
       window["RemoteVue"] = RemoteVue;
       window["ForceGraph"] = ForceGraph;
+      window["Dag"] = Dag;
       window["OrbitControls"] = OrbitControls;
       window["downloadZip"] = downloadZip;
       window["TransformControls"] = TransformControls;

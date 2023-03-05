@@ -2,15 +2,33 @@
   <div v-if="artifact">
     <h1>{{ artifact.name || defaultName() }}</h1>
 
-    <p>{{ artifact }}</p>
+    <details class="card">
+      <summary>Artifact</summary>
+      <p>{{ artifact }}</p>
+    </details>
 
     <h2>Provenance</h2>
 
-    <div :id="graphElId"></div>
+    <!-- Provenance DAG goes here: -->
+    <svg></svg>
 
-    <p v-if="provenance">
-      {{ provenance }}
-    </p>
+    <div class="pan-zoom-btn-container">
+      <div class="pan-zoom-btn">
+        <o-button outlined @click="centerZoom">Center</o-button>
+      </div>
+
+      <div class="pan-zoom-btn">
+        <o-button outlined @click="resetZoom">Reset Zoom</o-button>
+      </div>
+    </div>
+
+    <details v-if="provenance" class="card">
+      <summary>Provenance</summary>
+      <p>
+        {{ provenance }}
+      </p>
+    </details>
+
   </div>
 </template>
 
@@ -22,6 +40,8 @@ export default {
       artifact: null,
       provenance: null,
       graphElId: null,
+      graphWidth: null,
+      graphHeight: null
     };
   },
 
@@ -81,16 +101,11 @@ export default {
         });
     },
     refreshProvenanceChart() {
-      let graphEl = document.getElementById(this.graphElId);
-      while (graphEl.children.length > 0)
-        graphEl.removeChild(graphEl.children[0]);
-
       let network = { nodes: [], links: [] };
 
       let nodeIdFor = function (node) {
         return (
-          node["artifact_id"] ||
-          node["operation_id"] + node["context_path"] + node["name"]
+          node["artifact_id"] || node["operation_id"] + node["name"]
         );
       };
 
@@ -152,24 +167,47 @@ export default {
         network.links.push(networkLink);
       }
 
-      let graph = ForceGraph(network, {
-        nodeId: (d) => d.id,
-        nodeGroup: (d) => d.group,
-        nodeTitle: (d) => d.title,
-        nodeText: (d) => d.text,
-        nodeHref: (d) => d.href,
-        nodeHighlight: (d) => d.highlight,
-        nodeRadius: 30,
-        nodeHighlightColor: "orange",
-        nodeStroke: "#eee",
-        linkStrokeWidth: (l) => Math.sqrt(l.value) * 3,
-        width: 800,
-        height: 1600,
-        colors: ["lightsteelblue", "darkseagreen"],
-        icons: ["\u{F01A6}", "\u{F072A}"],
-      });
+      // Build DAG structure to pass to dag-module
+      // TODO: make this process less wasteful (complexity-wise)
+      let parsedLinks = [];
+      network.links.forEach(link => {
+        let datapoint = {
+          id: link.source, 
+          parentIds: network.links.filter(ln => ln.target == link.source)
+            .map(l => l.source)
+        }
+        parsedLinks.push(datapoint);
+      })
 
-      graphEl.appendChild(graph);
+      // Collect any nodes with an out degree of 0
+      network.nodes.forEach(n => {
+        if (parsedLinks.filter(ln => ln.id == n.id).length == 0) {
+          parsedLinks.push(
+            {
+              id: n.id, parentIds: network.links.filter(ln => ln.target == n.id)
+                .map(l => {return l.source})
+            }
+          )
+        }
+      })
+
+      // Drop duplicates from parsedLinks:
+      let i1 = []; // intermediate array #1 holds unique node IDs
+      let i2 = []; // intermediate array #2 holds unique node objects
+      parsedLinks.forEach(l => {if (!i1.includes(l.id)) {
+        i1.push(l.id); i2.push(l)
+      }});
+
+      let dagGraph = Dag(i2, network, {
+        nodeGroup: (d) => d.group,
+        icons: ["\u{F01A6}", "\u{F072A}"]
+      })
+
+      this.graphWidth = dagGraph[0];
+      this.graphHeight = dagGraph[1];
+
+      d3.select('svg').call(this.zoom());
+
     },
     defaultName() {
       return (
@@ -179,6 +217,26 @@ export default {
         ")"
       );
     },
+    zoom() {
+      return d3.zoom().on('zoom', this.handleZoom)
+    },
+    handleZoom(e) {
+      d3.selectAll('svg g')
+        // Get the first two <g>s, which are the nodes and edges
+        .filter(function(d, i) { return i == 0 || i == 1; })
+        // apply transformations to the graph
+        .attr('transform', e.transform);
+    },
+    resetZoom() {
+      d3.select('svg')
+        .transition()
+        .call(this.zoom().scaleTo, 1);
+    },
+    centerZoom () {
+      d3.select('svg')
+        .transition()
+        .call(this.zoom().translateTo, this.graphWidth / 2, this.graphHeight / 2);
+    }
   },
   created() {
     this.artifactId = this.$route.params.id;
@@ -188,4 +246,14 @@ export default {
 };
 </script>
 
-<style scoped></style>
+<style scoped>
+details {padding: 5px;}
+summary::marker {color: #888888;}
+.pan-zoom-btn-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+}
+.pan-zoom-btn {margin: 5px;}
+</style>

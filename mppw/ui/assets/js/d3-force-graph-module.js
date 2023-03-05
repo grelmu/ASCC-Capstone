@@ -82,11 +82,13 @@ function ForceGraph(
     }
   };
 
+
   const simulation = d3
     .forceSimulation(nodes)
     .force("link", forceLink)
     .force("charge", forceNode)
-    .force("dag", forceForward)
+    // .force("dag", forceForward)
+    .force("dag", forceRight)
     .force("center", d3.forceCenter())
     .force("collide", d3.forceCollide([nodeRadius * 2]))
     .on("tick", ticked);
@@ -128,6 +130,22 @@ function ForceGraph(
     .attr("marker-end", "url(#arrowhead)");
 
   const node = svg.append("g").selectAll("circle").data(nodes).join("g");
+
+  let expansionRatio = 3;
+  // Resize node content when any part of the node is hovered over
+  node.on("mouseover", function() {
+    let c = this.querySelector('circle');
+    c.style.transitionDuration = '.2s';
+    c.style.zIndex = '1000'; 
+    // Increase the radius of the circle
+    c.r.baseVal.value = c.r.baseVal.value * expansionRatio;
+  });
+  node.on("mouseout", function() {
+    let c = this.querySelector('circle');
+    c.style.transitionDuration = 'initial';
+    c.style.zIndex = 'initial';
+    c.r.baseVal.value = c.r.baseVal.value / expansionRatio; 
+  });
 
   const nodeCircles = node
     .append("circle")
