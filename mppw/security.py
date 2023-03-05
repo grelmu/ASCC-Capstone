@@ -230,7 +230,6 @@ def create_router(app):
             def find_user(repo_layer):
                 nonlocal user
                 user_repo = repo_layer.users
-                logger.warn(f"JWT user: {jwt_user}")
                 user = user_repo.query_one(id=str(jwt_user.id))
 
             using_app_repo_layer(app, find_user)
