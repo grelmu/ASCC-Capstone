@@ -23,9 +23,6 @@ def create_app(storage_layer):
     from . import repositories
 
     repositories.init_request_repo_layer(app)
-    repositories.using_app_repo_layer(
-        app, lambda repo_layer: repo_layer.init_module_schemas()
-    )
 
     from . import services
 

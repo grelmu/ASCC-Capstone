@@ -61,7 +61,9 @@ class ProvenanceStepGraph(networkx.MultiDiGraph):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def build_from_operation(self, operation: models.Operation):
+    def build_from_operation(
+        self, operation: models.Operation, schema: schemas.OperationSchema
+    ):
 
         """
         Every operation with attachments can be transformed into a linked provenance graph
@@ -75,7 +77,7 @@ class ProvenanceStepGraph(networkx.MultiDiGraph):
         about how the artifacts are used as input or output in the step.
         """
 
-        provenance_schema = schemas.get_operation_schema(operation.type_urn).provenance
+        provenance_schema = schema.provenance
 
         for step_def in provenance_schema.steps:
 
@@ -137,6 +139,7 @@ class ProvenanceStepGraph(networkx.MultiDiGraph):
     def extend_with_operation(
         self,
         operation: models.Operation,
+        schema_cb,
         artifact_node: ArtifactNode,
         strategy: str = None,
         cache={},
@@ -156,7 +159,9 @@ class ProvenanceStepGraph(networkx.MultiDiGraph):
 
         operation_provenance: ProvenanceStepGraph = cache.get(operation.id)
         if operation_provenance is None:
-            operation_provenance = ProvenanceStepGraph().build_from_operation(operation)
+            operation_provenance = ProvenanceStepGraph().build_from_operation(
+                operation, schema_cb()
+            )
             cache[operation.id] = operation_provenance
 
         if artifact_node not in operation_provenance.nodes():
@@ -333,13 +338,19 @@ class ProvenanceServices:
         self.service_layer: ServiceLayer = service_layer
         self.repo_layer = self.service_layer.repo_layer
 
-    def build_operation_steps(self, operation) -> ProvenanceStepGraph:
+    def build_operation_steps(self, operation: models.Operation) -> ProvenanceStepGraph:
 
         """
         Build the operation steps and artifact relationships for a single operation
         """
-
-        return ProvenanceStepGraph().build_from_operation(operation)
+        schema = (
+            self.service_layer.schema_services()
+            .query_resolved_project_schema(
+                operation.project, type_urns=[operation.type_urn]
+            )
+            .schema_model
+        )
+        return ProvenanceStepGraph().build_from_operation(operation, schema)
 
     def build_artifact_provenance(
         self, artifact_id, strategy: str = None
@@ -373,8 +384,16 @@ class ProvenanceServices:
 
             for operation in artifact_operations:
 
+                schema_cb = (
+                    lambda: self.service_layer.schema_services()
+                    .query_resolved_project_schema(
+                        operation.project, type_urns=[operation.type_urn]
+                    )
+                    .schema_model
+                )
+
                 extended_provenance = provenance_graph.extend_with_operation(
-                    operation, next_artifact_node, strategy=strategy
+                    operation, schema_cb, next_artifact_node, strategy=strategy
                 )
 
                 for artifact_node in extended_provenance.nodes():

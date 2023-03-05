@@ -24,6 +24,27 @@ class SchemaServices:
         self.service_layer: ServiceLayer = service_layer
         self.repo_layer = self.service_layer.repo_layer
 
+    @staticmethod
+    def init_module_schemas(repo_layer):
+
+        repo_layer.module_schemas.reset()
+
+        for module_name in schemas.get_schema_module_names():
+            for mod_schema in schemas.load_all_schemas_in_module(module_name):
+                mod_schema: schemas.ModuleSchema
+
+                stored_schema = models.StoredSchema(
+                    type_urn=mod_schema.module_schema_model.type_urn,
+                    module=module_name,
+                    tags=[f"module:{module_name}"],
+                    active=(not mod_schema.module_schema_model.abstract),
+                    storage_schema_json=mod_schema.module_schema_model.json(),
+                    storage_schema_json5=mod_schema.module_schema_json5,
+                    storage_schema_yaml=mod_schema.module_schema_yaml,
+                )
+
+                repo_layer.module_schemas.create(stored_schema)
+
     def query_project_schemas(
         self,
         project_id,

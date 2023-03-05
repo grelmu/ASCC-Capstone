@@ -20,6 +20,10 @@ class ServiceLayer:
     Generally all (nontrivial) logical data warehouse actions should be accessible here.
     """
 
+    @staticmethod
+    def init_persistent(repo_layer):
+        SchemaServices.init_module_schemas(repo_layer)
+
     def __init__(self, repo_layer):
         self.repo_layer = repo_layer
 

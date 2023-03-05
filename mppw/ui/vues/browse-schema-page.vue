@@ -164,14 +164,26 @@ export default {
           return this.projectSchemas;
         });
     },
+    getProjectNameSlug() {
+      let projectName = this.projects.find((p) => p["id"] == this.projectId)[
+        "name"
+      ];
+      return projectName.toLowerCase().replaceAll(/[^A-Za-z0-9]/g, "-");
+    },
+    getDateTimeSlug() {
+      return new Date()
+        .toISOString()
+        .replace(/(.*)\..*/, "$1")
+        .replaceAll(/[^0-9]/g, "");
+    },
     getTemplatedUrn(type_urn) {
       return type_urn
-        .replace(/(.*):([^:]+)$/, "$1:project-name:$2")
+        .replace(/(.*):([^:]+)$/, "$1:" + this.getProjectNameSlug() + ":$2")
         .replace(
           /:template$/,
           type_urn.indexOf(":operation:") > 0
-            ? ":new-operation"
-            : ":new-artifact"
+            ? ":new-operation-" + this.getDateTimeSlug()
+            : ":new-artifact-" + this.getDateTimeSlug()
         );
     },
     getTemplateJson5FromSchema(baseSchema) {

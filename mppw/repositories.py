@@ -4,7 +4,6 @@ import typing
 from typing import Optional, List, ClassVar, Any, Union
 import fastapi
 import fastapi.encoders
-import pydantic
 import bson
 import datetime
 import furl
@@ -21,7 +20,6 @@ import pymongo.client_session
 import gridfs
 
 from . import models
-from . import schemas
 from . import storage
 
 
@@ -95,26 +93,6 @@ class MongoDBRepositoryLayer:
         self.buckets = BucketRepository(self.storage_layer)
 
         self.module_schemas = SchemaCache(self.cache_session)
-
-    def init_module_schemas(self):
-
-        self.module_schemas.reset()
-
-        for module_name in schemas.get_schema_module_names():
-            for mod_schema in schemas.load_all_schemas_in_module(module_name):
-                mod_schema: schemas.ModuleSchema
-
-                stored_schema = models.StoredSchema(
-                    type_urn=mod_schema.module_schema_model.type_urn,
-                    module=module_name,
-                    tags=[f"module:{module_name}"],
-                    active=(not mod_schema.module_schema_model.abstract),
-                    storage_schema_json=mod_schema.module_schema_model.json(),
-                    storage_schema_json5=mod_schema.module_schema_json5,
-                    storage_schema_yaml=mod_schema.module_schema_yaml,
-                )
-
-                self.module_schemas.create(stored_schema)
 
 
 class MongoDBRepository:
