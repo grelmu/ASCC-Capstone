@@ -119,7 +119,10 @@ class MongoDBStorageLayer:
 
     def start_cache_session(self):
         return pymongo.client_session.ClientSession(
-            self.mdb_cache_client, None, None, None,
+            self.mdb_cache_client,
+            None,
+            None,
+            None,
         )
 
     def get_gridfs_db(self, name):

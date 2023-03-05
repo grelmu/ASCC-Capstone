@@ -21,7 +21,7 @@ Fixtures that allow testing against an active, local API
 @pytest.fixture
 def api_storage_layer():
     return storage.MongoDBStorageLayer(
-        "mongodb://localhost:27027/mppw?authSource=admin",
+        "mongodb://localhost:27027/mppw?authSource=admin&directConnection=true",
         lambda: ("admin", "password"),
     )
 

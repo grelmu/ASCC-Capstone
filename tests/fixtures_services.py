@@ -17,7 +17,7 @@ won't show up in the API.
 @pytest.fixture
 def storage_layer():
     return storage.MongoDBStorageLayer(
-        "mongodb://localhost:27027/mppw_tests?authSource=admin",
+        "mongodb://localhost:27027/mppw_tests?authSource=admin&directConnection=true",
         lambda: ("admin", "password"),
     )
 

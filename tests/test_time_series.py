@@ -31,9 +31,9 @@ def test_time_series_sample(api_client, api_project, api_bucket):
     # Setup the collection
     resolved_bucket_url = resolve_bucket_url(api_bucket["url_data"], api_client.api_url)
     ts_collection_name = __name__.split(".")[-1] + "_sample"
-    bucket_collection = pymongo.MongoClient(resolved_bucket_url).get_default_database()[
-        ts_collection_name
-    ]
+    bucket_collection = pymongo.MongoClient(
+        resolved_bucket_url, directConnection=True
+    ).get_default_database()[ts_collection_name]
 
     # Add time series data to collection
     time_range = [

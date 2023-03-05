@@ -8,7 +8,6 @@ include = ["MPPW_RELEASE_NOTES.md"]
 [tool.poetry.dependencies]
 python = "^3.8"
 fastapi = "^0.68.2"
-motor = "^2.5.1"
 argh = "^0.26.2"
 uvicorn = {extras = ["standard"], version = "^0.15.0"}
 python-jose = {extras = ["cryptography"], version = "^3.3.0"}
@@ -29,6 +28,7 @@ importlib-metadata = "^4.11.3"
 networkx = "^2.8.1"
 json-stream = "^2.0.2"
 mongomock = "^4.1.2"
+pymongo = "^4.3.3"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
