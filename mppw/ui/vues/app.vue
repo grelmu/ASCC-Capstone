@@ -72,14 +72,14 @@
                     Browse Operations
                   </router-link>
                 </li>
-                <li class="nav-item">
-                  <router-link to="/about" class="nav-link">
-                    About
-                  </router-link>
-                </li>
                 <li v-if="isAdminUser()" class="nav-item mt-3">
                   <router-link to="/config" class="nav-link text-secondary">
                     Configure
+                  </router-link>
+                </li>
+                <li class="nav-item mt-3">
+                  <router-link to="/about" class="nav-link">
+                    About
                   </router-link>
                 </li>
               </ul>

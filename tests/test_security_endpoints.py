@@ -38,6 +38,37 @@ def test_create_users_basic(api_pytest_client: mppw_clients.MppwApiClient):
         assert ex.response.status_code == 401
 
 
+def test_patch_user_basic(api_pytest_client: mppw_clients.MppwApiClient):
+
+    """
+    Tests that we can patch a user via the API
+    """
+
+    api = api_pytest_client
+
+    user = api.create_user(
+        {
+            "username": "basic_patched_user",
+            "allowed_scopes": [
+                mppw.security.READ_PROVENANCE_SCOPE,
+                mppw.security.MODIFY_PROVENANCE_SCOPE,
+            ],
+            "local_claims": api.default_claims,
+            "password": "password",
+        }
+    )
+
+    user["username"] = "bad_username"
+    api.patch_user(
+        user["id"],
+        allowed_scopes=[mppw.security.READ_PROVENANCE_SCOPE],
+    )
+
+    patched_user = api.get_user(user["id"])
+    assert patched_user["allowed_scopes"] == [mppw.security.READ_PROVENANCE_SCOPE]
+    assert patched_user["username"] == "basic_patched_user"
+
+
 def test_provenance_permissions_basic(api_pytest_client: mppw_clients.MppwApiClient):
 
     """
