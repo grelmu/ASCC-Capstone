@@ -19,7 +19,6 @@ from . import schemas
 from . import security
 from .security import (
     request_user,
-    ADMIN_SCOPE,
     READ_PROVENANCE_SCOPE,
     MODIFY_PROVENANCE_SCOPE,
 )
@@ -36,7 +35,9 @@ def create_router(app):
     )
     def create(
         stored_schema: models.StoredSchema,
-        user: security.ScopedUser = Security(request_user(app), scopes=[ADMIN_SCOPE]),
+        user: security.ScopedUser = Security(
+            request_user(app), scopes=[MODIFY_PROVENANCE_SCOPE]
+        ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
 

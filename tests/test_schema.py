@@ -110,7 +110,6 @@ def test_parse_operation_schema():
         )
 
         if i != 2:
-            print(schema_value)
             assert schema.services.class_qualname == "module:ClassName"
 
 

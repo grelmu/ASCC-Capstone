@@ -69,12 +69,12 @@
               <ul class="nav flex-column">
                 <li class="nav-item">
                   <router-link to="/" class="nav-link">
-                    Browse Operations
+                    <o-icon icon="printer-3d"></o-icon>&nbsp;&nbsp;Operations
                   </router-link>
                 </li>
-                <li class="nav-item">
+                <li v-if="isModifyProvenanceUser()" class="nav-item">
                   <router-link to="/schema" class="nav-link">
-                    Browse Schema
+                    <o-icon icon="application-braces"></o-icon>&nbsp;&nbsp;Schema
                   </router-link>
                 </li>
                 <li v-if="isAdminUser()" class="nav-item mt-3">
@@ -84,7 +84,7 @@
                 </li>
                 <li class="nav-item mt-3">
                   <router-link to="/about" class="nav-link">
-                    About
+                    <o-icon icon="information"></o-icon>&nbsp;&nbsp;About
                   </router-link>
                 </li>
               </ul>
@@ -113,7 +113,7 @@
             </div>
           </nav>
 
-          <main class="col-sm-auto col-md-10 col-lg-11 ms-md-auto px-4 mt-4">
+          <main class="main-content col-sm-auto col-md-12 col-lg-12 ms-md-auto px-4 mt-4">
             <router-view></router-view>
           </main>
         </div>
@@ -1078,12 +1078,13 @@ export default {
   z-index: 100; /* Behind the navbar */
   padding: 48px 0 0; /* Height of navbar */
   box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.1);
-  min-width: 100px;
+  width: 130px;
 }
 
 @media (max-width: 767.98px) {
   .sidebar {
     top: 5rem;
+    width: 100%;
   }
 }
 
@@ -1098,9 +1099,11 @@ export default {
 
 .sidebar .nav-link {
   font-weight: 500;
-
   color: #333;
   padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+  font-size: 0.9em;
 }
 
 .sidebar .nav-link .feather {
@@ -1131,7 +1134,7 @@ export default {
   padding-bottom: 1rem;
   box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.25);
   text-align: center;
-  min-width: 100px;
+  width: 130px;
 }
 
 .navbar .navbar-toggler {
@@ -1155,6 +1158,17 @@ export default {
   border-color: transparent;
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.25);
 }
+
+.main-content {
+  padding-left: 145px !important;
+}
+
+@media (max-width: 767.98px) {
+  .main-content {
+    padding-left: 15px !important;
+  }
+}
+
 </style>
 
 <style>
