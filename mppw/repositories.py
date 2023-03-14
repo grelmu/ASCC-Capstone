@@ -187,7 +187,7 @@ class UserRepository(MongoDBRepository):
             query_doc[f"local_claims.{local_claim_name}"] = {"$exists": True}
         if active is not None:
             query_doc["active"] = {"$ne": False} if active else False
-        
+
         return query_doc
 
     def create(self, user: models.User):
@@ -204,21 +204,51 @@ class UserRepository(MongoDBRepository):
         active=None,
     ):
         query_doc = self._query_doc_for(
-                id=id,
-                username=username,
-                allowed_scopes=allowed_scopes,
-                local_claim_name=local_claim_name,
-                active=active,
-            )
+            id=id,
+            username=username,
+            allowed_scopes=allowed_scopes,
+            local_claim_name=local_claim_name,
+            active=active,
+        )
 
         logger.warn(query_doc)
 
         return map(
             lambda doc: doc_to_model(doc, models.User),
-            list(
-                self.collection.find(query_doc)
-            ),
+            list(self.collection.find(query_doc)),
         )
+
+    def update(self, user: models.User):
+        return (
+            self.collection.replace_one(
+                self._query_doc_for(id=user.id),
+                model_to_doc(user),
+            ).modified_count
+            == 1
+        )
+
+    def partial_update(self, id: str, update_fn):
+
+        txn = self.session.start_transaction()
+
+        try:
+
+            user = self.query_one(id=id)
+            if user is None:
+                return False
+            user = update_fn(user)
+            if user is None:
+                return False
+
+            result = self.update(user)
+            self.session.commit_transaction()
+            txn = None
+
+            return result
+
+        finally:
+            if txn:
+                self.session.abort_transaction()
 
     def deactivate(self, id: str):
         return (
@@ -276,6 +306,38 @@ class ProjectRepository(MongoDBRepository):
                 )
             ),
         )
+
+    def update(self, project: models.Project):
+        return (
+            self.collection.replace_one(
+                self._query_doc_for(ids=[project.id]),
+                model_to_doc(project),
+            ).modified_count
+            == 1
+        )
+
+    def partial_update(self, id: str, update_fn):
+
+        txn = self.session.start_transaction()
+
+        try:
+
+            project = self.query_one(ids=[id])
+            if project is None:
+                return False
+            project = update_fn(project)
+            if project is None:
+                return False
+
+            result = self.update(project)
+            self.session.commit_transaction()
+            txn = None
+
+            return result
+
+        finally:
+            if txn:
+                self.session.abort_transaction()
 
     def deactivate(self, id: str):
         return (

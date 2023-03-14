@@ -7,6 +7,7 @@ import pydantic
 import datetime
 
 from mppw import logger
+from . import endpoints
 from . import models
 from . import repositories
 from .repositories import request_repo_layer
@@ -62,6 +63,30 @@ def create_router(app):
 
         ids = project_claims_for_user(user)
         return list(repo_layer.projects.query(ids=ids, name=name, active=active))
+
+    @router.patch("/{id}", response_model=bool)
+    def patch(
+        id: str,
+        changes: List[endpoints.Change],
+        current_user: models.User = Security(request_user(app), scopes=[ADMIN_SCOPE]),
+        repo_layer=Depends(request_repo_layer(app)),
+    ):
+        def update_fn(metadata: models.Project):
+
+            for change in changes:
+                if change.op == "replace":
+                    setattr(metadata, change.path, change.value)
+                elif change.op == "remove":
+                    setattr(metadata, change.path, None)
+
+            return metadata
+
+        modified = repo_layer.projects.partial_update(id, update_fn)
+
+        if not modified:
+            raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
+
+        return True
 
     @router.delete("/{id}", response_model=bool)
     def delete(

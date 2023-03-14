@@ -23,6 +23,7 @@ import jose.jwt
 from datetime import datetime, timedelta
 
 from mppw import logger
+from . import endpoints
 from . import models
 from . import repositories
 from .repositories import app_storage_layer, request_repo_layer, using_app_repo_layer
@@ -229,7 +230,6 @@ def create_router(app):
             def find_user(repo_layer):
                 nonlocal user
                 user_repo = repo_layer.users
-                logger.warn(f"JWT user: {jwt_user}")
                 user = user_repo.query_one(id=str(jwt_user.id))
 
             using_app_repo_layer(app, find_user)
@@ -357,9 +357,7 @@ def create_router(app):
     )
     def create(
         new_user: NewUser,
-        current_user: ScopedUser = Security(
-            request_user(app), scopes=[ADMIN_SCOPE_NAME]
-        ),
+        current_user: ScopedUser = Security(request_user(app), scopes=[ADMIN_SCOPE]),
         repo_layer=Depends(request_repo_layer(app)),
     ):
 
@@ -376,9 +374,7 @@ def create_router(app):
     @router.get("/users/{id}", response_model=models.SafeUser)
     def read(
         id: str,
-        current_user: ScopedUser = Security(
-            request_user(app), scopes=[ADMIN_SCOPE_NAME]
-        ),
+        current_user: ScopedUser = Security(request_user(app), scopes=[ADMIN_SCOPE]),
         repo_layer=Depends(request_repo_layer(app)),
     ):
 
@@ -394,9 +390,7 @@ def create_router(app):
         allowed_scopes: List[str] = None,
         local_claim_name: str = None,
         active: bool = fastapi.Query(True),
-        current_user: ScopedUser = Security(
-            request_user(app), scopes=[ADMIN_SCOPE_NAME]
-        ),
+        current_user: ScopedUser = Security(request_user(app), scopes=[ADMIN_SCOPE]),
         repo_layer=Depends(request_repo_layer(app)),
     ):
 
@@ -412,13 +406,38 @@ def create_router(app):
             )
         )
 
+    @router.patch("/users/{id}", response_model=bool)
+    def patch(
+        id: str,
+        changes: List[endpoints.Change],
+        current_user: models.User = Security(request_user(app), scopes=[ADMIN_SCOPE]),
+        repo_layer=Depends(request_repo_layer(app)),
+    ):
+        def update_fn(metadata: models.User):
+
+            for change in changes:
+                if change.op == "replace":
+                    setattr(metadata, change.path, change.value)
+                elif change.op == "remove":
+                    setattr(metadata, change.path, None)
+
+            return metadata
+
+        modified = repo_layer.users.partial_update(
+            id,
+            update_fn,
+        )
+
+        if not modified:
+            raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
+
+        return True
+
     @router.delete("/users/{id}", response_model=bool)
     def delete(
         id: str,
         preserve_data: bool = True,
-        current_user: models.User = Security(
-            request_user(app), scopes=[ADMIN_SCOPE_NAME]
-        ),
+        current_user: models.User = Security(request_user(app), scopes=[ADMIN_SCOPE]),
         repo_layer=Depends(request_repo_layer(app)),
     ):
 
@@ -430,6 +449,13 @@ def create_router(app):
             raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
 
         return True
+
+    @router.get("/scopes/", response_model=typing.Dict)
+    def query_scopes(
+        current_user: ScopedUser = Security(request_user(app)),
+        repo_layer=Depends(request_repo_layer(app)),
+    ):
+        return SCOPES
 
     return router
 

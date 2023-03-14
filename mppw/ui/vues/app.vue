@@ -72,7 +72,12 @@
                     Browse Operations
                   </router-link>
                 </li>
-                <li class="nav-item">
+                <li v-if="isAdminUser()" class="nav-item mt-3">
+                  <router-link to="/config" class="nav-link text-secondary">
+                    Configure
+                  </router-link>
+                </li>
+                <li class="nav-item mt-3">
                   <router-link to="/about" class="nav-link">
                     About
                   </router-link>
@@ -120,6 +125,10 @@ const routes = [
     component: RemoteVue.lazyComponent("vues/browse-operations-page.vue"),
   },
   { path: "/about", component: RemoteVue.lazyComponent("vues/about-page.vue") },
+  {
+    path: "/config",
+    component: RemoteVue.lazyComponent("vues/config-page.vue"),
+  },
   {
     path: "/operations/:id",
     component: RemoteVue.lazyComponent("vues/operations-page.vue"),
@@ -280,6 +289,114 @@ export default {
           response,
           "Unknown response when logging out",
           true
+        );
+      });
+    },
+    apiCreateUser(userWithPassword) {
+      return this.apiFetch("security/users/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(userWithPassword),
+      }).then((response) => {
+        if (response.status == 201) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when creating user"
+        );
+      });
+    },
+    apiFetchUsers() {
+      return this.apiFetch("security/users/", {
+        method: "GET",
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when fetching users",
+          true
+        );
+      });
+    },
+    apiPatchUser(id, changes) {
+      return this.apiFetch("security/users/" + id, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(changes),
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when patching user"
+        );
+      });
+    },
+    apiDeleteUser(id) {
+      return this.apiFetch("security/users/" + id, {
+        method: "DELETE",
+      }).then((response) => {
+        if (response.status == 200 || response.status == 204)
+          return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when deleting user"
+        );
+      });
+    },
+    apiFetchScopes() {
+      return this.apiFetch("security/scopes/", {
+        method: "GET",
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when fetching scopes",
+          true
+        );
+      });
+    },
+    apiCreateProject(project) {
+      return this.apiFetch("projects/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(project),
+      }).then((response) => {
+        if (response.status == 201) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when creating project"
+        );
+      });
+    },
+    apiPatchProject(id, changes) {
+      return this.apiFetch("projects/" + id, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(changes),
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when patching project"
+        );
+      });
+    },
+    apiDeleteProject(id) {
+      return this.apiFetch("projects/" + id, {
+        method: "DELETE",
+      }).then((response) => {
+        if (response.status == 200 || response.status == 204)
+          return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when deleting project"
         );
       });
     },
@@ -970,9 +1087,8 @@ export default {
 </style>
 
 <style>
-
 .o-modal {
-  z-index: 1030; 
+  z-index: 1030;
 }
 
 .o-modal__content {
@@ -1000,5 +1116,4 @@ export default {
 select:disabled {
   opacity: 0.5;
 }
-
 </style>

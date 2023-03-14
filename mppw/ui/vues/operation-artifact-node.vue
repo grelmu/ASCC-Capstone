@@ -227,6 +227,12 @@
             step="any"
             v-model="newSpatialFrame['transform']['translation_xyz']['z']"
           ></o-input>
+          <span style="display: flex; align-items: center; padding-left: 1em; padding-right: 0.25em;">Units:</span>
+          <o-input
+            type="text"
+            step="any"
+            v-model="newSpatialFrame['transform']['translation_xyz_units']"
+          ></o-input>
         </o-field>
 
         <o-field label="Rotation (Euler) αβγ">
