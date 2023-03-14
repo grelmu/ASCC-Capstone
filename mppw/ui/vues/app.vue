@@ -78,8 +78,8 @@
                   </router-link>
                 </li>
                 <li v-if="isAdminUser()" class="nav-item mt-3">
-                  <router-link to="/config" class="nav-link text-secondary">
-                    Configure
+                  <router-link to="/config" class="nav-link text-dark">
+                    <o-icon icon="database-cog"></o-icon>&nbsp;&nbsp;Configure
                   </router-link>
                 </li>
                 <li class="nav-item mt-3">
