@@ -32,14 +32,10 @@ pymongo = "^4.3.3"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
-
-# START for (fff_)analysis
-#notebook = "^6.4.8"
-#matplotlib = "^3.5.1"
-#ipympl = "^0.8.7"
-# END for (fff_)analysis
+requests-toolbelt = "^0.9.1"
+papermill = "^2.4.0"
+nbconvert = "^7.0.0"
 black = {version = "^22.3.0", allow-prereleases = true}
-
 
 [tool.poetry.scripts]
 # TODO: remove
@@ -51,16 +47,11 @@ mppw_docker = "scripts.docker:main"
 mppw_migrations = "scripts.migrations:main"
 mppw_app = "scripts.app:main"
 
-[tool.poetry.group.dev.dependencies]
-requests-toolbelt = "^0.9.1"
-papermill = "^2.4.0"
-nbconvert = "^7.0.0"
-
 [tool.black]
 extend-exclude = '''
 (^/(containers|.*analysis|mppw_clients|mppw/pcl))
 '''
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
+requires = ["poetry-core>=1.2.0"]
 build-backend = "poetry.core.masonry.api"
