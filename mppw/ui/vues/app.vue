@@ -69,7 +69,12 @@
               <ul class="nav flex-column">
                 <li class="nav-item">
                   <router-link to="/" class="nav-link">
-                    Browse Operations
+                    <o-icon icon="printer-3d"></o-icon>&nbsp;&nbsp;Operations
+                  </router-link>
+                </li>
+                <li v-if="isModifyProvenanceUser()" class="nav-item">
+                  <router-link to="/schema" class="nav-link">
+                    <o-icon icon="application-braces"></o-icon>&nbsp;&nbsp;Schema
                   </router-link>
                 </li>
                 <li v-if="isAdminUser()" class="nav-item mt-3">
@@ -79,7 +84,7 @@
                 </li>
                 <li class="nav-item mt-3">
                   <router-link to="/about" class="nav-link">
-                    About
+                    <o-icon icon="information"></o-icon>&nbsp;&nbsp;About
                   </router-link>
                 </li>
               </ul>
@@ -108,7 +113,7 @@
             </div>
           </nav>
 
-          <main class="col-sm-auto col-md-10 col-lg-11 ms-md-auto px-4 mt-4">
+          <main class="main-content col-sm-auto col-md-12 col-lg-12 ms-md-auto px-4 mt-4">
             <router-view></router-view>
           </main>
         </div>
@@ -123,6 +128,10 @@ const routes = [
   {
     path: "/",
     component: RemoteVue.lazyComponent("vues/browse-operations-page.vue"),
+  },
+  {
+    path: "/schema",
+    component: RemoteVue.lazyComponent("vues/browse-schema-page.vue"),
   },
   { path: "/about", component: RemoteVue.lazyComponent("vues/about-page.vue") },
   {
@@ -204,7 +213,6 @@ export default {
     },
     isModifyArtifactUser() {
       if (!this.currentUser) return false;
-      console.log(this.currentUser);
       return (
         this.isAdminUser() ||
         this.isModifyProvenanceUser() ||
@@ -411,31 +419,9 @@ export default {
         );
       });
     },
-    apiFetchOpTypes() {
-      return this.apiFetch("schema/operations/", {
-        method: "GET",
-      }).then((response) => {
-        if (response.status == 200) return response.json();
-        this.throwApiResponseError(
-          response,
-          "Unknown response when querying for operation types"
-        );
-      });
-    },
-    apiFetchArtifactTypes() {
-      return this.apiFetch("schema/artifacts/", {
-        method: "GET",
-      }).then((response) => {
-        if (response.status == 200) return response.json();
-        this.throwApiResponseError(
-          response,
-          "Unknown response when querying for artifact types"
-        );
-      });
-    },
-    apiFetchOperationType(type_urn) {
+    apiFetchProjectSchemas(projectId) {
       return this.apiFetch(
-        "schema/operations/by_type?type_urn=" + encodeURIComponent(type_urn),
+        "projects/" + projectId + "/services/project/schema/",
         {
           method: "GET",
         }
@@ -443,13 +429,13 @@ export default {
         if (response.status == 200) return response.json();
         this.throwApiResponseError(
           response,
-          "Unknown response when querying for operation type"
+          "Unknown response when querying for project schemas"
         );
       });
     },
-    apiFetchArtifactType(type_urn) {
+    apiFetchProjectOperationSchemas(projectId) {
       return this.apiFetch(
-        "schema/artifacts/by_type?type_urn=" + encodeURIComponent(type_urn),
+        "projects/" + projectId + "/services/project/schema/operations/",
         {
           method: "GET",
         }
@@ -457,7 +443,106 @@ export default {
         if (response.status == 200) return response.json();
         this.throwApiResponseError(
           response,
-          "Unknown response when querying for artifact type"
+          "Unknown response when querying for project operation schemas"
+        );
+      });
+    },
+    apiFetchProjectSchemaByType(projectId, type_urn) {
+      return this.apiFetch(
+        "projects/" +
+          projectId +
+          "/services/project/schema/?type_urn=" +
+          encodeURIComponent(type_urn),
+        {
+          method: "GET",
+        }
+      ).then((response) => {
+        if (response.status == 200) {
+          return response
+            .json()
+            .then((response_arr) =>
+              response_arr.length > 0 ? response_arr[0] : null
+            );
+        }
+        this.throwApiResponseError(
+          response,
+          "Unknown response when querying for project schema by type"
+        );
+      });
+    },
+    apiFetchDigitalArtifactJsonSchema(id) {
+      return this.apiFetch(
+        "artifacts/" + id + "/services/artifact/digital/json_schema",
+        {
+          method: "GET",
+        }
+      ).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when retrieving json schema for artifact"
+        );
+      });
+    },
+    apiCreateUserSchema(schema) {
+      return this.apiFetch("schemas/user/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(schema),
+      }).then((response) => {
+        if (response.status == 201) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when creating user schema"
+        );
+      });
+    },
+    apiPatchUserSchema(id, changes) {
+      return this.apiFetch("schemas/user/" + id, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(changes),
+      }).then((response) => {
+        if (response.status == 200) return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when patching user schema"
+        );
+      });
+    },
+    apiDeleteUserSchema(id) {
+      return this.apiFetch("schemas/user/" + id, {
+        method: "DELETE",
+      }).then((response) => {
+        if (response.status == 200 || response.status == 204)
+          return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when deleting user schema"
+        );
+      });
+    },
+    apiFetchModuleSchemaByType(type_urn) {
+      return this.apiFetch(
+        "schemas/module/?type_urn=" + encodeURIComponent(type_urn),
+        {
+          method: "GET",
+        }
+      ).then((response) => {
+        if (response.status == 200) {
+          return response
+            .json()
+            .then((response_arr) =>
+              response_arr.length > 0 ? response_arr[0] : null
+            );
+        }
+        this.throwApiResponseError(
+          response,
+          "Unknown response when querying for module schema by type"
         );
       });
     },
@@ -510,20 +595,6 @@ export default {
         this.throwApiResponseError(
           response,
           "Unknown response when retrieving parent of artifact"
-        );
-      });
-    },
-    apiFetchDigitalArtifactJsonSchema(id) {
-      return this.apiFetch(
-        "artifacts/" + id + "/services/artifact/digital/json_schema",
-        {
-          method: "GET",
-        }
-      ).then((response) => {
-        if (response.status == 200) return response.json();
-        this.throwApiResponseError(
-          response,
-          "Unknown response when retrieving json schema for artifact"
         );
       });
     },
@@ -1007,12 +1078,13 @@ export default {
   z-index: 100; /* Behind the navbar */
   padding: 48px 0 0; /* Height of navbar */
   box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.1);
-  min-width: 100px;
+  width: 130px;
 }
 
 @media (max-width: 767.98px) {
   .sidebar {
     top: 5rem;
+    width: 100%;
   }
 }
 
@@ -1027,9 +1099,11 @@ export default {
 
 .sidebar .nav-link {
   font-weight: 500;
-
   color: #333;
   padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+  font-size: 0.9em;
 }
 
 .sidebar .nav-link .feather {
@@ -1060,7 +1134,7 @@ export default {
   padding-bottom: 1rem;
   box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.25);
   text-align: center;
-  min-width: 100px;
+  width: 130px;
 }
 
 .navbar .navbar-toggler {
@@ -1084,6 +1158,17 @@ export default {
   border-color: transparent;
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.25);
 }
+
+.main-content {
+  padding-left: 145px !important;
+}
+
+@media (max-width: 767.98px) {
+  .main-content {
+    padding-left: 15px !important;
+  }
+}
+
 </style>
 
 <style>

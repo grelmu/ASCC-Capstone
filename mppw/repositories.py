@@ -4,11 +4,11 @@ import typing
 from typing import Optional, List, ClassVar, Any, Union
 import fastapi
 import fastapi.encoders
-import pydantic
 import bson
 import datetime
 import furl
 import secrets
+import re
 
 from mppw import logger
 
@@ -31,13 +31,15 @@ def init_request_repo_layer(app: fastapi.FastAPI):
 
         def request_repo_layer():
             with storage_layer.start_session() as session:
-                yield MongoDBRepositoryLayer(storage_layer, session)
+                with storage_layer.start_cache_session() as cache_session:
+                    yield MongoDBRepositoryLayer(storage_layer, session, cache_session)
 
         app.state.repositories_request_repo_layer = request_repo_layer
 
         def cb_repo_layer(cb):
             with storage_layer.start_session() as session:
-                cb(MongoDBRepositoryLayer(storage_layer, session))
+                with storage_layer.start_cache_session() as cache_session:
+                    cb(MongoDBRepositoryLayer(storage_layer, session, cache_session))
 
         app.state.repositories_cb_repo_layer = cb_repo_layer
 
@@ -75,17 +77,22 @@ class MongoDBRepositoryLayer:
         self,
         storage_layer: storage.MongoDBStorageLayer,
         session: pymongo.client_session.ClientSession,
+        cache_session: pymongo.client_session.ClientSession,
     ):
 
         self.storage_layer = storage_layer
         self.session = session
+        self.cache_session = cache_session
 
         self.kv = ConfigKvRepository(self.session)
         self.users = UserRepository(self.session)
         self.projects = ProjectRepository(self.session)
         self.operations = OperationRepository(self.session)
         self.artifacts = ArtifactRepository(self.session)
+        self.user_schemas = SchemaRepository(self.session)
         self.buckets = BucketRepository(self.storage_layer)
+
+        self.module_schemas = SchemaCache(self.cache_session)
 
 
 class MongoDBRepository:
@@ -210,8 +217,6 @@ class UserRepository(MongoDBRepository):
             local_claim_name=local_claim_name,
             active=active,
         )
-
-        logger.warn(query_doc)
 
         return map(
             lambda doc: doc_to_model(doc, models.User),
@@ -1351,3 +1356,141 @@ class BucketRepository:
             return False
 
         return True
+
+
+class UnknownSchemaTypeException(Exception):
+    pass
+
+
+class FailureToReplaceSchemaException(Exception):
+    pass
+
+
+class SchemaRepository(MongoDBRepository):
+    @property
+    def collection(self) -> pymongo.collection.Collection:
+        return self.db.get_collection("user_schemas", codec_options=mdb_codec_options)
+
+    def create(self, schema: models.StoredSchema):
+        result = self.collection.insert_one(model_to_doc(schema))
+        schema.id = models.ObjectDbId(result.inserted_id)
+        return schema
+
+    def _query_doc_for(
+        self,
+        id: str = None,
+        project_ids: List[str] = None,
+        module_names: List[str] = None,
+        ids: List[str] = None,
+        type_urns: List[str] = None,
+        type_urn_prefix: str = None,
+        name: str = None,
+        tags: List[str] = None,
+        active: bool = None,
+    ):
+        query_doc = {}
+        if id is not None:
+            query_doc["_id"] = coerce_doc_id(id)
+        if ids is not None:
+            query_doc["_id"] = {"$in": list(map(coerce_doc_id, ids))}
+        if project_ids is not None:
+            query_doc["project"] = {"$in": list(map(coerce_doc_id, project_ids))}
+        if module_names is not None:
+            query_doc["module"] = {"$in": list(module_names)}
+        if type_urns is not None:
+            query_doc["type_urn"] = {"$in": type_urns}
+        if type_urn_prefix is not None:
+            query_doc["type_urn"] = {"$regex": f"^{re.escape(type_urn_prefix)}"}
+        if name is not None:
+            query_doc["name"] = name
+        if tags is not None:
+            query_doc["tags"] = {"$in": list(tags)}
+        if active is not None:
+            query_doc["active"] = {"$ne": False} if active else False
+
+        return query_doc
+
+    def query(
+        self,
+        ids: List[str] = None,
+        project_ids: List[str] = None,
+        module_names: List[str] = None,
+        type_urns: List[str] = None,
+        type_urn_prefix: str = None,
+        name: str = None,
+        tags: List[str] = None,
+        active: bool = None,
+    ):
+        query_doc = self._query_doc_for(
+            ids=ids,
+            project_ids=project_ids,
+            module_names=module_names,
+            type_urns=type_urns,
+            type_urn_prefix=type_urn_prefix,
+            name=name,
+            tags=tags,
+            active=active,
+        )
+
+        return map(
+            lambda doc: doc_to_model(doc, models.StoredSchema),
+            self.collection.find(query_doc).sort("_id", pymongo.DESCENDING),
+        )
+
+    def update(self, schema: models.StoredSchema, project_ids: List[str] = None):
+        return (
+            self.collection.replace_one(
+                self._query_doc_for(ids=[schema.id], project_ids=project_ids),
+                model_to_doc(schema),
+            ).modified_count
+            == 1
+        )
+
+    def partial_update(self, id: str, update_fn, project_ids: List[str] = None):
+
+        txn = self.session.start_transaction()
+
+        try:
+
+            schema = self.query_one(ids=[id], project_ids=project_ids)
+            if schema is None:
+                return False
+            schema = update_fn(schema)
+            if schema is None:
+                return False
+
+            result = self.update(schema, project_ids=project_ids)
+            self.session.commit_transaction()
+            txn = None
+
+            return result
+
+        finally:
+            if txn:
+                self.session.abort_transaction()
+
+    def deactivate(self, id: str, project_ids: List[str] = None):
+        return (
+            self.collection.update_one(
+                self._query_doc_for(id=id, project_ids=project_ids),
+                {"$set": {"active": False}},
+            ).modified_count
+            == 1
+        )
+
+    def delete(self, id: str, project_ids: List[str] = None):
+        return (
+            self.collection.delete_one(
+                self._query_doc_for(id=id, project_ids=project_ids)
+            ).deleted_count
+            == 1
+        )
+
+
+class SchemaCache(SchemaRepository):
+    @property
+    def collection(self) -> pymongo.collection.Collection:
+        return self.db.get_collection("module_schemas")
+
+    def reset(self):
+        self.collection.drop()

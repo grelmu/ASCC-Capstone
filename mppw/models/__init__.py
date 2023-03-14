@@ -7,8 +7,12 @@ import datetime
 import enum
 import networkx
 import re
+import json
+import hashlib
 
 from mppw import logger
+
+from .. import schemas
 
 """
 Data models for the storage layer
@@ -156,6 +160,9 @@ class User(SafeUser):
 class Project(DocModel):
     name: str
     description: Optional[str]
+
+    included_schema_modules: Optional[List[str]]
+
     active: bool = True
 
 
@@ -602,3 +609,48 @@ class Operation(DocModel):
 
     class Config(pydantic.BaseConfig):
         arbitrary_types_allowed = True
+
+
+class StoredSchema(DocModel):
+
+    type_urn: str
+    project: Optional[DbId]
+    module: Optional[str]
+    tags: Optional[List[str]]
+    active: bool = True
+
+    storage_schema_json: Optional[str]
+    storage_schema_hash: Optional[str]
+
+    storage_schema_yaml: Optional[str]
+    storage_schema_json5: Optional[str]
+
+    @pydantic.root_validator
+    def validate_storage_schemas(cls, values):
+        if values.get("storage_schema_json", None) is None:
+            if values.get("storage_schema_json5", None) is not None:
+                import pyjson5
+
+                values["storage_schema_json"] = json.dumps(
+                    pyjson5.loads(values["storage_schema_json5"])
+                )
+            elif values.get("storage_schema_yaml", None) is not None:
+                import yaml
+
+                values["storage_schema_json"] = json.dumps(
+                    yaml.load(values["storage_schema_yaml"])
+                )
+        if values.get("storage_schema_hash", None) is None:
+
+            if values.get("storage_schema_json", None) is None:
+                raise Exception(
+                    f"Cannot hash missing storage schema for type {values.get('type_urn')}"
+                )
+
+            hasher = hashlib.sha256()
+            hasher.update(values["storage_schema_json"].encode("utf-8"))
+            values["storage_schema_hash"] = f"sha256:{hasher.hexdigest()}"
+        return values
+
+    def storage_schema_type_urn(self):
+        return json.loads(self.storage_schema_json).get("type_urn")

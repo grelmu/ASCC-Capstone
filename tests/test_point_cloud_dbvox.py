@@ -47,9 +47,9 @@ def test_basic(api_client, api_project, api_bucket):
 
     resolved_bucket_url = resolve_bucket_url(api_bucket["url_data"], api_client.api_url)
     cloud_collection_name = __name__.split(".")[-1] + "_basic"
-    bucket_collection = pymongo.MongoClient(resolved_bucket_url).get_default_database()[
-        cloud_collection_name
-    ]
+    bucket_collection = pymongo.MongoClient(
+        resolved_bucket_url, directConnection=True
+    ).get_default_database()[cloud_collection_name]
 
     space = dbvox.Vox3Space(11)  # +-1024
 
@@ -90,9 +90,9 @@ def test_basic_dt(api_client, api_project, api_bucket):
 
     resolved_bucket_url = resolve_bucket_url(api_bucket["url_data"], api_client.api_url)
     cloud_collection_name = __name__.split(".")[-1] + "_basic"
-    bucket_collection = pymongo.MongoClient(resolved_bucket_url).get_default_database()[
-        cloud_collection_name
-    ]
+    bucket_collection = pymongo.MongoClient(
+        resolved_bucket_url, directConnection=True
+    ).get_default_database()[cloud_collection_name]
 
     space = dbvox.Vox3Space(11)  # +-1024
 
@@ -147,9 +147,9 @@ def test_basic_cloudfile(api_client, api_project, api_bucket):
 
     resolved_bucket_url = resolve_bucket_url(api_bucket["url_data"], api_client.api_url)
     cloud_collection_name = __name__.split(".")[-1] + "_basic"
-    bucket_collection = pymongo.MongoClient(resolved_bucket_url).get_default_database()[
-        cloud_collection_name
-    ]
+    bucket_collection = pymongo.MongoClient(
+        resolved_bucket_url, directConnection=True
+    ).get_default_database()[cloud_collection_name]
 
     space = dbvox.Vox3Space(11)  # +-1024
 

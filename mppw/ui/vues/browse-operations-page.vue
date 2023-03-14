@@ -158,9 +158,9 @@ export default {
   data() {
     return {
       projects: null,
-      opTypes: null,
 
       projectId: null,
+      opTypes: null,
 
       isCreatingNewProject: false,
       newProject: {},
@@ -311,15 +311,22 @@ export default {
     refreshOpTypes() {
       this.opTypes = null;
       this.newOpTypeUrn = null;
-      return this.$root.apiFetchOpTypes().then((opTypes) => {
-        this.opTypes = opTypes;
-      });
+      return this.$root
+        .apiFetchProjectOperationSchemas(this.projectId)
+        .then((opSchemas) => {
+          this.opTypes = opSchemas.map((o) => o["schema_model"]);
+        });
     },
 
     onProjectSelected(projectId) {
       this.projectId = projectId;
+
       this.resetOpsTable();
-      if (this.projectId) this.loadOpsTable();
+      if (this.projectId) {
+        this.refreshOpTypes().then(() => {
+          return this.loadOpsTable();
+        });
+      }
     },
 
     loadOpsTable() {
@@ -371,7 +378,6 @@ export default {
       this.parameters.page_num = page;
       return this.apiFetchProjectOpsPaged(this.projectId, this.parameters).then(
         (ops) => {
-          console.log(ops);
           this.opsRows = ops.results;
           this.total = ops.total;
           this.opsLoading = false;
@@ -388,7 +394,6 @@ export default {
           this.opsRows = ops.results;
           this.total = ops.total;
           this.opsLoading = false;
-          console.log(ops);
         }
       );
     },
@@ -400,7 +405,6 @@ export default {
           this.opsRows = ops.results;
           this.total = ops.total;
           this.opsLoading = false;
-          console.log(ops);
         }
       );
     },
@@ -408,7 +412,6 @@ export default {
 
   mounted() {
     this.refreshProjects();
-    this.refreshOpTypes();
   },
 };
 </script>

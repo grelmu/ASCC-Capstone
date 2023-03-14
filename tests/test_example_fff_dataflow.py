@@ -44,7 +44,7 @@ def api_fff_builder(api_pytest_client: mppw_clients.MppwApiClient):
         )
 
         client = pymongo.MongoClient(
-            resolve_bucket_url(fff_bucket["url_data"], api.api_url)
+            resolve_bucket_url(fff_bucket["url_data"], api.api_url), directConnection=True
         )
 
         opc_collection = client.get_default_database()["opc_sample"]

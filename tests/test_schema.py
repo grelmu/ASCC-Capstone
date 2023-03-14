@@ -3,6 +3,8 @@ import json
 
 from mppw import schemas
 
+from .fixtures_services import ServiceLayerContext
+
 """
 Unit tests of schemas for operations and artifacts
 """
@@ -108,23 +110,7 @@ def test_parse_operation_schema():
         )
 
         if i != 2:
-            print(schema_value)
             assert schema.services.class_qualname == "module:ClassName"
-
-
-def test_load_operation_schema():
-
-    """
-    Test that we can load a sample schema with a parent reference
-    """
-
-    schema = schemas.get_operation_schema("urn:x-mfg:operation:fff")
-
-    child_kind_urns = list(map(lambda k: k.kind_urn, schema.attachments.child_kinds))
-
-    assert ":toolpath" in child_kind_urns
-    assert ":attachments" in child_kind_urns
-    assert len(schema.provenance.steps) == 2
 
 
 def test_parse_artifact_schema():
@@ -151,16 +137,65 @@ def test_parse_artifact_schema():
     assert schema.services.class_qualname == "module:ClassName"
 
 
-def test_load_artifact_schema():
+def test_init_persistent_module_schemas(api_storage_layer, api_pytest_client):
 
     """
-    Test that we can load a sample schema with a parent reference
+    Test that we can persistently initialize module schemas from modules (via the repository)
     """
 
-    schema = schemas.get_artifact_schema("urn:x-mfg:artifact:digital:file")
+    with ServiceLayerContext(api_storage_layer) as service_layer:
 
-    assert (
-        schema.services.class_qualname
-        == "mppw.services.artifacts.digital_file_services:FileServices"
-    )
-    assert schema.name == "File"
+        module_schemas = service_layer.schema_services().query_project_schemas(
+            api_pytest_client.default_project["id"], module_names=["mppw"]
+        )
+        assert len(module_schemas) > 10
+
+
+def test_resolve_operation_schema(api_storage_layer, api_pytest_client):
+
+    """
+    Test that we can resolve a sample schema with a parent reference
+    """
+
+    with ServiceLayerContext(api_storage_layer) as service_layer:
+
+        schema = (
+            service_layer.schema_services()
+            .query_resolved_project_schema(
+                api_pytest_client.default_project["id"],
+                type_urns=["urn:x-mfg:operation:fff"],
+            )
+            .schema_model
+        )
+
+        child_kind_urns = list(
+            map(lambda k: k.kind_urn, schema.attachments.child_kinds)
+        )
+
+        assert ":toolpath" in child_kind_urns
+        assert ":attachments" in child_kind_urns
+        assert len(schema.provenance.steps) == 2
+
+
+def test_resolve_artifact_schema(api_storage_layer, api_pytest_client):
+
+    """
+    Test that we can resolve a sample artifact schema
+    """
+
+    with ServiceLayerContext(api_storage_layer) as service_layer:
+
+        schema = (
+            service_layer.schema_services()
+            .query_resolved_project_schema(
+                api_pytest_client.default_project["id"],
+                type_urns=["urn:x-mfg:artifact:digital:file"],
+            )
+            .schema_model
+        )
+
+        assert (
+            schema.services.class_qualname
+            == "mppw.services.artifacts.digital_file_services:FileServices"
+        )
+        assert schema.name == "File"

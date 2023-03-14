@@ -245,6 +245,33 @@ def create_router(app):
         services = service_layer.artifact_services_for(artifact)
         return services.operation_parent(artifact)
 
+    #
+    # Schema
+    #
+
+    @router.get(
+        "/{id}/services/artifact/schema",
+        response_model=services.ResolvedSchema,
+    )
+    def get_schema(
+        id: str,
+        user: models.User = Security(request_user(app), scopes=[READ_PROVENANCE_SCOPE]),
+        service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
+    ):
+        artifact: models.Artifact = read(id, user, service_layer.repo_layer)
+
+        schema = service_layer.schema_services().query_resolved_project_schema(
+            artifact.project,
+            type_urns=[artifact.type_urn],
+            active=True,
+            current=True,
+        )
+
+        if not schema:
+            raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
+
+        return schema
+
     @router.get(
         "/{id}/services/artifact/digital/json_schema",
         response_model=typing.Optional[dict],
@@ -254,9 +281,9 @@ def create_router(app):
         user: models.User = Security(request_user(app), scopes=[READ_PROVENANCE_SCOPE]),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-        artifact: models.Artifact = read(id, user, service_layer.repo_layer)
-        services = service_layer.artifact_services_for(artifact)
-        return services.schema.json_schema
+        schema: services.ResolvedSchema = get_schema(id, user, service_layer)
+
+        return schema.schema_model.json_schema
 
     #
     # Provenance
@@ -450,8 +477,8 @@ def create_router(app):
 
         artifact: models.Artifact = read(id, user, service_layer.repo_layer)
 
-        service: services.DatabaseBucketServices = service_layer.artifact_service(
-            artifact.type_urn
+        service: services.DatabaseBucketServices = service_layer.artifact_services_for(
+            artifact
         )
         return service.stats(artifact)
 

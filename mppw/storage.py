@@ -4,7 +4,9 @@ import fastapi
 from fastapi.applications import FastAPI
 import pymongo
 import pymongo.errors
+import pymongo.client_session
 import gridfs
+import mongomock
 import furl
 import time
 
@@ -85,6 +87,9 @@ class MongoDBStorageLayer:
         # Ensure our auth has worked
         self.mdb_client.get_default_database()
 
+        # Start up an in-memory cache
+        self.mdb_cache_client = mongomock.MongoClient(self.mdb_url)
+
     def upgrade_schema(self):
 
         logger.info("Upgrading storage schema...")
@@ -111,6 +116,14 @@ class MongoDBStorageLayer:
 
     def start_session(self):
         return self.mdb_client.start_session(causal_consistency=True)
+
+    def start_cache_session(self):
+        return pymongo.client_session.ClientSession(
+            self.mdb_cache_client,
+            None,
+            None,
+            None,
+        )
 
     def get_gridfs_db(self, name):
         default_db_name = self.mdb_client.get_default_database().name
