@@ -539,12 +539,24 @@ def create_router(app):
     @router.post("/{id}/services/point-cloud/insert", response_model=bool)
     def point_cloud_insert(
         id: str,
+        # For documentation only
+        body: typing.List[XyztPoint] = fastapi.Body(None),
         body_stream=fastapi.Depends(endpoints.sync_body_stream),
         user: security.ScopedUser = Security(
             request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
+        """
+        Add points into a point cloud artifact.
+
+        Points are specified in the body of the request as a list of XyztPoints -
+        see schema for more details.
+
+        Streaming insertion is supported to manage large numbers of inserts.
+        Currently only JSON inserts are supported.
+        """
+
         artifact: models.Artifact = read(id, user, service_layer.repo_layer)
         services: PointCloudServices = service_layer.artifact_services_for(
             artifact, PointCloudServices
@@ -558,16 +570,31 @@ def create_router(app):
         id: str,
         space_bounds: str,
         time_bounds: str = None,
-        coerce_dt_bounds: bool = False,
+        coerce_dt_bounds: bool = True,
         user: security.ScopedUser = Security(
             request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
+
+        """
+        Search for points in a point cloud artifact.
+
+        Space bounds are specified by a JSON string encoding a numeric array of:
+        [[x_min, y_min, z_min], [x_max, y_max, z_max]]
+
+        Datetime bounds are specified similarly by a JSON string encoding an array of:
+        [min_time, max_time]
+
+        See XyztPoint schema for supported time bound types and format.
+
+        Streaming results are supported to manage large numbers of points.
+        Currently only JSON output is supported.
+        NOTE: The coerce_dt_bounds parameter is deprecated.
+        """
+
         space_bounds = json.loads(space_bounds)
         time_bounds = json.loads(time_bounds) if time_bounds else None
-        if time_bounds and coerce_dt_bounds:
-            time_bounds = tuple(arrow.get(bound).datetime for bound in time_bounds)
 
         artifact: models.Artifact = read(id, user, service_layer.repo_layer)
         services: PointCloudServices = service_layer.artifact_services_for(
@@ -577,7 +604,7 @@ def create_router(app):
         point_cursor = services.sample(artifact, space_bounds, time_bounds)
         return endpoints.StreamingJsonResponse(point_cursor)
 
-    @router.get("/{id}/services/point-cloud/bounds")
+    @router.get("/{id}/services/point-cloud/bounds", response_model=List[List])
     def point_cloud_bounds(
         id: str,
         user: security.ScopedUser = Security(
@@ -585,6 +612,11 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
+        """
+        Get the bounds of a point cloud artifact.
+
+        Returns an array with min and max xyzt arrays - see XyztPoint.p schema for more details.
+        """
 
         artifact: models.Artifact = read(id, user, service_layer.repo_layer)
 
@@ -599,13 +631,21 @@ def create_router(app):
         id: str,
         space_bounds: str,
         time_bounds: str = None,
-        coerce_dt_bounds: bool = False,
+        coerce_dt_bounds: bool = True,
         format: str = "pcd",
         user: security.ScopedUser = Security(
             request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
+
+        """
+        Search for points in a point cloud artifact and return a file in a specified format.
+
+        Currently the only format supported is "pcd" (PCL library cloud file).
+
+        See point-cloud/points for more information on query parameters.
+        """
 
         points: List[services.XyztPoint] = point_cloud_points(
             id, space_bounds, time_bounds, coerce_dt_bounds, user, service_layer

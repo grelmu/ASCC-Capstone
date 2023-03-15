@@ -20,6 +20,18 @@ class UnknownPointCloudStorageStrategyException(Exception):
 
 
 class XyztPoint(models.BaseJsonModel):
+
+    """
+    A point in space and time
+
+    Consists of a "p" list of length 4, xyzt coordinates, and an
+    (optional) "ctx" (context) object with any additional metadata.
+
+    The xyz coordinates are numeric, and the time coordinate is
+    specified as a format-native datetime.  In JSON this is an
+    ISO datetime string but other formats may be supported.
+    """
+
     p: List
     ctx: Optional[Any]
 
@@ -33,6 +45,15 @@ class PointCloudServices(ArtifactServices):
         storage_strategy: str
         storage_strategy_params: Any
         xyzt_bounds: Any
+
+        @pydantic.validator("xyzt_bounds")
+        def validate_xyzt_bounds(cls, v):
+            if not v:
+                return None
+            v = list(list(mm) for mm in v)
+            for i in [0, 1]:
+                v[i][3] = arrow.get(v[i][3]).to("utc").datetime
+            return v
 
     class XyzFieldsParams(pydantic.BaseModel):
         x_field: str = "x"
@@ -218,16 +239,17 @@ class PointCloudServices(ArtifactServices):
             )
 
             next_batch = []
-            next_bounds = (
-                [list(mm) for mm in meta.xyzt_bounds]
-                if meta.xyzt_bounds is not None
-                else None
-            )
 
             def write_batch():
-                print(dbvox_collection)
+
+                # Strictly write bounds in UTC datetime
+                for i in [0, 1]:
+                    meta.xyzt_bounds[i][3] = (
+                        arrow.get(meta.xyzt_bounds[i][3]).to("utc").datetime
+                    )
+
                 dbvox_collection.update_one(
-                    {"_id": None}, {"$set": {"xyzt_bounds": next_bounds}}
+                    {"_id": None}, {"$set": {"xyzt_bounds": meta.xyzt_bounds}}
                 )
                 dbvox_collection.insert_many(next_batch)
                 next_batch.clear()
@@ -238,7 +260,8 @@ class PointCloudServices(ArtifactServices):
             ]:
 
                 point_doc.setdefault("ctx", {})
-                point_doc["p"][3] = arrow.get(point_doc["p"][3]).datetime
+                # Strictly write points in UTC datetime
+                point_doc["p"][3] = arrow.get(point_doc["p"][3]).to("utc").datetime
                 xyzt_point = XyztPoint(**point_doc)
                 xyzt_point.ctx.update(
                     {
@@ -251,8 +274,8 @@ class PointCloudServices(ArtifactServices):
                 )
 
                 next_batch.append(xyzt_point.ctx)
-                next_bounds = PointCloudServices._update_bounds(
-                    next_bounds, xyzt_point.p
+                meta.xyzt_bounds = PointCloudServices._update_bounds(
+                    meta.xyzt_bounds, xyzt_point.p
                 )
 
                 if (
@@ -382,6 +405,12 @@ class PointCloudServices(ArtifactServices):
         meta = PointCloudServices.DbVoxMeta(**(collection.find_one({"_id": None})))
         space = dbvox.Vox3Space(meta.max_scale)
         voxels = space.get_cover(*(tuple(zip(*space_bounds))))
+        # Strictly query points in UTC datetime
+        time_bounds = (
+            [arrow.get(dt).to("utc").datetime for dt in time_bounds]
+            if time_bounds is not None
+            else None
+        )
 
         vox_query = {
             "$or": [

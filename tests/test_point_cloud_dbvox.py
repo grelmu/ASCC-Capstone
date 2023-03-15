@@ -37,7 +37,7 @@ def create_point_cube(collection, space, x_range, y_range, z_range, t_range):
                             "y": y,
                             "z": z,
                             "vaddr": voxel.to_addr(),
-                            "stamp": t,
+                            "stamp": arrow.get(t).to("utc").datetime,
                         }
                     )
 
