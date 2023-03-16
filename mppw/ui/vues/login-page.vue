@@ -40,7 +40,7 @@
         <button
           class="w-100 btn btn-lg btn-primary"
           type="submit"
-          @click="doLogin()"
+          @click="doLogin"
         >
           Sign in
         </button>
@@ -61,7 +61,10 @@ export default {
     fetchOauth2PasswordBearer: Function,
   },
   methods: {
-    doLogin() {
+    doLogin(event) {
+      // DRAGONS - form submit will *cancel* our pending request,
+      // and cause login-retry race conditions, we need to prevent that
+      event.preventDefault();
       this.fetchOauth2PasswordBearer({
         method: "POST",
         body: new URLSearchParams({

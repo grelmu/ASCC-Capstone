@@ -1,80 +1,117 @@
 <template>
   <div v-if="artifact">
-
     <o-loading
-        :full-page="false"
-        :active="isLoadingSampleDocs"
-        :can-cancel="false"
-      >
-        <o-icon icon="star-four-points" size="large" spin> </o-icon>
+      :full-page="false"
+      :active="isLoadingSampleDocs"
+      :can-cancel="false"
+    >
+      <o-icon icon="star-four-points" size="large" spin> </o-icon>
     </o-loading>
 
     <section>
-      <o-collapse :open="true" class="card col-12" animation="slide" padding-botton="5px" style="margin-bottom: 5px;">
+      <o-collapse
+        :open="true"
+        class="card col-12"
+        animation="slide"
+        padding-botton="5px"
+        style="margin-bottom: 5px"
+      >
         <template #trigger="props">
-          <div class="card-header" role="button" style="height: 40px;">
-            <p class="card-header-title">
-              Pull Point Cloud Data
-            </p>
+          <div class="card-header" role="button" style="height: 40px">
+            <p class="card-header-title">Pull Point Cloud Data</p>
             <a class="card-header-icon">
               <o-icon :icon="props.open ? 'caret-up' : 'caret-down'"> </o-icon>
             </a>
           </div>
         </template>
         <div class="card-content col-6">
-          <div class="content" style="padding: 20px;">
+          <div class="content" style="padding: 20px">
             <o-field label="space_bounds">
               <!-- e.g.: [[-100000, -100000, -100000], [100000, 100000, 100000]] -->
-              <o-input placeholder="[[x1, y1, z1], [x2, y2, z2]]"
-                v-model="formData.space_bounds">
+              <o-input
+                placeholder="[[x1, y1, z1], [x2, y2, z2]]"
+                v-model="formData.space_bounds"
+              >
               </o-input>
               <transition name="fade">
-                <button class="reset-button hidden" @click="resetSpaceBounds()" v-if="formData.space_bounds == '' || formData.space_bounds != originalBounds.formDataSpaceBounds">
-                  <span class="o-icon reset-button"><i class="mdi mdi-refresh mdi-24px"></i></span>
+                <button
+                  class="reset-button hidden"
+                  @click="resetSpaceBounds()"
+                  v-if="
+                    formData.space_bounds == '' ||
+                    formData.space_bounds != originalBounds.formDataSpaceBounds
+                  "
+                >
+                  <span class="o-icon reset-button"
+                    ><i class="mdi mdi-refresh mdi-24px"></i
+                  ></span>
                 </button>
               </transition>
             </o-field>
             <o-field label="time_bounds_start">
               <!-- e.g.: ["2022-02-04T16:02:47.633000", "2022-02-04T16:02:47.90"] -->
               <o-datetimepicker
-                rounded placeholder="Click to select..." :timepicker="{ enableSeconds, hourFormat }"
-                icon="calendar" v-model="timeBoundsStart" @update:modelValue="normalizeTimeBounds">
+                rounded
+                placeholder="Click to select..."
+                :timepicker="{ enableSeconds, hourFormat }"
+                icon="calendar"
+                v-model="timeBoundsStart"
+                @update:modelValue="normalizeTimeBounds"
+              >
               </o-datetimepicker>
               <transition name="fade">
-                <button class="reset-button" @click="resetBoundsStart()" v-if="timeBoundsStart != originalBounds.timeBoundsStart">
-                  <span class="o-icon reset-button"><i class="mdi mdi-refresh mdi-24px"></i></span>
+                <button
+                  class="reset-button"
+                  @click="resetBoundsStart()"
+                  v-if="timeBoundsStart != originalBounds.timeBoundsStart"
+                >
+                  <span class="o-icon reset-button"
+                    ><i class="mdi mdi-refresh mdi-24px"></i
+                  ></span>
                 </button>
               </transition>
             </o-field>
             <o-field label="time_bounds_end">
               <o-datetimepicker
-                rounded placeholder="Click to select..." :timepicker="{ enableSeconds, hourFormat }"
-                icon="calendar" v-model="timeBoundsEnd" @update:modelValue="normalizeTimeBounds">
+                rounded
+                placeholder="Click to select..."
+                :timepicker="{ enableSeconds, hourFormat }"
+                icon="calendar"
+                v-model="timeBoundsEnd"
+                @update:modelValue="normalizeTimeBounds"
+              >
               </o-datetimepicker>
               <transition name="fade">
-                <button class="reset-button" @click="resetBoundsEnd()" v-if="timeBoundsEnd != originalBounds.timeBoundsEnd">
-                  <span class="o-icon reset-button"><i class="mdi mdi-refresh mdi-24px"></i></span>
+                <button
+                  class="reset-button"
+                  @click="resetBoundsEnd()"
+                  v-if="timeBoundsEnd != originalBounds.timeBoundsEnd"
+                >
+                  <span class="o-icon reset-button"
+                    ><i class="mdi mdi-refresh mdi-24px"></i
+                  ></span>
                 </button>
               </transition>
             </o-field>
 
             <div class="mt-3 text-end pcl-btns">
-              <o-button @click="getPointCloud()"
-                class="text-end">
-                Get Point Cloud
-              </o-button><br/>
+              <o-button @click="getPointCloud()" class="text-end">
+                Get Point Cloud </o-button
+              ><br />
               <o-button
                 @click="downloadPointCloud()"
                 class="text-end"
-                variant="info">
-                  Download Full Point Cloud
+                variant="info"
+              >
+                Download Full Point Cloud
               </o-button>
               <o-button
                 v-if="response[0]"
                 @click="toggleThree()"
                 class="text-end"
-                variant="info">
-                  Visualize
+                variant="info"
+              >
+                Visualize
               </o-button>
             </div>
 
@@ -83,27 +120,48 @@
             </p>
 
             <div class="mt-3 text-end pcl-btns scrolling-btn-row">
-              <o-button v-if="tbChunks.length > 0"
-                id="l-scroll-btn" @click="scb(-300)">←</o-button>
-              <div v-for="(chunk, index) in tbChunks"
+              <o-button
+                v-if="tbChunks.length > 0"
+                id="l-scroll-btn"
+                @click="scb(-300)"
+                >←</o-button
+              >
+              <div
+                v-for="(chunk, index) in tbChunks"
                 class="text-end chunk-btn-wrapper o-btn"
                 outlined
                 :title="'FROM:\n' + chunk['start'] + '\n\nTO:\n' + chunk['end']"
-                :key="chunk['start']">
+                :key="chunk['start']"
+              >
                 <div class="chunk-btn-ctr">
-                  <o-button inverted @click="(e) => {
-                      downloadPointCloud(e, chunk, `pc_chunk_${index}`)
-                    }"><o-icon :icon="'download'"></o-icon>
+                  <o-button
+                    inverted
+                    @click="
+                      (e) => {
+                        downloadPointCloud(e, chunk, `pc_chunk_${index}`);
+                      }
+                    "
+                    ><o-icon :icon="'download'"></o-icon>
                   </o-button>
-                  <o-button inverted @click="(e) => {
-                      getPointCloudChunk(e, chunk)
-                    }"><o-icon :icon="'eye'"></o-icon>
+                  <o-button
+                    inverted
+                    @click="
+                      (e) => {
+                        getPointCloudChunk(e, chunk);
+                      }
+                    "
+                    ><o-icon :icon="'eye'"></o-icon>
                   </o-button>
                 </div>
-                <p>Chunk {{index}}</p>
-              </div><br/>
-              <o-button v-if="tbChunks.length > 0"
-                id="r-scroll-btn" @click="scb(300)">→</o-button>
+                <p>Chunk {{ index }}</p>
+              </div>
+              <br />
+              <o-button
+                v-if="tbChunks.length > 0"
+                id="r-scroll-btn"
+                @click="scb(300)"
+                >→</o-button
+              >
             </div>
           </div>
         </div>
@@ -117,10 +175,10 @@
             <pre v-if="response.length < 5000" class="col-12">
               {{ JSON.stringify(response, null, 2) }}
             </pre>
-            <div class="large-warning" v-else-if="response.length >= 5000"> 
+            <div class="large-warning" v-else-if="response.length >= 5000">
               <p>
-                Large response &lpar;{{response.length}} items&rpar;
-                not displayed for page performance.
+                Large response &lpar;{{ response.length }} items&rpar; not
+                displayed for page performance.
                 <br />
                 <br />
                 <b>Please download to view data.</b>
@@ -128,21 +186,25 @@
             </div>
           </div>
 
-          <div :id="'three-parent-container-' + $.uid" class="three-parent-container">
-            <scatter-plot v-if="response[0]" 
-                          :importData=response 
-                          :key=response
-                          @newBounds="updateBounds"></scatter-plot>
+          <div
+            :id="'three-parent-container-' + $.uid"
+            class="three-parent-container"
+          >
+            <scatter-plot
+              v-if="response[0]"
+              :importData="response"
+              :key="response"
+              @newBounds="updateBounds"
+            ></scatter-plot>
           </div>
         </div>
       </o-collapse>
     </section>
-   
   </div>
 </template>
 
 <script>
-import scatterPlot from '../scatter-plot.vue';
+import scatterPlot from "../scatter-plot.vue";
 export default {
   components: { scatterPlot },
   data() {
@@ -150,11 +212,11 @@ export default {
       artifact: null,
       enableSeconds: true,
       formData: {
-        'space_bounds': null,
-        'time_bounds': null,
-        'coerce_dt_bounds': true,
+        space_bounds: null,
+        time_bounds: null,
+        coerce_dt_bounds: true,
       },
-      hourFormat: '24',
+      hourFormat: "24",
       locale: undefined,
       timeBoundsStart: null,
       timeBoundsEnd: null,
@@ -163,9 +225,9 @@ export default {
       tbChunks: [],
       visualizePoints: false,
       isLoadingSampleDocs: false,
-      pointSelector: 'ctx',
-      sliderSelector: 'prestamp',
-      displayValue: '',
+      pointSelector: "ctx",
+      sliderSelector: "prestamp",
+      displayValue: "",
       showSelectors: true,
       isLoading: false,
     };
@@ -175,63 +237,71 @@ export default {
     artifactId: String,
   },
   methods: {
-    updateBounds(newValues){
+    updateBounds(newValues) {
       this.formData.space_bounds = newValues;
     },
-    findPointSelectorPaths(obj, path=''){
+    findPointSelectorPaths(obj, path = "") {
       let successfulArray = [];
-      Object.getOwnPropertyNames(obj).forEach(key => {
-        if(typeof obj[key] == "object"){
+      Object.getOwnPropertyNames(obj).forEach((key) => {
+        if (typeof obj[key] == "object") {
           successfulArray.push(path + key);
           if (!this.pointSelector) this.pointSelector = path + key;
-          successfulArray = successfulArray.concat(this.findPointSelectorPaths(obj[key], path + key + '.' ));
+          successfulArray = successfulArray.concat(
+            this.findPointSelectorPaths(obj[key], path + key + ".")
+          );
         }
       });
       return successfulArray;
     },
-    getDisplayValueOptions(){
-      let obj = this.pointSelector.split('.').reduce(function(p,prop) { return p[prop] }, this.response[0]);
-      let arr = this.findDisplayValuePaths(obj, this.pointSelector + '.');
-      if (!arr.includes(this.displayValue)) this.displayValue = '';
+    getDisplayValueOptions() {
+      let obj = this.pointSelector.split(".").reduce(function (p, prop) {
+        return p[prop];
+      }, this.response[0]);
+      let arr = this.findDisplayValuePaths(obj, this.pointSelector + ".");
+      if (!arr.includes(this.displayValue)) this.displayValue = "";
       return arr;
     },
-    findDisplayValuePaths(obj, path=''){
+    findDisplayValuePaths(obj, path = "") {
       let successfulArray = [];
       if (obj == null) return successfulArray;
-      if (["x","y","z"].every(key => Object.keys(obj).includes(key))){
+      if (["x", "y", "z"].every((key) => Object.keys(obj).includes(key))) {
         successfulArray.push(path);
         if (!this.pointSelector) this.pointSelector = path;
       }
-      
-      Object.getOwnPropertyNames(obj).forEach(key => {
-        if(typeof obj[key] == "boolean")
-          successfulArray.push(path + key);
-        if(typeof obj[key] == "object")
-          successfulArray = successfulArray.concat(this.findDisplayValuePaths(obj[key], path + key + '.' ));
+
+      Object.getOwnPropertyNames(obj).forEach((key) => {
+        if (typeof obj[key] == "boolean") successfulArray.push(path + key);
+        if (typeof obj[key] == "object")
+          successfulArray = successfulArray.concat(
+            this.findDisplayValuePaths(obj[key], path + key + ".")
+          );
       });
 
       return successfulArray;
     },
-    getSliderSelectorOptions(){
-      let obj = this.pointSelector.split('.').reduce(function(p,prop) { return p[prop] }, this.response[0]);
-      let arr = this.findSliderSelectorPaths(obj, this.pointSelector + '.');
-      if (!arr.includes(this.sliderSelector)) this.sliderSelector = '';
+    getSliderSelectorOptions() {
+      let obj = this.pointSelector.split(".").reduce(function (p, prop) {
+        return p[prop];
+      }, this.response[0]);
+      let arr = this.findSliderSelectorPaths(obj, this.pointSelector + ".");
+      if (!arr.includes(this.sliderSelector)) this.sliderSelector = "";
       return arr;
     },
-    findSliderSelectorPaths(obj,path='',comparator){
+    findSliderSelectorPaths(obj, path = "", comparator) {
       let successfulArray = [];
       if (obj == null) return successfulArray;
-      Object.getOwnPropertyNames(obj).forEach(key => {
-        if(['number', 'string', 'bigint'].includes(typeof obj[key]))
+      Object.getOwnPropertyNames(obj).forEach((key) => {
+        if (["number", "string", "bigint"].includes(typeof obj[key]))
           successfulArray.push(path + key);
-        if(typeof obj[key] == "object")
-          successfulArray = successfulArray.concat(this.findSliderSelectorPaths(obj[key], path + key + '.'));
+        if (typeof obj[key] == "object")
+          successfulArray = successfulArray.concat(
+            this.findSliderSelectorPaths(obj[key], path + key + ".")
+          );
       });
 
       return successfulArray;
-
     },
-    toggleThree(){
+    toggleThree() {
       this.visualizePoints ? this.hideThree() : this.showThree();
     },
     showThree() {
@@ -241,8 +311,9 @@ export default {
     },
     hideThree() {
       this.visualizePoints = false;
-      this.$el.querySelector('.three-parent-container')
-      .classList.remove('three-show');
+      this.$el
+        .querySelector(".three-parent-container")
+        .classList.remove("three-show");
     },
     refreshArtifact() {
       this.artifact = null;
@@ -256,42 +327,44 @@ export default {
       });
     },
     getBoundLimits() {
-        this.$root.apiFetchPointCloudBounds(this.artifactId).then((bounds) => {
+      this.$root.apiFetchPointCloudBounds(this.artifactId).then((bounds) => {
+        // This api returns the time and space bounds combined like this:
+        //      [ [x1,y1,z1,t1], [x2,y2,z2,t2] ]
 
-          // This api returns the time and space bounds combined like this:
-          //      [ [x1,y1,z1,t1], [x2,y2,z2,t2] ]
+        let time_bounds = [bounds[0].pop(), bounds[1].pop()];
 
-          let time_bounds = [bounds[0].pop(), bounds[1].pop()];
+        // These two bind to the inputs and expect a Date object
+        this.timeBoundsStart = new Date(time_bounds[0]);
+        this.timeBoundsEnd = new Date(time_bounds[1]);
 
-          // These two bind to the inputs and expect a Date object
-          this.timeBoundsStart = new Date(time_bounds[0]);
-          this.timeBoundsEnd = new Date(time_bounds[1]);
+        this.formData.time_bounds = JSON.stringify(
+          this.incTimeBounds(time_bounds)
+        );
+        this.formData.space_bounds = JSON.stringify(
+          this.incSpaceBounds(bounds)
+        );
 
-          this.formData.time_bounds = JSON.stringify(this.incTimeBounds(time_bounds));
-          this.formData.space_bounds = JSON.stringify(this.incSpaceBounds(bounds));
-
-          // Store original values used for reset button
-          this.originalBounds = {
-            timeBoundsStart: this.timeBoundsStart,
-            timeBoundsEnd: this.timeBoundsEnd,
-            formDataSpaceBounds: this.formData.space_bounds
-          }
-          
-        });
+        // Store original values used for reset button
+        this.originalBounds = {
+          timeBoundsStart: this.timeBoundsStart,
+          timeBoundsEnd: this.timeBoundsEnd,
+          formDataSpaceBounds: this.formData.space_bounds,
+        };
+      });
     },
-    resetSpaceBounds(){
+    resetSpaceBounds() {
       this.formData.space_bounds = this.originalBounds.formDataSpaceBounds;
     },
-    resetBoundsStart(){
+    resetBoundsStart() {
       this.timeBoundsStart = this.originalBounds.timeBoundsStart;
       this.normalizeTimeBounds();
     },
-    resetBoundsEnd(){
+    resetBoundsEnd() {
       this.timeBoundsEnd = this.originalBounds.timeBoundsEnd;
       this.normalizeTimeBounds();
     },
     incSpaceBounds(bounds) {
-      let incBounds = [[], []]
+      let incBounds = [[], []];
       for (let i = 0; i < bounds[0].length; ++i) {
         incBounds[0].push(Math.ceil(bounds[0][i]) - 1);
         incBounds[1].push(Math.floor(bounds[1][i]) + 1);
@@ -300,18 +373,27 @@ export default {
     },
     incTimeBounds(bounds) {
       let incBounds = [new Date(bounds[0] + "Z"), new Date(bounds[1] + "Z")];
-      incBounds[0].setMinutes(incBounds[0].getMinutes(), incBounds[0].getSeconds(), 0);
-      incBounds[1].setMinutes(incBounds[1].getMinutes(), incBounds[1].getSeconds() + 1, 0);
-      incBounds = [incBounds[0].toISOString().substring(0, 19), incBounds[1].toISOString().substring(0, 19)];
+      incBounds[0].setMinutes(
+        incBounds[0].getMinutes(),
+        incBounds[0].getSeconds(),
+        0
+      );
+      incBounds[1].setMinutes(
+        incBounds[1].getMinutes(),
+        incBounds[1].getSeconds() + 1,
+        0
+      );
+      incBounds = [
+        incBounds[0].toISOString().substring(0, 19),
+        incBounds[1].toISOString().substring(0, 19),
+      ];
       return incBounds;
     },
     normalizeTimeBounds() {
-      this.formData.time_bounds = this.normTB(
-        {
-          "start": this.timeBoundsStart,
-          "end": this.timeBoundsEnd
-        }
-      )
+      this.formData.time_bounds = this.normTB({
+        start: this.timeBoundsStart,
+        end: this.timeBoundsEnd,
+      });
     },
     normTB(tb) {
       /*
@@ -319,55 +401,61 @@ export default {
         We reapply the timezone offset between the user's timezone and Zulu 
         so that what the user enters is what is queried on the backend.
       */
-      return JSON.stringify(
-        [
-          new Date(tb["start"].getTime() - (tb["start"].getTimezoneOffset() * 60 * 1000)).toISOString(),
-          new Date(tb["end"].getTime() - (tb["end"].getTimezoneOffset() * 60 * 1000)).toISOString()
-        ]
-      );
+      return JSON.stringify([
+        new Date(
+          tb["start"].getTime() - tb["start"].getTimezoneOffset() * 60 * 1000
+        ).toISOString(),
+        new Date(
+          tb["end"].getTime() - tb["end"].getTimezoneOffset() * 60 * 1000
+        ).toISOString(),
+      ]);
     },
     getPointCloud() {
       this.isLoading = true;
       this.visualizePoints = false;
       // Clear style on previously clicked chunk buttons:
-      document.querySelectorAll('.clicked-dl-btn').forEach(item => {item.classList.remove('clicked-dl-btn')})
+      document.querySelectorAll(".clicked-dl-btn").forEach((item) => {
+        item.classList.remove("clicked-dl-btn");
+      });
       this.isLoadingSampleDocs = true;
-      return this.$root.apiFetchPointcloud(
-        this.artifactId,
-        this.formData).then((result) => {
+      return this.$root
+        .apiFetchPointcloud(this.artifactId, this.formData)
+        .then((result) => {
           this.response = result;
 
           this.tbChunks = this.getDateChunks(
             new Date(this.timeBoundsStart),
-            new Date(this.timeBoundsEnd),
-            // This means chunks contain 1 minute of data: 
-            1
-          )
-        }).finally(() => {
-            this.isLoadingSampleDocs = false;
-            this.isLoading = false;
+            new Date(this.timeBoundsEnd)
+          );
+        })
+        .finally(() => {
+          this.isLoadingSampleDocs = false;
+          this.isLoading = false;
         });
     },
-    // Get point cloud, but for a chunk not the whole range 
+    // Get point cloud, but for a chunk not the whole range
     getPointCloudChunk(e, chunk) {
       this.hideThree();
       // Update styling so the current chunk button is visually selected
-      document.querySelectorAll('.selected-chunk').forEach(el =>{el.classList.remove('selected-chunk')});
+      document.querySelectorAll(".selected-chunk").forEach((el) => {
+        el.classList.remove("selected-chunk");
+      });
       let targ = e.target;
-      while (targ.classList.contains('chunk-btn-wrapper') == false) {
+      while (targ.classList.contains("chunk-btn-wrapper") == false) {
         targ = targ.parentElement;
       }
       targ.classList.add("selected-chunk");
 
       // Query for the chunk's data and display in the pane on the right
-      this.$root.apiFetchPointcloud(this.artifactId, 
-      {
-        space_bounds: this.formData.space_bounds,
-        time_bounds: this.normTB(chunk),
-        coerce_dt_bounds: this.formData.coerce_dt_bounds
-      }).then(res => {
-        this.response = res;
-      });
+      this.$root
+        .apiFetchPointcloud(this.artifactId, {
+          space_bounds: this.formData.space_bounds,
+          time_bounds: this.normTB(chunk),
+          coerce_dt_bounds: this.formData.coerce_dt_bounds,
+        })
+        .then((res) => {
+          this.response = res;
+        });
     },
     /**
      * This function redirects to a download link to the points specified by the query
@@ -376,12 +464,14 @@ export default {
       let url;
 
       // Create an anchor tag and then click it to start the download
-      let a = document.createElement('a');
+      let a = document.createElement("a");
       a.download = `${fname}.json`;
 
       if (chunk == null) {
         // We clicked the full download button, not a specific chunk
-        url = this.$root.apiUrl(this.$root.apiFetchPointcloudUrl(this.artifactId, this.formData));
+        url = this.$root.apiUrl(
+          this.$root.apiFetchPointcloudUrl(this.artifactId, this.formData)
+        );
       } else {
         url = this.buildIntervalURL(e, chunk);
       }
@@ -391,24 +481,45 @@ export default {
     /**
      * Divide a specified time range into n smaller [start, end] pairs
      * based on a given subset size (i.e. 2 minute subsets)
-     * 
+     *
      * Parameters:
      * - start: the start time of the full range
      * - end: the end time of the full range
      * - chunkSize: the size of each smaller constituent time range in minutes
-     * 
+     *
      * Returns:
      * - an array of {start: Date(), end: Date()} objects representing
      *   constituent chunks of the parent range
      */
-    getDateChunks(start, end, chunkSize) {
+    getDateChunks(start, end, chunkSizeMins) {
+      start = new Date(start);
+      end = new Date(end);
+      if (end < start) {
+        let swap = end;
+        end = start;
+        start = swap;
+      }
+
+      if (chunkSizeMins == null) {
+        let diffMillis = new Date(end) - new Date(start);
+        let diffDays = Math.floor(diffMillis / (24 * 60 * 60 * 1000));
+
+        if (diffDays < 7) {
+          chunkSizeMins = 5;
+        } else if (diffDays < 2 * 365) {
+          chunkSizeMins = 24 * 60;
+        } else {
+          chunkSizeMins = Math.ceil(diffDays / 1000) * 24 * 60;
+        }
+      }
+
       let result = [];
       let s = new Date(start);
       while (s < end) {
         let e = new Date(s);
-        e.setMinutes(e.getMinutes() + chunkSize);
-        result.push({start:new Date(s), end: e <= end? e : new Date(end)});
-        s.setMinutes(s.getMinutes() + chunkSize); 
+        e.setMinutes(e.getMinutes() + chunkSizeMins);
+        result.push({ start: new Date(s), end: e <= end ? e : new Date(end) });
+        s.setMinutes(s.getMinutes() + chunkSizeMins);
       }
       return result;
     },
@@ -424,27 +535,26 @@ export default {
       let targ = e.target;
       // doing this because if the user clicks on the text inside
       // the button the event target isn't the button.
-      while (targ.classList.contains('chunk-btn-wrapper') == false) {
+      while (targ.classList.contains("chunk-btn-wrapper") == false) {
         targ = targ.parentElement;
       }
-      targ.classList.add('clicked-dl-btn');
+      targ.classList.add("clicked-dl-btn");
 
       let url = this.$root.apiUrl(
-        this.$root.apiFetchPointcloudUrl(this.artifactId, 
-        {
+        this.$root.apiFetchPointcloudUrl(this.artifactId, {
           space_bounds: this.formData.space_bounds,
           time_bounds: this.normTB(chunk),
-          coerce_dt_bounds: this.formData.coerce_dt_bounds
+          coerce_dt_bounds: this.formData.coerce_dt_bounds,
         })
       );
       return url;
     },
     // Scroll Chunk Button function
     scb(x) {
-      document.querySelector('.scrolling-btn-row').scrollBy({
+      document.querySelector(".scrolling-btn-row").scrollBy({
         top: 0,
         left: x,
-        behavior: 'smooth'
+        behavior: "smooth",
       });
     },
   },
@@ -486,7 +596,9 @@ export default {
 .pcl-btns button.o-btn:first-of-type {
   margin-left: 0px;
 }
-.large-warning-ctr {height: 100%;}
+.large-warning-ctr {
+  height: 100%;
+}
 .large-warning {
   width: 100%;
   height: 100%;
@@ -552,15 +664,20 @@ export default {
   width: 50%;
   border-radius: 0px;
 }
-#l-scroll-btn, #r-scroll-btn {
+#l-scroll-btn,
+#r-scroll-btn {
   z-index: 15;
   box-shadow: 0px 0px 5px #c0c0c0;
 }
 #l-scroll-btn {
-  position: sticky; left: 0px;
+  position: sticky;
+  left: 0px;
   margin-left: 0px;
 }
-#r-scroll-btn {position: sticky; right: 0px;}
+#r-scroll-btn {
+  position: sticky;
+  right: 0px;
+}
 
 .scrolling-btn-row .clicked-dl-btn {
   border-color: #c0c0c0 !important;
@@ -577,7 +694,7 @@ export default {
 }
 .three-parent-container {
   display: none;
-  position:absolute;
+  position: absolute;
   width: 100%;
   height: 100%;
   /* max-height: 400px; */
@@ -585,7 +702,7 @@ export default {
 }
 .three-parent-container.three-full-screen {
   position: fixed;
-  width: calc(100vw );
+  width: calc(100vw);
   height: calc(100vh - 48px);
   top: 48px;
   z-index: 1000;
@@ -594,7 +711,8 @@ export default {
 .three-parent-container.three-show {
   display: block;
 }
-.o-ctrl-input, .o-dpck {
+.o-ctrl-input,
+.o-dpck {
   flex: 1;
 }
 .reset-button {
@@ -602,12 +720,12 @@ export default {
   background: white;
   padding: 0px 5px;
 }
-.fade-enter-active, .fade-leave-active {
+.fade-enter-active,
+.fade-leave-active {
   transition: opacity 0.5s;
 }
-.fade-enter-from, .fade-leave-to {
+.fade-enter-from,
+.fade-leave-to {
   transition: opacity 0.3s;
 }
-
 </style>
-
