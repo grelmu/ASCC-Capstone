@@ -1,3 +1,17 @@
+# 0.10.0
+
+New Features:
+
+* **Improved artifact provenance viewer**
+* Admin "Configure" Interface
+* **Editable schemas for projects**
+* Point cloud insertion endpoint
+  * Improved API docs
+
+Bugfixes:
+
+* Annoying double-login issue
+
 # 0.9.1
 
 New Features:

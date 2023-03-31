@@ -45,7 +45,9 @@ $ docker pull docker-images.composites.maine.edu:5000/ascc/mppw-jupyterhub:$MPPW
 The full MPPW stack is defined in a configurable `docker-compose` file - this file is included in the `ascc/mppw` images.  To extract it, run:
 
 ```sh
-$ docker run --rm --entrypoint cat docker-images.composites.maine.edu:5000/ascc/mppw:$MPPW_VERSION ./compose.yml > mppw-stack.yml
+$ docker run --rm --entrypoint cat \
+    docker-images.composites.maine.edu:5000/ascc/mppw:$MPPW_VERSION \
+      ./compose.yml > mppw-stack.yml
 ```
 
 ### Deploy warehouse stack
