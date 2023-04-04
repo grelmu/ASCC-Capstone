@@ -2,6 +2,7 @@ import fastapi
 import fastapi.encoders
 import asyncio
 import pydantic
+import json_stream
 import typing
 from typing import List, Tuple, Union, Any
 
@@ -143,6 +144,16 @@ async def sync_body_stream(request: fastapi.Request):
             return
 
     return gen_from_async_loop()
+
+def json_string_gen_to_json_values_gen(json_string_gen):
+    return (stream_json_to_value(p) for p in json_stream.load(json_string_gen))
+
+def stream_json_to_value(maybe_value):
+    if isinstance(maybe_value, json_stream.base.StreamingJSONObject):
+        return dict((k, stream_json_to_value(v)) for k, v in maybe_value.items())
+    elif isinstance(maybe_value, json_stream.base.StreamingJSONList):
+        return list(stream_json_to_value(v) for v in maybe_value)
+    return maybe_value
 
 
 class StreamingJsonResponse(fastapi.responses.StreamingResponse):

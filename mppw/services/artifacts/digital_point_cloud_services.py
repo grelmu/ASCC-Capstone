@@ -254,10 +254,10 @@ class PointCloudServices(ArtifactServices):
                 dbvox_collection.insert_many(next_batch)
                 next_batch.clear()
 
-            for point_doc in [
+            for point_doc in (
                 PointCloudServices._stream_json_to_value(p)
                 for p in json_stream.load(json_gen)
-            ]:
+            ):
 
                 point_doc.setdefault("ctx", {})
                 # Strictly write points in UTC datetime

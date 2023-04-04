@@ -2,7 +2,7 @@ import fastapi
 from fastapi import Security, Depends
 import starlette.background
 import typing
-from typing import Union, List
+from typing import Union, List, Optional
 import pydantic
 import json
 import arrow
@@ -562,6 +562,7 @@ def create_router(app):
             artifact, PointCloudServices
         )
 
+        # TODO: Pull out body stream stuff from service internals
         services.insert(artifact, body_stream)
         return True
 
@@ -683,14 +684,56 @@ def create_router(app):
         else:
             raise fastapi.exceptions.HTTPException(fastapi.status.HTTP_400_BAD_REQUEST)
 
-    from .services.artifacts.digital_time_series_services import TimeSeriesServices
+    from .services.artifacts.digital_time_series_services import (
+        TimeSeriesServices,
+        TimeSeriesEvent,
+        TimeSeriesStats,
+    )
 
-    @router.get("/{id}/services/time-series/sample")
+    @router.post("/{id}/services/time-series/insert", response_model=bool)
+    def time_series_insert(
+        id: str,
+        # For documentation only
+        body: typing.List[typing.Union[TimeSeriesEvent, typing.Any]] = fastapi.Body(
+            None
+        ),
+        body_stream=fastapi.Depends(endpoints.sync_body_stream),
+        user: security.ScopedUser = Security(
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
+        ),
+        service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
+    ):
+        """
+        Add events to a time series artifact.
+
+        Events are specified in the body of the request as a list of TimeSeriesEvents -
+        see schema for more details.  Alternately, raw events of any form can be inserted
+        in the time series assuming an initialized "dt_field" for the series or default
+        "stamp", "timestamp", or "ts" fields.
+
+        Streaming insertion is supported to manage large numbers of inserts.
+        Currently only JSON inserts are supported.
+        """
+
+        artifact: models.Artifact = read(id, user, service_layer.repo_layer)
+        services: TimeSeriesServices = service_layer.artifact_services_for(
+            artifact, TimeSeriesServices
+        )
+
+        ts_events = endpoints.json_string_gen_to_json_values_gen(body_stream)
+        services.insert(artifact, ts_events)
+        return True
+
+    @router.get(
+        "/{id}/services/time-series/sample", response_model=List[TimeSeriesEvent]
+    )
     def time_series_sample(
         id: str,
         time_bounds: str = None,
         limit: int = 0,
         est_limit_bytes: int = 0,
+        inclusive_min: bool = True,
+        inclusive_max: bool = True,
         user: security.ScopedUser = Security(
             request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
@@ -703,12 +746,18 @@ def create_router(app):
         )
 
         time_bounds = json.loads(time_bounds)
-        time_bounds = tuple(arrow.get(bound).datetime for bound in time_bounds)
 
-        cursor = services.sample(artifact, time_bounds, limit, est_limit_bytes)
+        cursor = services.sample(
+            artifact,
+            time_bounds,
+            limit=limit,
+            est_limit_bytes=est_limit_bytes,
+            inclusive_min=inclusive_min,
+            inclusive_max=inclusive_max,
+        )
         return endpoints.StreamingJsonResponse(cursor)
 
-    @router.get("/{id}/services/time-series/bounds")
+    @router.get("/{id}/services/time-series/bounds", response_model=Optional[List])
     def time_series_bounds(
         id: str,
         user: security.ScopedUser = Security(
@@ -722,8 +771,25 @@ def create_router(app):
             artifact, TimeSeriesServices
         )
 
-        bounds = services.get_bounds(artifact)
-        bounds = [str(arrow.get(bounds[0])), str(arrow.get(bounds[1]))]
-        return bounds
+        return services.get_bounds(artifact)
+
+    @router.get(
+        "/{id}/services/time-series/stats",
+        response_model=TimeSeriesStats,
+    )
+    def time_series_stats(
+        id: str,
+        user: security.ScopedUser = Security(
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
+        ),
+        service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
+    ):
+
+        artifact: models.Artifact = read(id, user, service_layer.repo_layer)
+
+        service: TimeSeriesServices = service_layer.artifact_services_for(
+            artifact, TimeSeriesServices
+        )
+        return service.stats(artifact)
 
     return router

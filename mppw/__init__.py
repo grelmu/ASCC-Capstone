@@ -8,7 +8,6 @@ except:
 
 try:
     distribution = importlib_metadata.Distribution.from_name(__name__)
-    print(distribution.locate_file("MPPW_RELEASE_NOTES.md"))
     with open(distribution.locate_file("MPPW_RELEASE_NOTES.md"), "r") as f:
         RELEASE_NOTES = f.read()
 except:
