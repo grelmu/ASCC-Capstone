@@ -21,7 +21,16 @@ class UnknownTimeSeriesFieldException(Exception):
 class TimeSeriesEvent(models.BaseJsonModel):
 
     """
-    Time series consist of arbitrary event data at a particular time
+    An event in time
+
+    Consists of a "t" timestamp and an (optional) "ctx" (context) object
+    with any event data.
+
+    The datetime timestamp is, by default, stored in datetime format and
+    serialized as an ISO datetime string.  Other timestamp formats such as
+    numeric timestamps are possible and inferred if the time series has not
+    been initialized with a standard timestamp field.  Mixing formats is
+    not supported.
     """
 
     # Usually we should be datetime.datetime, but for compatibility with *any* time series we can
@@ -37,6 +46,13 @@ class TimeSeriesEvent(models.BaseJsonModel):
 
 
 class TimeSeriesStats(models.BaseJsonModel):
+
+    """
+    Information about storage of a time series artifact
+
+    Consists of basic size and storage information, as well as any scheme-specific statistics.
+    """
+
     size_bytes: int
     storage_url: str
     storage_stats: Any

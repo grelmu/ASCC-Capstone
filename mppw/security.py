@@ -297,7 +297,11 @@ def create_router(app):
         access_token: str
         token_type: str
 
-    @router.post("/" + LOCAL_TOKEN_ENDPOINT, response_model=Token)
+    @router.post(
+        "/" + LOCAL_TOKEN_ENDPOINT,
+        response_model=Token,
+        tags=["security"],
+    )
     def post_login_for_local_access_token(
         form_data: OAuth2PasswordRequestForm = Depends(OAuth2PasswordRequestForm),
         repo_layer=Depends(request_repo_layer(app)),
@@ -337,7 +341,11 @@ def create_router(app):
 
         return {"access_token": access_token, "token_type": "bearer"}
 
-    @router.post("/token-to-cookie", response_model=bool)
+    @router.post(
+        "/token-to-cookie",
+        response_model=bool,
+        tags=["security"],
+    )
     def token_to_cookie(
         token: str = Depends(local_oauth2_scheme),
         response: fastapi.Response = fastapi.Response(None),
@@ -345,7 +353,11 @@ def create_router(app):
         response.set_cookie(key=local_oauth2_scheme.cookie_name, value=token)
         return True
 
-    @router.post("/logout", response_model=bool)
+    @router.post(
+        "/logout",
+        response_model=bool,
+        tags=["security"],
+    )
     def logout(response: fastapi.Response = fastapi.Response(None)):
         response.delete_cookie(key=local_oauth2_scheme.cookie_name)
         return True
@@ -354,6 +366,7 @@ def create_router(app):
         "/users/",
         response_model=models.SafeUser,
         status_code=fastapi.status.HTTP_201_CREATED,
+        tags=["users"],
     )
     def create(
         new_user: NewUser,
@@ -367,11 +380,19 @@ def create_router(app):
 
         return repo_layer.users.create(models.User(**new_user_dict))
 
-    @router.get("/users/me", response_model=ScopedUser)
+    @router.get(
+        "/users/me",
+        response_model=ScopedUser,
+        tags=["users"],
+    )
     def me(current_user: ScopedUser = Security(request_user(app))):
         return current_user
 
-    @router.get("/users/{id}", response_model=models.SafeUser)
+    @router.get(
+        "/users/{id}",
+        response_model=models.SafeUser,
+        tags=["users"],
+    )
     def read(
         id: str,
         current_user: ScopedUser = Security(request_user(app), scopes=[ADMIN_SCOPE]),
@@ -384,7 +405,11 @@ def create_router(app):
 
         return result
 
-    @router.get("/users/", response_model=typing.List[models.SafeUser])
+    @router.get(
+        "/users/",
+        response_model=typing.List[models.SafeUser],
+        tags=["users"],
+    )
     def query(
         username: str = None,
         allowed_scopes: List[str] = None,
@@ -406,7 +431,11 @@ def create_router(app):
             )
         )
 
-    @router.patch("/users/{id}", response_model=bool)
+    @router.patch(
+        "/users/{id}",
+        response_model=bool,
+        tags=["users"],
+    )
     def patch(
         id: str,
         changes: List[endpoints.Change],
@@ -433,7 +462,11 @@ def create_router(app):
 
         return True
 
-    @router.delete("/users/{id}", response_model=bool)
+    @router.delete(
+        "/users/{id}",
+        response_model=bool,
+        tags=["users"],
+    )
     def delete(
         id: str,
         preserve_data: bool = True,
@@ -450,7 +483,11 @@ def create_router(app):
 
         return True
 
-    @router.get("/scopes/", response_model=typing.Dict)
+    @router.get(
+        "/scopes/",
+        response_model=typing.Dict,
+        tags=["security"],
+    )
     def query_scopes(
         current_user: ScopedUser = Security(request_user(app)),
         repo_layer=Depends(request_repo_layer(app)),

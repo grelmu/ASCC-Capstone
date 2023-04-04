@@ -10,7 +10,31 @@ from mppw import __version__ as __mppw_version__
 
 def create_app(storage_layer):
 
-    app = fastapi.FastAPI()
+    app = fastapi.FastAPI(
+        title="Material Process-Property Warehouse API",
+        version=__mppw_version__,
+        openapi_tags=[
+            {"name": "app"},
+            {
+                "name": "security",
+            },
+            {
+                "name": "users",
+            },
+            {
+                "name": "projects",
+            },
+            {
+                "name": "artifacts",
+            },
+            {
+                "name": "operations",
+            },
+            {
+                "name": "schema",
+            },
+        ],
+    )
 
     #
     # Setup storage basics
@@ -35,13 +59,22 @@ def create_app(storage_layer):
     # Enable compression when client supports it
     app.add_middleware(fastapi.middleware.gzip.GZipMiddleware, minimum_size=10 * 1024)
 
-    @app.get("/")
+    @app.get(
+        "/",
+        tags=["app"],
+    )
     def root():
         return fastapi.responses.RedirectResponse("/ui")
 
-    @app.get("/ui")
-    @app.get("/ui/")
-    def ui_root():
+    @app.get(
+        "/ui",
+        tags=["app"],
+    )
+    @app.get(
+        "/ui/",
+        tags=["app"],
+    )
+    def web_interface_root():
         return fastapi.responses.RedirectResponse("/ui/index.html")
 
     app.mount(
@@ -52,7 +85,10 @@ def create_app(storage_layer):
         name="ui",
     )
 
-    @app.get("/version")
+    @app.get(
+        "/version",
+        tags=["app"],
+    )
     def version(with_release_notes=False):
         version_info = {"version": __mppw_version__}
         if with_release_notes:
