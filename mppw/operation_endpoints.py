@@ -41,6 +41,7 @@ def create_router(app):
         "/",
         response_model=models.Operation,
         status_code=fastapi.status.HTTP_201_CREATED,
+        tags=["operations"],
     )
     def create(
         operation: models.Operation,
@@ -54,7 +55,11 @@ def create_router(app):
 
         return repo_layer.operations.create(operation)
 
-    @router.get("/{id}", response_model=models.Operation)
+    @router.get(
+        "/{id}",
+        response_model=models.Operation,
+        tags=["operations"],
+    )
     def read(
         id: str,
         user: security.ScopedUser = Security(
@@ -72,7 +77,11 @@ def create_router(app):
 
         return result
 
-    @router.get("/", response_model=List[models.Operation])
+    @router.get(
+        "/",
+        response_model=List[models.Operation],
+        tags=["operations"],
+    )
     def query(
         project_ids: List[str] = fastapi.Query(None),
         name: str = fastapi.Query(None),
@@ -109,7 +118,11 @@ def create_router(app):
         results: List[models.Operation]
         total: int
 
-    @router.get("/paged/", response_model=PaginatedOperations)
+    @router.get(
+        "/paged/",
+        response_model=PaginatedOperations,
+        tags=["operations"],
+    )
     def paged_query(
         project_ids: List[str] = fastapi.Query(None),
         name: str = fastapi.Query(None),
@@ -157,7 +170,11 @@ def create_router(app):
 
         return PaginatedOperations(results=list(results), total=total)
 
-    @router.put("/{id}", response_model=bool)
+    @router.put(
+        "/{id}",
+        response_model=bool,
+        tags=["operations"],
+    )
     def update(
         id: str,
         operation: models.Operation,
@@ -180,7 +197,11 @@ def create_router(app):
 
         return True
 
-    @router.patch("/{id}", response_model=bool)
+    @router.patch(
+        "/{id}",
+        response_model=bool,
+        tags=["operations"],
+    )
     def patch(
         id: str,
         changes: List[endpoints.Change],
@@ -210,7 +231,11 @@ def create_router(app):
 
         return True
 
-    @router.delete("/{id}", response_model=bool)
+    @router.delete(
+        "/{id}",
+        response_model=bool,
+        tags=["operations"],
+    )
     def delete(
         id: str,
         preserve_data: bool = True,
@@ -235,7 +260,11 @@ def create_router(app):
     # Services
     #
 
-    @router.post("/{id}/services/operation/init", response_model=models.Operation)
+    @router.post(
+        "/{id}/services/operation/init",
+        response_model=models.Operation,
+        tags=["operations"],
+    )
     def init(
         id: str,
         args: dict = {},
@@ -256,6 +285,7 @@ def create_router(app):
     @router.get(
         "/{id}/services/operation/schema",
         response_model=services.ResolvedSchema,
+        tags=["operations"],
     )
     def get_schema(
         id: str,
@@ -280,7 +310,7 @@ def create_router(app):
     # Artifact attachments
     #
 
-    @router.post("/{id}/artifacts/", response_model=bool)
+    @router.post("/{id}/artifacts/", response_model=bool, tags=["operations"])
     def attach_artifact(
         id: str,
         attachment: models.AttachmentGraph.AttachmentNode,
@@ -302,6 +332,7 @@ def create_router(app):
     @router.get(
         "/{id}/artifacts/",
         response_model=List[models.AttachmentGraph.AttachmentNode],
+        tags=["operations"],
     )
     def query_artifacts(
         id: str,
@@ -338,7 +369,11 @@ def create_router(app):
             ),
         )
 
-    @router.post("/{id}/artifacts/claim", response_model=bool)
+    @router.post(
+        "/{id}/artifacts/claim",
+        response_model=bool,
+        tags=["operations"],
+    )
     def claim_artifact(
         id: str,
         attachment: models.AttachmentGraph.AttachmentNode,
@@ -357,7 +392,11 @@ def create_router(app):
 
         return True
 
-    @router.delete("/{id}/artifacts/", response_model=bool)
+    @router.delete(
+        "/{id}/artifacts/",
+        response_model=bool,
+        tags=["operations"],
+    )
     def detach_artifact(
         id: str,
         attachment: models.AttachmentGraph.AttachmentNode,
@@ -383,6 +422,7 @@ def create_router(app):
     @router.get(
         "/{id}/artifacts/all",
         response_model=List[services.OperationServices.AttachedArtifact],
+        tags=["operations"],
     )
     def all_artifacts(
         id: str,
@@ -399,6 +439,7 @@ def create_router(app):
     @router.get(
         "/{id}/artifacts/frame_candidates",
         response_model=List[services.OperationServices.AttachedArtifact],
+        tags=["operations"],
     )
     def frame_candidates(
         id: str,
@@ -431,7 +472,9 @@ def create_router(app):
         )
 
     @router.get(
-        "/{id}/artifacts/attachments/default", response_model=models.AnyArtifact
+        "/{id}/artifacts/attachments/default",
+        response_model=models.AnyArtifact,
+        tags=["operations"],
     )
     def get_default_attachments(
         id: str,
@@ -452,6 +495,7 @@ def create_router(app):
     @router.get(
         "/{id}/services/operation/provenance/steps",
         response_model=endpoints.ProvenanceGraphModel,
+        tags=["operations"],
     )
     def get_provenance_steps(
         id: str,

@@ -32,6 +32,7 @@ def create_router(app):
         "/user/",
         response_model=models.StoredSchema,
         status_code=fastapi.status.HTTP_201_CREATED,
+        tags=["schema"],
     )
     def create(
         stored_schema: models.StoredSchema,
@@ -47,7 +48,11 @@ def create_router(app):
 
         return repo_layer.user_schemas.create(stored_schema)
 
-    @router.get("/user/{id}", response_model=models.StoredSchema)
+    @router.get(
+        "/user/{id}",
+        response_model=models.StoredSchema,
+        tags=["schema"],
+    )
     def read(
         id: str,
         user: security.ScopedUser = Security(
@@ -64,7 +69,11 @@ def create_router(app):
 
         return result
 
-    @router.get("/user/", response_model=List[models.StoredSchema])
+    @router.get(
+        "/user/",
+        response_model=List[models.StoredSchema],
+        tags=["schema"],
+    )
     def query(
         project_ids: List[str] = fastapi.Query(None),
         type_urn: str = None,
@@ -94,7 +103,11 @@ def create_router(app):
 
         return list(result)
 
-    @router.patch("/user/{id}", response_model=bool)
+    @router.patch(
+        "/user/{id}",
+        response_model=bool,
+        tags=["schema"],
+    )
     def patch(
         id: str,
         changes: List[endpoints.Change],
@@ -132,7 +145,11 @@ def create_router(app):
 
         return True
 
-    @router.delete("/user/{id}", response_model=bool)
+    @router.delete(
+        "/user/{id}",
+        response_model=bool,
+        tags=["schema"],
+    )
     def delete(
         id: str,
         preserve_data: bool = True,
@@ -157,7 +174,11 @@ def create_router(app):
     # Module schemas
     #
 
-    @router.get("/module/", response_model=List[models.StoredSchema])
+    @router.get(
+        "/module/",
+        response_model=List[models.StoredSchema],
+        tags=["schema"],
+    )
     def query(
         module_names: List[str] = None,
         type_urn: str = None,
