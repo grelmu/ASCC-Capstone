@@ -62,6 +62,10 @@ def logger_reconfig():
                     "handlers": ["default"],
                     "level": "WARN",
                 },
+                "mkdocs": {
+                    "handlers": ["default"],
+                    "level": LOG_LEVEL,
+                },
             },
         }
     )
@@ -75,3 +79,37 @@ try:
     from . import pcl
 except ImportError as ex:
     logger.warn(f"Could not load PCL bindings:\n{ex}")
+
+CACHE_DIR = os.environ.get("MPPW_CACHE_DIR", ".mppw/cache")
+
+#
+# Rebuild guide files if required
+#
+
+_GUIDE_DIR = os.path.join(os.path.dirname(__file__), "guide")
+_GUIDE_PREBUILD_SITE_DIR = os.path.join(_GUIDE_DIR, "site")
+_GUIDE_CACHE_SITE_DIR = os.path.join(CACHE_DIR, "guide", "site")
+_GUIDE_SITE_FORCE_REBUILD = (
+    os.environ.get("MPPW_GUIDE_SITE_FORCE_REBUILD", "false").lower() == "true"
+)
+
+if os.path.exists(_GUIDE_PREBUILD_SITE_DIR) and not _GUIDE_SITE_FORCE_REBUILD:
+    GUIDE_SITE_DIR = _GUIDE_PREBUILD_SITE_DIR
+else:
+    GUIDE_SITE_DIR = _GUIDE_CACHE_SITE_DIR
+    if not os.path.exists(GUIDE_SITE_DIR) or _GUIDE_SITE_FORCE_REBUILD:
+
+        import shutil
+
+        shutil.rmtree(GUIDE_SITE_DIR, ignore_errors=True)
+        os.makedirs(GUIDE_SITE_DIR, exist_ok=True)
+
+        import mkdocs.config
+        import mkdocs.commands.build
+
+        config = mkdocs.config.load_config(
+            os.path.join(os.path.dirname(__file__), "guide", "mkdocs.yml")
+        )
+        config.docs_dir = os.path.join(_GUIDE_DIR, "docs")
+        config.site_dir = GUIDE_SITE_DIR
+        mkdocs.commands.build.build(config)

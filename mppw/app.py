@@ -4,7 +4,7 @@ import fastapi
 import fastapi.staticfiles
 import fastapi.middleware.gzip
 
-from mppw import logger, RELEASE_NOTES
+from mppw import logger, RELEASE_NOTES, GUIDE_SITE_DIR
 from mppw import __version__ as __mppw_version__
 
 
@@ -83,6 +83,23 @@ def create_app(storage_layer):
             directory=os.path.join(os.path.dirname(__file__), "ui")
         ),
         name="ui",
+    )
+
+    @app.get(
+        "/guide",
+        tags=["app"],
+    )
+    @app.get(
+        "/guide/",
+        tags=["app"],
+    )
+    def help_root():
+        return fastapi.responses.RedirectResponse("/guide/index.html")
+
+    app.mount(
+        "/guide",
+        fastapi.staticfiles.StaticFiles(directory=GUIDE_SITE_DIR, html=True),
+        name="guide",
     )
 
     @app.get(
