@@ -2,7 +2,7 @@ import fastapi
 from fastapi import Security, Depends
 import starlette.background
 import typing
-from typing import Union, List
+from typing import Union, List, Optional
 import pydantic
 import json
 import arrow
@@ -31,7 +31,9 @@ from . import endpoints
 
 def create_router(app):
 
-    router = fastapi.APIRouter(prefix="/api/artifacts")
+    router = fastapi.APIRouter(
+        prefix="/api/artifacts",
+    )
 
     #
     # CRUD
@@ -41,6 +43,7 @@ def create_router(app):
         "/",
         response_model=models.AnyArtifact,
         status_code=fastapi.status.HTTP_201_CREATED,
+        tags=["artifacts"],
     )
     def create(
         artifact: models.AnyArtifact,
@@ -55,7 +58,11 @@ def create_router(app):
         art_repo = repo_layer.artifacts
         return art_repo.create(artifact)
 
-    @router.get("/{id}", response_model=models.AnyArtifact)
+    @router.get(
+        "/{id}",
+        response_model=models.AnyArtifact,
+        tags=["artifacts"],
+    )
     def read(
         id: str,
         user: security.ScopedUser = Security(
@@ -73,7 +80,11 @@ def create_router(app):
 
         return result
 
-    @router.get("/", response_model=List[models.AnyArtifact])
+    @router.get(
+        "/",
+        response_model=List[models.AnyArtifact],
+        tags=["artifacts"],
+    )
     def query(
         project_ids: List[str] = fastapi.Query(None),
         name: str = fastapi.Query(None),
@@ -103,7 +114,11 @@ def create_router(app):
         results: List[models.Artifact]
         total: int
 
-    @router.get("/paged/", response_model=PaginatedArtifacts)
+    @router.get(
+        "/paged/",
+        response_model=PaginatedArtifacts,
+        tags=["artifacts"],
+    )
     def paged_query(
         project_ids: List[str] = fastapi.Query(None),
         name: str = fastapi.Query(None),
@@ -145,7 +160,11 @@ def create_router(app):
 
         return PaginatedArtifacts(results=list(results), total=total)
 
-    @router.put("/{id}", response_model=bool)
+    @router.put(
+        "/{id}",
+        response_model=bool,
+        tags=["artifacts"],
+    )
     def update(
         id: str,
         artifact: models.AnyArtifact,
@@ -168,7 +187,11 @@ def create_router(app):
 
         return True
 
-    @router.patch("/{id}", response_model=bool)
+    @router.patch(
+        "/{id}",
+        response_model=bool,
+        tags=["artifacts"],
+    )
     def patch(
         id: str,
         changes: List[endpoints.Change],
@@ -198,7 +221,11 @@ def create_router(app):
 
         return True
 
-    @router.delete("/{id}", response_model=bool)
+    @router.delete(
+        "/{id}",
+        response_model=bool,
+        tags=["artifacts"],
+    )
     def delete(
         id: str,
         preserve_data: bool = True,
@@ -223,7 +250,11 @@ def create_router(app):
     # Services
     #
 
-    @router.post("/{id}/services/artifact/init", response_model=models.AnyArtifact)
+    @router.post(
+        "/{id}/services/artifact/init",
+        response_model=models.AnyArtifact,
+        tags=["artifacts"],
+    )
     def init(
         id: str,
         args: dict = {},
@@ -231,11 +262,22 @@ def create_router(app):
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
 
+        """
+        Initializes an artifact in a type-specific way using a set of parameters specified
+        in the body of the request.
+
+        See specializations of init at /services/<type>/init for more details on parameters.
+        """
+
         artifact: models.Artifact = read(id, user, service_layer.repo_layer)
         services = service_layer.artifact_services_for(artifact)
         return services.init(artifact, **args)
 
-    @router.get("/{id}/services/artifact/parent", response_model=models.Operation)
+    @router.get(
+        "/{id}/services/artifact/parent",
+        response_model=models.Operation,
+        tags=["artifacts"],
+    )
     def parent(
         id: str,
         user: models.User = Security(request_user(app), scopes=[READ_PROVENANCE_SCOPE]),
@@ -252,6 +294,7 @@ def create_router(app):
     @router.get(
         "/{id}/services/artifact/schema",
         response_model=services.ResolvedSchema,
+        tags=["artifacts"],
     )
     def get_schema(
         id: str,
@@ -275,6 +318,7 @@ def create_router(app):
     @router.get(
         "/{id}/services/artifact/digital/json_schema",
         response_model=typing.Optional[dict],
+        tags=["artifacts"],
     )
     def json_schema(
         id: str,
@@ -292,6 +336,7 @@ def create_router(app):
     @router.get(
         "/{id}/services/artifact/provenance",
         response_model=endpoints.ProvenanceGraphModel,
+        tags=["artifacts"],
     )
     def get_provenance(
         id: str,
@@ -311,6 +356,7 @@ def create_router(app):
     @router.get(
         "/{id}/services/artifact/frame_graph",
         response_model=endpoints.ArtifactFrameGraphModel,
+        tags=["artifacts"],
     )
     def get_frame_graph(
         id: str,
@@ -330,6 +376,7 @@ def create_router(app):
     @router.get(
         "/{id}/services/artifact/frame_path",
         response_model=typing.Optional[endpoints.ArtifactFramePathModel],
+        tags=["artifacts"],
     )
     def get_frame_path(
         id: str,
@@ -350,6 +397,7 @@ def create_router(app):
 
     @router.get(
         "/{id}/services/file/download",
+        tags=["artifacts"],
     )
     def file_download(
         id: str,
@@ -378,6 +426,7 @@ def create_router(app):
 
     @router.get(
         "/{id}/services/file-bucket/download",
+        tags=["artifacts"],
     )
     def file_bucket_download(
         id: str,
@@ -420,6 +469,7 @@ def create_router(app):
         "/{id}/services/file-bucket/upload",
         response_model=str,
         status_code=fastapi.status.HTTP_201_CREATED,
+        tags=["artifacts"],
     )
     def file_bucket_upload(
         id: str,
@@ -445,7 +495,9 @@ def create_router(app):
         return service.upload(artifact, path, SyncUploadFile(file), replace=replace)
 
     @router.post(
-        "/{id}/services/file-bucket/ls", response_model=List[repositories.BucketFile]
+        "/{id}/services/file-bucket/ls",
+        response_model=List[repositories.BucketFile],
+        tags=["artifacts"],
     )
     def file_bucket_ls(
         id: str,
@@ -466,6 +518,7 @@ def create_router(app):
     @router.get(
         "/{id}/services/database-bucket/stats",
         response_model=repositories.DatabaseBucketStats,
+        tags=["artifacts"],
     )
     def database_bucket(
         id: str,
@@ -486,7 +539,11 @@ def create_router(app):
         path: str
         new_path: str
 
-    @router.post("/{id}/services/file-bucket/rename", response_model=bool)
+    @router.post(
+        "/{id}/services/file-bucket/rename",
+        response_model=bool,
+        tags=["artifacts"],
+    )
     def file_bucket_rename(
         id: str,
         rename_paths: RenamePaths,
@@ -506,7 +563,11 @@ def create_router(app):
 
         return True
 
-    @router.post("/{id}/services/file-bucket/delete", response_model=bool)
+    @router.post(
+        "/{id}/services/file-bucket/delete",
+        response_model=bool,
+        tags=["artifacts"],
+    )
     def file_bucket_delete(
         id: str,
         path: str = fastapi.Body(None),
@@ -536,7 +597,30 @@ def create_router(app):
         XyztPoint,
     )
 
-    @router.post("/{id}/services/point-cloud/insert", response_model=bool)
+    @router.post(
+        "/{id}/services/point-cloud/init",
+        response_model=models.AnyArtifact,
+        tags=["artifacts"],
+    )
+    def point_cloud_init(
+        id: str,
+        args: dict = {},
+        user: models.User = Security(request_user(app), scopes=[MODIFY_ARTIFACT_SCOPE]),
+        service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
+    ):
+        """
+        Initializes a point-cloud artifact and allocates storage from a parent operation.
+
+        Currently the artifact is always initialized using a mongodb+dbvox storage backend.
+        """
+
+        return init(id, args, user, service_layer)
+
+    @router.post(
+        "/{id}/services/point-cloud/insert",
+        response_model=bool,
+        tags=["artifacts"],
+    )
     def point_cloud_insert(
         id: str,
         # For documentation only
@@ -562,10 +646,15 @@ def create_router(app):
             artifact, PointCloudServices
         )
 
+        # TODO: Pull out body stream stuff from service internals
         services.insert(artifact, body_stream)
         return True
 
-    @router.get("/{id}/services/point-cloud/points", response_model=List[XyztPoint])
+    @router.get(
+        "/{id}/services/point-cloud/points",
+        response_model=List[XyztPoint],
+        tags=["artifacts"],
+    )
     def point_cloud_points(
         id: str,
         space_bounds: str,
@@ -604,7 +693,11 @@ def create_router(app):
         point_cursor = services.sample(artifact, space_bounds, time_bounds)
         return endpoints.StreamingJsonResponse(point_cursor)
 
-    @router.get("/{id}/services/point-cloud/bounds", response_model=List[List])
+    @router.get(
+        "/{id}/services/point-cloud/bounds",
+        response_model=List[List],
+        tags=["artifacts"],
+    )
     def point_cloud_bounds(
         id: str,
         user: security.ScopedUser = Security(
@@ -626,7 +719,10 @@ def create_router(app):
 
         return meta
 
-    @router.get("/{id}/services/point-cloud/cloudfile")
+    @router.get(
+        "/{id}/services/point-cloud/cloudfile",
+        tags=["artifacts"],
+    )
     def point_cloud_cloudfile(
         id: str,
         space_bounds: str,
@@ -683,19 +779,108 @@ def create_router(app):
         else:
             raise fastapi.exceptions.HTTPException(fastapi.status.HTTP_400_BAD_REQUEST)
 
-    from .services.artifacts.digital_time_series_services import TimeSeriesServices
+    from .services.artifacts.digital_time_series_services import (
+        TimeSeriesServices,
+        TimeSeriesEvent,
+        TimeSeriesStats,
+    )
 
-    @router.get("/{id}/services/time-series/sample")
-    def time_series_sample(
+    @router.post(
+        "/{id}/services/time-series/init",
+        response_model=models.AnyArtifact,
+        tags=["artifacts"],
+    )
+    def time_series_init(
         id: str,
-        time_bounds: str = None,
-        limit: int = 0,
-        est_limit_bytes: int = 0,
+        args: dict = {},
+        user: models.User = Security(request_user(app), scopes=[MODIFY_ARTIFACT_SCOPE]),
+        service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
+    ):
+        """
+        Initializes a time-series artifact and allocates storage from a parent operation
+        or specified other operation.
+
+        Parameters are:
+        - scheme: the type of time series to create, defaults to "mongodb+ts"
+        - parent_operation_id: overrides the operation whose :process-data is used for storage
+
+        Parameters for mongodb+ts:
+        - parent_mongodb_url: use a different mongodb instance for storage
+        - dt_field: the timestamp field of stored events - defaults to "stamp", and will automatically infer "timestamp", "ts", or "poststamp"
+        - dt_encoding: the timestamp type of stored events - defaults to "datetime"
+        """
+
+        return init(id, args, user, service_layer)
+
+    @router.post(
+        "/{id}/services/time-series/insert",
+        response_model=bool,
+        tags=["artifacts"],
+    )
+    def time_series_insert(
+        id: str,
+        # For documentation only
+        body: typing.List[typing.Union[TimeSeriesEvent, typing.Any]] = fastapi.Body(
+            None
+        ),
+        body_stream=fastapi.Depends(endpoints.sync_body_stream),
         user: security.ScopedUser = Security(
             request_user(app), scopes=[READ_PROVENANCE_SCOPE]
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
+        """
+        Add events to a time series artifact.
+
+        Events are specified in the body of the request as a list of TimeSeriesEvents -
+        see schema for more details.  Alternately, raw events of any form can be inserted
+        in the time series assuming an initialized "dt_field" for the series or default
+        "stamp", "timestamp", or "ts" fields.
+
+        Streaming insertion is supported to manage large numbers of inserts.
+        Currently only JSON inserts are supported.
+        """
+
+        artifact: models.Artifact = read(id, user, service_layer.repo_layer)
+        services: TimeSeriesServices = service_layer.artifact_services_for(
+            artifact, TimeSeriesServices
+        )
+
+        ts_events = endpoints.json_string_gen_to_json_values_gen(body_stream)
+        services.insert(artifact, ts_events)
+        return True
+
+    @router.get(
+        "/{id}/services/time-series/sample",
+        response_model=List[TimeSeriesEvent],
+        tags=["artifacts"],
+    )
+    def time_series_sample(
+        id: str,
+        time_bounds: str = None,
+        limit: int = 0,
+        est_limit_bytes: int = 0,
+        inclusive_min: bool = True,
+        inclusive_max: bool = True,
+        user: security.ScopedUser = Security(
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
+        ),
+        service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
+    ):
+
+        """
+        Search for events in a time series artifact.
+
+        Datetime bounds are specified by a JSON string encoding an array of:
+        [min_time, max_time].
+
+        See TimeSeriesEvent schema for supported time bound types and format.
+
+        The returned events can be limited to a certain number or to a certain (estimated) data size.
+
+        Streaming results are supported to manage large numbers of points.
+        Currently only JSON output is supported.
+        """
 
         artifact: models.DigitalArtifact = read(id, user, service_layer.repo_layer)
         services: TimeSeriesServices = service_layer.artifact_services_for(
@@ -703,12 +888,22 @@ def create_router(app):
         )
 
         time_bounds = json.loads(time_bounds)
-        time_bounds = tuple(arrow.get(bound).datetime for bound in time_bounds)
 
-        cursor = services.sample(artifact, time_bounds, limit, est_limit_bytes)
+        cursor = services.sample(
+            artifact,
+            time_bounds,
+            limit=limit,
+            est_limit_bytes=est_limit_bytes,
+            inclusive_min=inclusive_min,
+            inclusive_max=inclusive_max,
+        )
         return endpoints.StreamingJsonResponse(cursor)
 
-    @router.get("/{id}/services/time-series/bounds")
+    @router.get(
+        "/{id}/services/time-series/bounds",
+        response_model=Optional[List],
+        tags=["artifacts"],
+    )
     def time_series_bounds(
         id: str,
         user: security.ScopedUser = Security(
@@ -716,14 +911,44 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
+        """
+        Get the bounds of a time series artifact.
+
+        Returns an array with min and max timestamps in the configured storage format.
+        """
+
         artifact: models.DigitalArtifact = read(id, user, service_layer.repo_layer)
 
         services: TimeSeriesServices = service_layer.artifact_services_for(
             artifact, TimeSeriesServices
         )
 
-        bounds = services.get_bounds(artifact)
-        bounds = [str(arrow.get(bounds[0])), str(arrow.get(bounds[1]))]
-        return bounds
+        return services.get_bounds(artifact)
+
+    @router.get(
+        "/{id}/services/time-series/stats",
+        response_model=TimeSeriesStats,
+        tags=["artifacts"],
+    )
+    def time_series_stats(
+        id: str,
+        user: security.ScopedUser = Security(
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
+        ),
+        service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
+    ):
+
+        """
+        Get statistics about storage of a time series artifact.
+
+        See TimeSeriesStats for more information.
+        """
+
+        artifact: models.Artifact = read(id, user, service_layer.repo_layer)
+
+        service: TimeSeriesServices = service_layer.artifact_services_for(
+            artifact, TimeSeriesServices
+        )
+        return service.stats(artifact)
 
     return router

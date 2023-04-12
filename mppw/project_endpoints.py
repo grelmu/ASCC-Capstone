@@ -22,7 +22,10 @@ def create_router(app):
     router = fastapi.APIRouter(prefix="/api/projects")
 
     @router.post(
-        "/", response_model=models.Project, status_code=fastapi.status.HTTP_201_CREATED
+        "/",
+        response_model=models.Project,
+        status_code=fastapi.status.HTTP_201_CREATED,
+        tags=["projects"],
     )
     def create(
         project: models.Project,
@@ -34,7 +37,11 @@ def create_router(app):
         security.reload_project_claims(app)
         return result
 
-    @router.get("/{id}", response_model=models.Project)
+    @router.get(
+        "/{id}",
+        response_model=models.Project,
+        tags=["projects"],
+    )
     def read(
         id: str,
         user: security.ScopedUser = Security(
@@ -51,7 +58,11 @@ def create_router(app):
 
         return result
 
-    @router.get("/", response_model=List[models.Project])
+    @router.get(
+        "/",
+        response_model=List[models.Project],
+        tags=["projects"],
+    )
     def query(
         name: str = fastapi.Query(None),
         active: bool = fastapi.Query(True),
@@ -64,7 +75,11 @@ def create_router(app):
         ids = project_claims_for_user(user)
         return list(repo_layer.projects.query(ids=ids, name=name, active=active))
 
-    @router.patch("/{id}", response_model=bool)
+    @router.patch(
+        "/{id}",
+        response_model=bool,
+        tags=["projects"],
+    )
     def patch(
         id: str,
         changes: List[endpoints.Change],
@@ -88,7 +103,11 @@ def create_router(app):
 
         return True
 
-    @router.delete("/{id}", response_model=bool)
+    @router.delete(
+        "/{id}",
+        response_model=bool,
+        tags=["projects"],
+    )
     def delete(
         id: str,
         preserve_data: bool = True,
@@ -108,7 +127,9 @@ def create_router(app):
         return True
 
     @router.get(
-        "/{id}/services/project/schema/", response_model=List[services.ResolvedSchema]
+        "/{id}/services/project/schema/",
+        response_model=List[services.ResolvedSchema],
+        tags=["projects"],
     )
     def query_project_schemas(
         id: str,
@@ -138,6 +159,7 @@ def create_router(app):
     @router.get(
         "/{id}/services/project/schema/operations/",
         response_model=List[services.ResolvedSchema],
+        tags=["projects"],
     )
     def query_project_operations_schemas(
         id: str,
@@ -160,6 +182,7 @@ def create_router(app):
     @router.get(
         "/{id}/services/project/schema/artifacts/",
         response_model=List[services.ResolvedSchema],
+        tags=["projects"],
     )
     def query_project_artifacts_schemas(
         id: str,
