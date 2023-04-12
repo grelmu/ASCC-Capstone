@@ -565,6 +565,24 @@ files = [
 ]
 
 [[package]]
+name = "erdantic"
+version = "0.5.0"
+description = "Entity relationship diagrams for Python data model classes like Pydantic."
+category = "dev"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "erdantic-0.5.0-py3-none-any.whl", hash = "sha256:43fbe1787d272958991d3b16ffa217b595957e66b394f79be76b4b6dd72dc773"},
+    {file = "erdantic-0.5.0.tar.gz", hash = "sha256:475389523b37b1ac06a96837d782a41b889fb27d099a1576183f1721a6a38e23"},
+]
+
+[package.dependencies]
+pydantic = "*"
+pygraphviz = "*"
+typer = "*"
+typing-extensions = "*"
+
+[[package]]
 name = "fastapi"
 version = "0.68.2"
 description = "FastAPI framework, high performance, easy to learn, fast to code, ready for production"
@@ -1544,6 +1562,17 @@ files = [
 plugins = ["importlib-metadata"]
 
 [[package]]
+name = "pygraphviz"
+version = "1.10"
+description = "Python interface to Graphviz"
+category = "dev"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "pygraphviz-1.10.zip", hash = "sha256:457e093a888128903251a266a8cc16b4ba93f3f6334b3ebfed92c7471a74d867"},
+]
+
+[[package]]
 name = "pyjson5"
 version = "1.6.1"
 description = "JSON5 serializer and parser for Python 3 written in Cython."
@@ -2346,6 +2375,27 @@ files = [
 test = ["pre-commit", "pytest"]
 
 [[package]]
+name = "typer"
+version = "0.7.0"
+description = "Typer, build great CLIs. Easy to code. Based on Python type hints."
+category = "dev"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "typer-0.7.0-py3-none-any.whl", hash = "sha256:b5e704f4e48ec263de1c0b3a2387cd405a13767d2f907f44c1a08cbad96f606d"},
+    {file = "typer-0.7.0.tar.gz", hash = "sha256:ff797846578a9f2a201b53442aedeb543319466870fbe1c701eab66dd7681165"},
+]
+
+[package.dependencies]
+click = ">=7.1.1,<9.0.0"
+
+[package.extras]
+all = ["colorama (>=0.4.3,<0.5.0)", "rich (>=10.11.0,<13.0.0)", "shellingham (>=1.3.0,<2.0.0)"]
+dev = ["autoflake (>=1.3.1,<2.0.0)", "flake8 (>=3.8.3,<4.0.0)", "pre-commit (>=2.17.0,<3.0.0)"]
+doc = ["cairosvg (>=2.5.2,<3.0.0)", "mdx-include (>=1.4.1,<2.0.0)", "mkdocs (>=1.1.2,<2.0.0)", "mkdocs-material (>=8.1.4,<9.0.0)", "pillow (>=9.3.0,<10.0.0)"]
+test = ["black (>=22.3.0,<23.0.0)", "coverage (>=6.2,<7.0)", "isort (>=5.0.6,<6.0.0)", "mypy (==0.910)", "pytest (>=4.4.0,<8.0.0)", "pytest-cov (>=2.10.0,<5.0.0)", "pytest-sugar (>=0.9.4,<0.10.0)", "pytest-xdist (>=1.32.0,<4.0.0)", "rich (>=10.11.0,<13.0.0)", "shellingham (>=1.3.0,<2.0.0)"]
+
+[[package]]
 name = "typing-extensions"
 version = "4.1.1"
 description = "Backported and Experimental Type Hints for Python 3.6+"
@@ -2591,4 +2641,4 @@ testing = ["func-timeout", "jaraco.itertools", "pytest (>=6)", "pytest-black (>=
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "dd0fbd8cd0ed76c7daa09cadb1abeaaf1b51e326ea215db2c6fcb044d2e98284"
+content-hash = "beb146aecfa1a14addc1a4b4e451c7811c66c2a0e432c86bfc06b9808bd2c260"
