@@ -31,9 +31,7 @@ class TestBasicManufacturingProcess:
         self._init()
 
     def _init(self):
-
         with ServiceLayerContext(self.storage_layer) as service_layer:
-
             artifact_repo: repositories.ArtifactRepository = (
                 service_layer.repo_layer.artifacts
             )
@@ -119,7 +117,6 @@ class TestBasicManufacturingProcess:
 
 
 def test_basic_process_provenance(storage_layer, test_project):
-
     """
     Test provenance exploration of a basic process
     """
@@ -127,7 +124,6 @@ def test_basic_process_provenance(storage_layer, test_project):
     test_process = TestBasicManufacturingProcess(storage_layer, test_project)
 
     with ServiceLayerContext(storage_layer) as service_layer:
-
         provenance_services = service_layer.provenance_services()
 
         # Backwards from specimen
@@ -199,9 +195,7 @@ class TestProcessPropertyManufacturingProcess:
         self._init()
 
     def _init(self):
-
         with ServiceLayerContext(self.storage_layer) as service_layer:
-
             artifact_repo: repositories.ArtifactRepository = (
                 service_layer.repo_layer.artifacts
             )
@@ -222,7 +216,6 @@ class TestProcessPropertyManufacturingProcess:
 
             self.batches = []
             for batch_name in ["Batch B1", "Batch B2"]:
-
                 batch = artifact_repo.create(
                     models.MaterialArtifact(
                         type_urn="urn:x-mfg:artifact:material:batch",
@@ -244,7 +237,6 @@ class TestProcessPropertyManufacturingProcess:
             self.walls = []
 
             for wall_name in ["Wall WA", "Wall WB", "Wall WC"]:
-
                 wall_code = wall_name.split(" ")[-1]
 
                 wall = artifact_repo.create(
@@ -303,7 +295,6 @@ class TestProcessPropertyManufacturingProcess:
             self.specimens = []
 
             for wall in self.walls:
-
                 wall_code = wall.name.split(" ")[-1]
 
                 cut = operation_repo.create(
@@ -329,7 +320,6 @@ class TestProcessPropertyManufacturingProcess:
                     f"Specimen {wall_code}_SA",
                     f"Specimen {wall_code}_SB",
                 ]:
-
                     specimen = artifact_repo.create(
                         models.MaterialArtifact(
                             type_urn="urn:x-mfg:artifact:material:part",
@@ -362,7 +352,6 @@ class TestProcessPropertyManufacturingProcess:
                     "Process-Property Tensile Test Y",
                 ]
             ):
-
                 test_code = test_name.split(" ")[-1]
 
                 test = operation_repo.create(
@@ -385,7 +374,6 @@ class TestProcessPropertyManufacturingProcess:
                 self.test_specimens[test.id] = test_specimens
 
                 for test_specimen in test_specimens:
-
                     tt_services.attach(
                         test,
                         models.AttachmentGraph.AttachmentNode.build(
@@ -487,7 +475,6 @@ class TestProcessPropertyManufacturingProcess:
 
 
 def test_process_property_provenance(storage_layer, test_project):
-
     """
     Tests that we can explore a full process-property provenance
     """
@@ -495,7 +482,6 @@ def test_process_property_provenance(storage_layer, test_project):
     test_process = TestProcessPropertyManufacturingProcess(storage_layer, test_project)
 
     with ServiceLayerContext(storage_layer) as service_layer:
-
         provenance_services = service_layer.provenance_services()
 
         # Backwards from sample properties
@@ -560,9 +546,7 @@ class TestFrameGraph:
         self._init()
 
     def _init(self):
-
         with ServiceLayerContext(self.storage_layer) as service_layer:
-
             artifact_repo: repositories.ArtifactRepository = (
                 service_layer.repo_layer.artifacts
             )
@@ -631,7 +615,6 @@ class TestFrameGraph:
             )
 
             if self.attach_to_operation:
-
                 operation_repo: repositories.OperationRepository = (
                     service_layer.repo_layer.operations
                 )
@@ -672,7 +655,6 @@ class TestFrameGraph:
                         self.mesh3,
                     ),
                 ]:
-
                     fff_services.attach(
                         self.fff,
                         models.AttachmentGraph.AttachmentNode.build(
@@ -684,7 +666,6 @@ class TestFrameGraph:
 
 
 def test_basic_frame_graph(storage_layer, test_project):
-
     """
     Tests that we can generate a full artifact frame graph
     """
@@ -692,7 +673,6 @@ def test_basic_frame_graph(storage_layer, test_project):
     test_frame_graph = TestFrameGraph(storage_layer, test_project)
 
     with ServiceLayerContext(storage_layer) as service_layer:
-
         provenance_services = service_layer.provenance_services()
 
         # Full from mesh
@@ -720,7 +700,6 @@ def test_basic_frame_graph(storage_layer, test_project):
 
 
 def test_explore_frame_graph(storage_layer, test_project):
-
     """
     Tests that we can explore parents/children of a artifact frame graph
     """
@@ -728,7 +707,6 @@ def test_explore_frame_graph(storage_layer, test_project):
     test_frame_graph = TestFrameGraph(storage_layer, test_project)
 
     with ServiceLayerContext(storage_layer) as service_layer:
-
         provenance_services = service_layer.provenance_services()
 
         # Parents from mesh
@@ -796,7 +774,6 @@ def test_explore_frame_graph(storage_layer, test_project):
 
 
 def test_explore_frame_path(storage_layer, test_project):
-
     """
     Tests that we can explore paths between artifacts in frame graphs
     """
@@ -804,7 +781,6 @@ def test_explore_frame_path(storage_layer, test_project):
     test_frame_graph = TestFrameGraph(storage_layer, test_project)
 
     with ServiceLayerContext(storage_layer) as service_layer:
-
         provenance_services = service_layer.provenance_services()
 
         # Mesh to Cloud
@@ -871,3 +847,203 @@ def test_explore_frame_path(storage_layer, test_project):
         )
 
         assert frame_path is None
+
+
+class TestBasicManufacturingProcessWithGeometry(TestBasicManufacturingProcess):
+
+    """
+    A basic manufacturing process used to check geometric search provenance functionality
+    """
+
+    def __init__(self, storage_layer, test_project: models.Project):
+        super().__init__(storage_layer, test_project)
+        self._init_geometry()
+
+    def _init_geometry(self):
+        with ServiceLayerContext(self.storage_layer) as service_layer:
+            artifact_repo: repositories.ArtifactRepository = (
+                service_layer.repo_layer.artifacts
+            )
+
+            operation_repo: repositories.OperationRepository = (
+                service_layer.repo_layer.operations
+            )
+
+            self.toolpath = artifact_repo.create(
+                models.DigitalArtifact(
+                    type_urn="urn:x-mfg:artifact:digital:file",
+                    project=self.test_project.id,
+                )
+            )
+
+            self.thermal_cloud = artifact_repo.create(
+                models.DigitalArtifact(
+                    type_urn="urn:x-mfg:artifact:digital:point-cloud",
+                    project=self.test_project.id,
+                )
+            )
+
+            self.thermal_cloud.spatial_frame = models.SpatialFrame(
+                parent_frame=self.toolpath.id, transform={}
+            )
+            artifact_repo.update(self.thermal_cloud)
+
+            self.fiducials.spatial_frame = models.SpatialFrame(
+                parent_frame=self.toolpath.id, transform={}
+            )
+            artifact_repo.update(self.fiducials)
+
+            fff_services = service_layer.operation_services_for(self.fff)
+            fff_services.attach(
+                self.fff,
+                models.AttachmentGraph.AttachmentNode.build(
+                    [":toolpath"],
+                    self.toolpath.id,
+                    models.AttachmentMode.OUTPUT,
+                ),
+            )
+            fff_services.attach(
+                self.fff,
+                models.AttachmentGraph.AttachmentNode.build(
+                    [":thermal-cloud"],
+                    self.thermal_cloud.id,
+                    models.AttachmentMode.OUTPUT,
+                ),
+            )
+
+            self.specimen_bbox = artifact_repo.create(
+                models.DigitalArtifact(
+                    type_urn="urn:x-mfg:artifact:digital:bounding-box",
+                    project=self.test_project.id,
+                )
+            )
+
+            self.specimen_bbox.spatial_frame = models.SpatialFrame(
+                parent_frame=self.fiducials.id, transform={}
+            )
+            artifact_repo.update(self.specimen_bbox)
+
+            cut_services = service_layer.operation_services_for(self.cut)
+            cut_services.attach(
+                self.cut,
+                models.AttachmentGraph.AttachmentNode.build(
+                    [
+                        ":input-parts",
+                        self.wall.id,
+                        ":output-parts",
+                        self.specimen.id,
+                        ":part-geometry",
+                    ],
+                    self.specimen_bbox.id,
+                    models.AttachmentMode.OUTPUT,
+                ),
+            )
+
+
+def test_explore_ancestor_frame_path(storage_layer, test_project):
+    """
+    Tests that we can explore paths between ancestor artifacts in frame graphs
+    """
+
+    process_with_geometry = TestBasicManufacturingProcessWithGeometry(
+        storage_layer, test_project
+    )
+
+    with ServiceLayerContext(storage_layer) as service_layer:
+        provenance_services = service_layer.provenance_services()
+
+        # Mesh to Cloud
+
+        ancestor_frame_paths = provenance_services.build_artifact_ancestor_frame_paths(
+            process_with_geometry.thermal_cloud.id, process_with_geometry.specimen.id
+        )
+
+        bbox_frame_path, bbox_provenance_path = ancestor_frame_paths[0]
+
+        assert bbox_frame_path.path_nodes[0].artifact_id == str(
+            process_with_geometry.thermal_cloud.id
+        )
+        assert bbox_frame_path.path_nodes[1].artifact_id == str(
+            process_with_geometry.toolpath.id
+        )
+        assert bbox_frame_path.path_nodes[2].artifact_id == str(
+            process_with_geometry.fiducials.id
+        )
+        assert bbox_frame_path.path_nodes[3].artifact_id == str(
+            process_with_geometry.specimen_bbox.id
+        )
+
+        assert bbox_provenance_path.path_nodes[0].artifact_id == str(
+            process_with_geometry.specimen_bbox.id
+        )
+        assert bbox_provenance_path.path_nodes[2].artifact_id == str(
+            process_with_geometry.specimen.id
+        )
+
+        assert [
+            len(provenance_path)
+            for frame_path, provenance_path in ancestor_frame_paths[1:]
+        ] == [5, 5, 5]
+
+
+def test_query_provenance(storage_layer, test_project):
+    """
+    Tests that we can explore paths between ancestor artifacts in frame graphs
+    """
+
+    process_with_geometry = TestBasicManufacturingProcessWithGeometry(
+        storage_layer, test_project
+    )
+
+    with ServiceLayerContext(storage_layer) as service_layer:
+        provenance_services: services.ProvenanceServices = (
+            service_layer.provenance_services()
+        )
+
+        results = provenance_services.query_artifact_provenance(
+            [process_with_geometry.specimen.id, process_with_geometry.wall.id],
+            """
+                MATCH (TC:ArtifactNode)<--(FFF:OperationStepNode)-[*1..99]->(CUT:OperationStepNode)-->(S:ArtifactNode) 
+                WHERE
+                    TC.type_urn = "urn:x-mfg:artifact:digital:point-cloud" AND
+                    FFF.type_urn = "urn:x-mfg:operation:fff" AND
+                    CUT.type_urn = "urn:x-mfg:operation:prepare:waterjetcut" AND
+                    S.type_urn = "urn:x-mfg:artifact:material:part"
+                RETURN TC, S
+            """,
+            strategy="ancestors+2",
+        )
+
+        assert results[0]["TC"][0].artifact_id == str(
+            process_with_geometry.thermal_cloud.id
+        )
+        assert results[0]["S"][0].artifact_id == str(process_with_geometry.specimen.id)
+
+        (
+            provenance_path,
+            frame_path,
+        ) = provenance_services.build_nearest_related_artifact_frame_path(
+            results[0]["S"][0].artifact_id,
+            """
+                MATCH (P:ArtifactNode)-->()-->(B:ArtifactNode) 
+                WHERE
+                    P.type_urn = "urn:x-mfg:artifact:material:part" AND
+                    B.type_urn = "urn:x-mfg:artifact:digital:bounding-box"
+                RETURN B
+            """,
+            results[0]["TC"][0].artifact_id,
+            strategy="ancestors+2",
+        )
+
+        assert provenance_path.path_nodes[0].artifact_id == str(
+            process_with_geometry.specimen.id
+        )
+        assert provenance_path.path_nodes[-1].artifact_id == str(
+            process_with_geometry.specimen_bbox.id
+        )
+        assert frame_path.path_nodes[0].artifact_id == str(
+            process_with_geometry.specimen_bbox.id
+        )
+        assert frame_path.path_nodes[-1].artifact_id == str(
+            process_with_geometry.thermal_cloud.id
+        )

@@ -1,13 +1,16 @@
 import pytest
+import furl
+import pandas
 
 import mppw.models
+
+from mppw_clients import mppw_clients
 from . import test_provenance
 
 
 def test_operation_provenance_steps_endpoint(
     api_client, api_storage_layer, api_project
 ):
-
     """
     Tests that we can serialize the provenance steps via an endpoint
     """
@@ -27,7 +30,6 @@ def test_operation_provenance_steps_endpoint(
 
 
 def test_artifact_provenance_endpoint(api_client, api_storage_layer, api_project):
-
     """
     Tests that we can serialize artifact provenance via an endpoint
     """
@@ -65,7 +67,6 @@ def test_artifact_provenance_endpoint(api_client, api_storage_layer, api_project
 def test_process_property_endpoints_create_provenance(
     api_client, api_storage_layer, api_project
 ):
-
     """
     Just builds a complex provenance to allow UI testing
     """
@@ -78,7 +79,6 @@ def test_process_property_endpoints_create_provenance(
 
 
 def test_artifact_frame_graph_endpoint(api_client, api_storage_layer, api_project):
-
     """
     Tests that we can serialize the frame graph via an endpoint
     """
@@ -96,7 +96,6 @@ def test_artifact_frame_graph_endpoint(api_client, api_storage_layer, api_projec
 
 
 def test_artifact_frame_path_endpoint(api_client, api_storage_layer, api_project):
-
     """
     Tests that we can serialize the frame path via an endpoint
     """
@@ -123,3 +122,71 @@ def test_artifact_frame_path_endpoint(api_client, api_storage_layer, api_project
     )
 
     assert frame_path is None
+
+
+def test_project_provenance_query_endpoint(
+    api_client: mppw_clients.MppwApiClient, api_storage_layer, api_project
+):
+    """
+    Tests that we can serialize a provenance query via an endpoint
+    """
+
+    process_with_geometry = test_provenance.TestBasicManufacturingProcessWithGeometry(
+        api_storage_layer, mppw.models.Project(**api_project)
+    )
+
+    query_furl = furl.furl(
+        f"/projects/{api_project['id']}/services/project/provenance/"
+    )
+    query_furl.query.params.add("from_artifact_ids", process_with_geometry.specimen.id)
+    query_furl.query.params.add("from_artifact_ids", process_with_geometry.wall.id)
+    query_furl.query.params[
+        "cypher_query"
+    ] = """
+        MATCH (TC:ArtifactNode)<--(FFF:OperationStepNode)-[*1..99]->(CUT:OperationStepNode)-->(S:ArtifactNode) 
+        WHERE
+            TC.type_urn = "urn:x-mfg:artifact:digital:point-cloud" AND
+            FFF.type_urn = "urn:x-mfg:operation:fff" AND
+            CUT.type_urn = "urn:x-mfg:operation:prepare:waterjetcut" AND
+            S.type_urn = "urn:x-mfg:artifact:material:part"
+        RETURN TC, S
+        """
+    query_furl.query.params["strategy"] = "ancestors+2"
+
+    results = api_client.get_json(query_furl.url)
+
+    results_df = pandas.DataFrame(results).applymap(lambda r: r["artifact_id"])
+    assert results_df["TC"].iloc[0] == str(process_with_geometry.thermal_cloud.id)
+    assert results_df["S"].iloc[0] == str(process_with_geometry.specimen.id)
+
+    nearest_related_furl = furl.furl(
+        f"/artifacts/{process_with_geometry.specimen.id}/services/artifact/provenance/nearest_related_frame_path"
+    )
+    nearest_related_furl.query.params[
+        "related_artifact_cypher_query"
+    ] = """
+        MATCH (P:ArtifactNode)-->(S)-->(B:ArtifactNode) 
+        WHERE
+            P.type_urn = "urn:x-mfg:artifact:material:part" AND
+            B.type_urn = "urn:x-mfg:artifact:digital:bounding-box"
+        RETURN B
+        """
+    nearest_related_furl.query.params["to_id"] = str(
+        process_with_geometry.thermal_cloud.id
+    )
+    nearest_related_furl.query.params["strategy"] = "ancestors+2"
+
+    paths = api_client.get_json(nearest_related_furl.url)
+
+    assert paths["provenance_path"]["path_nodes"][0]["artifact_id"] == str(
+        process_with_geometry.specimen.id
+    )
+    assert paths["provenance_path"]["path_nodes"][-1]["artifact_id"] == str(
+        process_with_geometry.specimen_bbox.id
+    )
+    assert paths["frame_path"]["path_nodes"][0]["artifact_id"] == str(
+        process_with_geometry.specimen_bbox.id
+    )
+    assert paths["frame_path"]["path_nodes"][-1]["artifact_id"] == str(
+        process_with_geometry.thermal_cloud.id
+    )

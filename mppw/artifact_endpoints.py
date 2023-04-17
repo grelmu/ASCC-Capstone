@@ -30,7 +30,6 @@ from . import endpoints
 
 
 def create_router(app):
-
     router = fastapi.APIRouter(
         prefix="/api/artifacts",
     )
@@ -52,7 +51,6 @@ def create_router(app):
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
-
         project_endpoints.check_project_claims_for_user(user, [str(artifact.project)])
 
         art_repo = repo_layer.artifacts
@@ -70,7 +68,6 @@ def create_router(app):
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
-
         result = repo_layer.artifacts.query_one(
             id=id, project_ids=project_endpoints.project_claims_for_user(user)
         )
@@ -95,7 +92,6 @@ def create_router(app):
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
-
         if project_ids is None:
             project_ids = project_endpoints.project_claims_for_user(user)
 
@@ -133,7 +129,6 @@ def create_router(app):
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
-
         if project_ids is None:
             project_ids = project_endpoints.project_claims_for_user(user)
 
@@ -173,7 +168,6 @@ def create_router(app):
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
-
         if id != str(artifact.id):
             raise fastapi.HTTPException(status_code=fastapi.status.HTTP_400_BAD_REQUEST)
 
@@ -201,7 +195,6 @@ def create_router(app):
         repo_layer=Depends(request_repo_layer(app)),
     ):
         def update_fn(artifact: models.DigitalArtifact):
-
             for change in changes:
                 if change.op == "replace":
                     setattr(artifact, change.path, change.value)
@@ -234,7 +227,6 @@ def create_router(app):
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
-
         modified = (
             repo_layer.artifacts.deactivate
             if preserve_data
@@ -261,7 +253,6 @@ def create_router(app):
         user: models.User = Security(request_user(app), scopes=[MODIFY_ARTIFACT_SCOPE]),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         """
         Initializes an artifact in a type-specific way using a set of parameters specified
         in the body of the request.
@@ -336,7 +327,7 @@ def create_router(app):
     @router.get(
         "/{id}/services/artifact/provenance",
         response_model=endpoints.ProvenanceGraphModel,
-        tags=["artifacts"],
+        tags=["artifacts", "provenance"],
     )
     def get_provenance(
         id: str,
@@ -346,7 +337,6 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         artifact: models.Artifact = read(id, user, service_layer.repo_layer)
         services = service_layer.provenance_services()
         return endpoints.ProvenanceGraphModel.from_graph(
@@ -357,6 +347,12 @@ def create_router(app):
         "/{id}/services/artifact/frame_graph",
         response_model=endpoints.ArtifactFrameGraphModel,
         tags=["artifacts"],
+        deprecated=True,
+    )
+    @router.get(
+        "/{id}/services/artifact/provenance/frame_graph",
+        response_model=endpoints.ArtifactFrameGraphModel,
+        tags=["artifacts", "provenance"],
     )
     def get_frame_graph(
         id: str,
@@ -366,7 +362,6 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         artifact: models.Artifact = read(id, user, service_layer.repo_layer)
         services = service_layer.provenance_services()
         return endpoints.ArtifactFrameGraphModel.from_graph(
@@ -377,6 +372,12 @@ def create_router(app):
         "/{id}/services/artifact/frame_path",
         response_model=typing.Optional[endpoints.ArtifactFramePathModel],
         tags=["artifacts"],
+        deprecated=True,
+    )
+    @router.get(
+        "/{id}/services/artifact/provenance/frame_path",
+        response_model=typing.Optional[endpoints.ArtifactFramePathModel],
+        tags=["artifacts", "provenance"],
     )
     def get_frame_path(
         id: str,
@@ -386,12 +387,38 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         artifact: models.Artifact = read(id, user, service_layer.repo_layer)
         services = service_layer.provenance_services()
         return endpoints.ArtifactFramePathModel.from_path(
             services.build_artifact_frame_path(artifact.id, to_id)
         )
+
+    @router.get(
+        "/{id}/services/artifact/provenance/nearest_related_frame_path",
+        response_model=endpoints.RelatedFramePathModel,
+        tags=["artifacts", "provenance"],
+    )
+    def get_provenance_nearest_related_frame_path(
+        id: str,
+        to_id: str,
+        related_artifact_cypher_query: str,
+        strategy: str = None,
+        user: security.ScopedUser = Security(
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
+        ),
+        service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
+    ):
+        artifact: models.Artifact = read(id, user, service_layer.repo_layer)
+        services = service_layer.provenance_services()
+
+        (
+            provenance_path,
+            frame_path,
+        ) = services.build_nearest_related_artifact_frame_path(
+            artifact.id, related_artifact_cypher_query, to_id, strategy=strategy
+        )
+
+        return endpoints.RelatedFramePathModel.from_paths(provenance_path, frame_path)
 
     from .services.artifacts.digital_file_services import FileServices
 
@@ -406,7 +433,6 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         artifact: models.DigitalArtifact = read(id, user, service_layer.repo_layer)
         service: FileServices = service_layer.artifact_services_for(
             artifact, FileServices
@@ -436,7 +462,6 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         artifact: models.DigitalArtifact = read(id, user, service_layer.repo_layer)
         service: FileBucketServices = service_layer.artifact_services_for(
             artifact, FileBucketServices
@@ -481,7 +506,6 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         if path is None:
             raise fastapi.HTTPException(
                 status_code=fastapi.status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -507,7 +531,6 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         artifact: models.DigitalArtifact = read(id, user, service_layer.repo_layer)
         service: FileBucketServices = service_layer.artifact_services_for(
             artifact, FileBucketServices
@@ -527,7 +550,6 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         artifact: models.Artifact = read(id, user, service_layer.repo_layer)
 
         service: services.DatabaseBucketServices = service_layer.artifact_services_for(
@@ -552,7 +574,6 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         artifact: models.DigitalArtifact = read(id, user, service_layer.repo_layer)
         service: FileBucketServices = service_layer.artifact_services_for(
             artifact, FileBucketServices
@@ -576,7 +597,6 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         if path is None:
             raise fastapi.HTTPException(
                 status_code=fastapi.status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -665,7 +685,6 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         """
         Search for points in a point cloud artifact.
 
@@ -734,7 +753,6 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         """
         Search for points in a point cloud artifact and return a file in a specified format.
 
@@ -748,7 +766,6 @@ def create_router(app):
         )
 
         if format == "pcd":
-
             try:
                 from mppw import pcl
             except Exception as ex:
@@ -867,7 +884,6 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         """
         Search for events in a time series artifact.
 
@@ -937,7 +953,6 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         """
         Get statistics about storage of a time series artifact.
 
