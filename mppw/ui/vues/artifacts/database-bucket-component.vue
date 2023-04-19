@@ -29,6 +29,8 @@
         :class="showReadOnlyUrl ? 'tab-pane fade' : 'tab-pane fade show active'"
         role="tabpanel"
       >
+        <a :href="this.op_ui_url" target="_blank"><o-button variant="warning">OP UI</o-button></a>
+        
         <p><b>MongoDB Read-Write URL: </b> {{ local_url }}</p>
       </div>
     </div>
@@ -57,6 +59,11 @@ export default {
 
       showReadOnlyUrl: true,
     };
+  },
+  computed: {
+    op_ui_url: function() {
+      return "http://localhost:5000/dashboard?db_uri="+encodeURI(this.local_url)
+    }
   },
   props: {
     opId: String,

@@ -10,7 +10,7 @@ services:
       MPPW_GUIDE_SITE_FORCE_REBUILD: "true"
     volumes:
       - "${MPPW_LOCAL_PACKAGE_DIR:-./mppw}:/local/mppw"
-    command: "bash -c 'cd local && uvicorn --host 0.0.0.0 mppw.main:app --debug --reload-include *.md'"
+    command: "bash -c 'cd local && uvicorn --host 0.0.0.0 mppw.main:app --debug --reload-include *.vue --reload-include *.md'"
 
   jupyterhub:
     ports:
