@@ -28,10 +28,9 @@
       <div
         :class="showReadOnlyUrl ? 'tab-pane fade' : 'tab-pane fade show active'"
         role="tabpanel"
-      >
-        <a :href="this.op_ui_url" target="_blank"><o-button variant="warning">OP UI</o-button></a>
-        
+      > 
         <p><b>MongoDB Read-Write URL: </b> {{ local_url }}</p>
+        <a :href="this.op_ui_url" target="_blank"><o-button variant="warning">Collect Data in OP UI</o-button></a>
       </div>
     </div>
 
@@ -73,6 +72,7 @@ export default {
     refreshArtifact() {
       this.artifact = null;
       return this.$root.apiFetchArtifact(this.artifactId).then((artifact) => {
+        console.log(this)
         this.artifact = artifact;
         this.local_url = this.replace_mongo_local(artifact.url_data);
         this.read_only_url = this.generate_read_only_link(artifact.url_data);
