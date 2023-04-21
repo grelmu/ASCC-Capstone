@@ -168,7 +168,7 @@ def test_project_provenance_query_endpoint(
         MATCH (P:ArtifactNode)-->(S)-->(B:ArtifactNode) 
         WHERE
             P.type_urn = "urn:x-mfg:artifact:material:part" AND
-            B.type_urn = "urn:x-mfg:artifact:digital:bounding-box"
+            B.type_urn = "urn:x-mfg:artifact:digital:document:bounding-box"
         RETURN B
         """
     nearest_related_furl.query.params["to_id"] = str(

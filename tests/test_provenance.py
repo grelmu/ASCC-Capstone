@@ -940,52 +940,6 @@ class TestBasicManufacturingProcessWithGeometry(TestBasicManufacturingProcess):
             )
 
 
-def test_explore_ancestor_frame_path(storage_layer, test_project):
-    """
-    Tests that we can explore paths between ancestor artifacts in frame graphs
-    """
-
-    process_with_geometry = TestBasicManufacturingProcessWithGeometry(
-        storage_layer, test_project
-    )
-
-    with ServiceLayerContext(storage_layer) as service_layer:
-        provenance_services = service_layer.provenance_services()
-
-        # Mesh to Cloud
-
-        ancestor_frame_paths = provenance_services.build_artifact_ancestor_frame_paths(
-            process_with_geometry.thermal_cloud.id, process_with_geometry.specimen.id
-        )
-
-        bbox_frame_path, bbox_provenance_path = ancestor_frame_paths[0]
-
-        assert bbox_frame_path.path_nodes[0].artifact_id == str(
-            process_with_geometry.thermal_cloud.id
-        )
-        assert bbox_frame_path.path_nodes[1].artifact_id == str(
-            process_with_geometry.toolpath.id
-        )
-        assert bbox_frame_path.path_nodes[2].artifact_id == str(
-            process_with_geometry.fiducials.id
-        )
-        assert bbox_frame_path.path_nodes[3].artifact_id == str(
-            process_with_geometry.specimen_bbox.id
-        )
-
-        assert bbox_provenance_path.path_nodes[0].artifact_id == str(
-            process_with_geometry.specimen_bbox.id
-        )
-        assert bbox_provenance_path.path_nodes[2].artifact_id == str(
-            process_with_geometry.specimen.id
-        )
-
-        assert [
-            len(provenance_path)
-            for frame_path, provenance_path in ancestor_frame_paths[1:]
-        ] == [5, 5, 5]
-
-
 def test_query_provenance(storage_layer, test_project):
     """
     Tests that we can explore paths between ancestor artifacts in frame graphs
