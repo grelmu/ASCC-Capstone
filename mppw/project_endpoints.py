@@ -219,6 +219,23 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
+        """
+        Query the provenance of multiple artifact ids with a graph query, and return a named result set
+        of nodes.
+
+        Currently the "Cypher" graph query language is supported - for more information, see:
+        https://neo4j.com/developer/cypher/
+
+        A provenance graph has nodes of two types to query - "ArtifactNode" and "OperationStepNode" nodes.
+        The attributes available are:
+          * type_urn (both)
+          * step_name (OperationStepNode)
+          * tags (both)
+
+        TODO: With these attributes only structural queries are supported - fuller support for queries using
+        data inside artifacts and operation steps is in consideration.
+        """
+
         if id is not None:
             check_project_claims_for_user(user, [id])
 

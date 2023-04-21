@@ -337,6 +337,18 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
+        """
+        Get an artifact's provenance, computed via a particular strategy.
+
+        The returned graph is bipartite, with OperationStep nodes and Artifact nodes.
+        Edges include information about the artifact/operation attachment that creates
+        the Artifact/OperationStep provenance relationship.
+
+        The strategy is of the format "ancestors[+N]" or "descendents[+N]", where
+        the optional "+N" specifies that any nodes N edges from a node in the
+        ancestry or descendants tree should be included in the provenance.
+        """
+
         artifact: models.Artifact = read(id, user, service_layer.repo_layer)
         services = service_layer.provenance_services()
         return endpoints.ProvenanceGraphModel.from_graph(
@@ -362,6 +374,17 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
+        """
+        Get an artifact's frame graph, computed via a particular strategy (defaults to "full").
+
+        The returned graph has nodes of artifacts.  Edges include information about the spatial
+        frame relationship between artifacts.
+
+        The strategy is of the format "parents", "children", or "full" (default) indicating
+        whether to explore the frame parents or children of an artifact.  Note that frame parents
+        and children are not necessarily ancestors or descendants in an artifact's provenance.
+        """
+
         artifact: models.Artifact = read(id, user, service_layer.repo_layer)
         services = service_layer.provenance_services()
         return endpoints.ArtifactFrameGraphModel.from_graph(
@@ -387,6 +410,13 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
+        """
+        Get the (shortest) frame path between artifacts.
+
+        The returned path includes an ordered list of nodes and edges indicating the intermediate spatial
+        frames between two artifacts.
+        """
+
         artifact: models.Artifact = read(id, user, service_layer.repo_layer)
         services = service_layer.provenance_services()
         return endpoints.ArtifactFramePathModel.from_path(
@@ -408,6 +438,20 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
+        """
+        Query the nearest related artifact with any frame path to the specified artifact, and return both
+        the (shortest) provenance path to the related artifact along with the (shortest) frame path to
+        the specified artifact.
+
+        Essentially this is a combination provenance/geometry search and allows searching for digital artifacts
+        related to a source artifact which can then be geometrically related to a target digital artifact.
+
+        To specify the types of related digital artifacts, a graph query is used to specify allowable related
+        provenance nodes.
+
+        See project/-/services/project/provenance for more info on graph queries.
+        """
+
         artifact: models.Artifact = read(id, user, service_layer.repo_layer)
         services = service_layer.provenance_services()
 

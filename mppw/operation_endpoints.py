@@ -491,6 +491,15 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
+        """
+        Get the OperationStep nodes created by this operation as well as Artifact inputs and
+        outputs.
+
+        As a subgraph of a provenance graph, the returned graph is bipartite, with OperationStep
+        nodes and Artifact nodes.  However the graph is usually not fully connected as it contains
+        only the relationships created by this operation.
+        """
+
         op: models.Operation = read(id, user, service_layer.repo_layer)
         service: services.ProvenanceServices = service_layer.provenance_services()
 
