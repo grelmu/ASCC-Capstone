@@ -966,4 +966,42 @@ def create_router(app):
         )
         return service.stats(artifact)
 
+    from .services.artifacts.digital_bounding_box_services import (
+        BoundingBoxServices,
+    )
+
+    @router.post(
+        "/{id}/services/bounding-box/transform",
+        response_model=dict,
+        tags=["artifacts"],
+    )
+    def bounding_box_transform(
+        id: str,
+        frame_artifact_id: str,
+        user: models.User = Security(request_user(app), scopes=[MODIFY_ARTIFACT_SCOPE]),
+        service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
+    ):
+        """
+        Get a transformed version of the bounding box artifact in the frame of another specified
+        digital artifact.
+
+        Returns a bounding box in the JSON schema representation of :bounding-box.
+        
+        Uses the shortest frame path possible for projection.  Note that bounding boxes are
+        axis-aligned, but are transfomed as oriented geometries before being bounded by axis-aligned
+        coordinates again for return.  This means that a 45 degree rotation, for example, may make
+        the transformed bounding box larger in volume and other dimensions.
+          
+        If the bounding box is not related to the frame of the other artifact, returns an
+        error.
+        """
+
+        artifact: models.Artifact = read(id, user, service_layer.repo_layer)
+
+        service: BoundingBoxServices = service_layer.artifact_services_for(
+            artifact, BoundingBoxServices
+        )
+
+        return service.transform_artifact_bbox_into_frame(artifact, frame_artifact_id)
+
     return router

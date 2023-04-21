@@ -913,7 +913,7 @@ class TestBasicManufacturingProcessWithGeometry(TestBasicManufacturingProcess):
 
             self.specimen_bbox = artifact_repo.create(
                 models.DigitalArtifact(
-                    type_urn="urn:x-mfg:artifact:digital:bounding-box",
+                    type_urn="urn:x-mfg:artifact:digital:document:bounding-box",
                     project=self.test_project.id,
                 )
             )
@@ -1028,7 +1028,7 @@ def test_query_provenance(storage_layer, test_project):
                 MATCH (P:ArtifactNode)-->()-->(B:ArtifactNode) 
                 WHERE
                     P.type_urn = "urn:x-mfg:artifact:material:part" AND
-                    B.type_urn = "urn:x-mfg:artifact:digital:bounding-box"
+                    B.type_urn = "urn:x-mfg:artifact:digital:document:bounding-box"
                 RETURN B
             """,
             results[0]["TC"][0].artifact_id,
