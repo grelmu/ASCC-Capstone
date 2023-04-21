@@ -24,6 +24,7 @@ RUN echo $PACKAGE_VERSION > PACKAGE_VERSION
 
 RUN mkdir -p /root/.ssh
 COPY ssh_config /root/.ssh/config
+RUN pip install --upgrade pip
 RUN --mount=type=ssh pip install $PACKAGE_NAME-$PACKAGE_VERSION-py3-none-any.whl
 
 COPY dist/$PACKAGE_NAME-stack.yml compose.yml

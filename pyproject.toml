@@ -33,6 +33,13 @@ mkdocs = "^1.4.2"
 watchgod = "^0.8.2"
 dotmotif = "^0.13.0"
 grand-cypher = { git = "https://github.com/aplbrain/grand-cypher.git", rev = "dcd5094" }
+open3d = "^0.17.0"
+# REQUIRED for open3d
+scikit-learn = "^1.2.2"
+# REQUIRED for open3d
+addict = "^2.4.0"
+# REQUIRED for open3d
+pillow = "^9.5.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
