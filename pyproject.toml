@@ -31,6 +31,15 @@ mongomock = "^4.1.2"
 pymongo = "^4.3.3"
 mkdocs = "^1.4.2"
 watchgod = "^0.8.2"
+dotmotif = "^0.13.0"
+grand-cypher = { git = "https://github.com/aplbrain/grand-cypher.git", rev = "dcd5094" }
+open3d = "^0.17.0"
+# REQUIRED for open3d
+scikit-learn = "^1.2.2"
+# REQUIRED for open3d
+addict = "^2.4.0"
+# REQUIRED for open3d
+pillow = "^9.5.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
@@ -38,6 +47,7 @@ requests-toolbelt = "^0.9.1"
 papermill = "^2.4.0"
 nbconvert = "^7.0.0"
 black = {version = "^22.3.0", allow-prereleases = true}
+erdantic = {version = "^0.5.0", optional = true}
 
 [tool.poetry.scripts]
 # TODO: remove
@@ -48,6 +58,7 @@ mppw-app = "scripts.app:main"
 mppw_docker = "scripts.docker:main"
 mppw_migrations = "scripts.migrations:main"
 mppw_app = "scripts.app:main"
+mppw_diagrams = "scripts.gen_erd:main"
 
 [tool.black]
 extend-exclude = '''

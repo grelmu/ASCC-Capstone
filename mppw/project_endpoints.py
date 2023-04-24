@@ -18,7 +18,6 @@ from .security import request_user, ADMIN_SCOPE, READ_PROVENANCE_SCOPE
 
 
 def create_router(app):
-
     router = fastapi.APIRouter(prefix="/api/projects")
 
     @router.post(
@@ -32,7 +31,6 @@ def create_router(app):
         user: security.ScopedUser = Security(request_user(app), scopes=[ADMIN_SCOPE]),
         repo_layer=Depends(request_repo_layer(app)),
     ):
-
         result = repo_layer.projects.create(project)
         security.reload_project_claims(app)
         return result
@@ -49,7 +47,6 @@ def create_router(app):
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
-
         check_project_claims_for_user(user, [str(id)])
 
         result = repo_layer.projects.query_one(ids=[id])
@@ -71,7 +68,6 @@ def create_router(app):
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
-
         ids = project_claims_for_user(user)
         return list(repo_layer.projects.query(ids=ids, name=name, active=active))
 
@@ -87,7 +83,6 @@ def create_router(app):
         repo_layer=Depends(request_repo_layer(app)),
     ):
         def update_fn(metadata: models.Project):
-
             for change in changes:
                 if change.op == "replace":
                     setattr(metadata, change.path, change.value)
@@ -114,7 +109,6 @@ def create_router(app):
         user: security.ScopedUser = Security(request_user(app), scopes=[ADMIN_SCOPE]),
         repo_layer=Depends(request_repo_layer(app)),
     ):
-
         modified = (
             repo_layer.projects.deactivate
             if preserve_data
@@ -125,6 +119,10 @@ def create_router(app):
 
         security.reload_project_claims(app)
         return True
+
+    #
+    # Schemas
+    #
 
     @router.get(
         "/{id}/services/project/schema/",
@@ -200,6 +198,54 @@ def create_router(app):
             current=current,
             user=user,
             service_layer=service_layer,
+        )
+
+    #
+    # Provenance
+    #
+
+    @router.get(
+        "/{id}/services/project/provenance/",
+        response_model=typing.Dict[str, List[endpoints.ProvenanceNode]],
+        tags=["projects", "provenance"],
+    )
+    def query_provenance(
+        id: str,
+        from_artifact_ids: List[str] = fastapi.Query(None),
+        cypher_query: str = None,
+        strategy: str = None,
+        user: security.ScopedUser = Security(
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
+        ),
+        service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
+    ):
+        """
+        Query the provenance of multiple artifact ids with a graph query, and return a named result set
+        of nodes.
+
+        Currently the "Cypher" graph query language is supported - for more information, see:
+        https://neo4j.com/developer/cypher/
+
+        A provenance graph has nodes of two types to query - "ArtifactNode" and "OperationStepNode" nodes.
+        The attributes available are:
+          * type_urn (both)
+          * step_name (OperationStepNode)
+          * tags (both)
+
+        TODO: With these attributes only structural queries are supported - fuller support for queries using
+        data inside artifacts and operation steps is in consideration.
+        """
+
+        if id is not None:
+            check_project_claims_for_user(user, [id])
+
+        services = service_layer.provenance_services()
+        results, provenance_graph = services.query_artifact_provenance(
+            from_artifact_ids, cypher_query, strategy=strategy
+        )
+
+        return endpoints.ProvenanceGraphModel.cypher_node_results_model(
+            results, provenance_graph
         )
 
     return router

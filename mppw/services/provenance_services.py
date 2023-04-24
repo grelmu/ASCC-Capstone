@@ -4,6 +4,7 @@ import networkx
 import json
 import re
 from typing import List, Set, Sequence, Optional
+import grandcypher
 
 from .. import repositories
 from .. import models
@@ -25,7 +26,6 @@ class ProvenanceStepGraph(networkx.MultiDiGraph):
 
     # NOTE that these nodes must support equality comparisons
     class ArtifactNode(pydantic.BaseModel):
-
         artifact_id: str
 
         def __members(self):
@@ -41,7 +41,6 @@ class ProvenanceStepGraph(networkx.MultiDiGraph):
             return hash(self.__members())
 
     class OperationStepNode(pydantic.BaseModel):
-
         operation_id: str
         context_path: str
         name: str
@@ -62,9 +61,12 @@ class ProvenanceStepGraph(networkx.MultiDiGraph):
         super().__init__(*args, **kwargs)
 
     def build_from_operation(
-        self, operation: models.Operation, schema: schemas.OperationSchema
+        self,
+        operation: models.Operation,
+        schema: schemas.OperationSchema,
+        include_motif_attrs=False,
+        artifact_cb=None,
     ):
-
         """
         Every operation with attachments can be transformed into a linked provenance graph
         of operation steps.
@@ -80,7 +82,6 @@ class ProvenanceStepGraph(networkx.MultiDiGraph):
         provenance_schema = schema.provenance
 
         for step_def in provenance_schema.steps:
-
             context_nodes = [operation.attachments.root]
             if step_def.context is not None:
                 context_nodes = operation.attachments.find_nodes_by_artifact_path_expr(
@@ -88,7 +89,6 @@ class ProvenanceStepGraph(networkx.MultiDiGraph):
                 )
 
             for context_node in context_nodes:
-
                 step_node = ProvenanceStepGraph.OperationStepNode(
                     operation_id=str(operation.id),
                     context_path=context_node.artifact_path,
@@ -130,6 +130,63 @@ class ProvenanceStepGraph(networkx.MultiDiGraph):
                 if not (to_edges or step_def.is_sink or step_node.name == ":default"):
                     continue
 
+                if (from_edges or to_edges) and include_motif_attrs:
+                    self.add_node(
+                        step_node,
+                        __labels__=set(
+                            [ProvenanceStepGraph.OperationStepNode.__name__]
+                        ),
+                        node_type=ProvenanceStepGraph.OperationStepNode.__name__,
+                        type_urn=operation.type_urn,
+                        step_name=step_node.name,
+                        #
+                        tags=operation.tags,
+                    )
+
+                    for edges in [from_edges, to_edges]:
+                        for node_from, node_to, _ in edges:
+                            artifact_node = (
+                                node_from
+                                if isinstance(
+                                    node_from, ProvenanceStepGraph.ArtifactNode
+                                )
+                                else node_to
+                            )
+
+                            artifact = artifact_cb(artifact_node.artifact_id)
+
+                            if isinstance(artifact, models.MaterialArtifact):
+                                self.add_node(
+                                    artifact_node,
+                                    __labels__=set(
+                                        [ProvenanceStepGraph.ArtifactNode.__name__]
+                                    ),
+                                    node_type=ProvenanceStepGraph.ArtifactNode.__name__,
+                                    type_urn=artifact.type_urn,
+                                    #
+                                    tags=artifact.tags,
+                                    #
+                                    material_system_urn=artifact.material_system_urn,
+                                    label=artifact.label,
+                                )
+                            elif isinstance(artifact, models.DigitalArtifact):
+                                self.add_node(
+                                    artifact_node,
+                                    __labels__=set(
+                                        [ProvenanceStepGraph.ArtifactNode.__name__]
+                                    ),
+                                    node_type=ProvenanceStepGraph.ArtifactNode.__name__,
+                                    type_urn=artifact.type_urn,
+                                    #
+                                    tags=artifact.tags,
+                                    #
+                                    local_data=artifact.local_data,
+                                    url_data=artifact.url_data,
+                                )
+
+                    for _, artifact_node, _ in to_edges:
+                        pass
+
                 for edges in [from_edges, to_edges]:
                     for edge in edges:
                         self.add_edge(*edge)
@@ -142,9 +199,10 @@ class ProvenanceStepGraph(networkx.MultiDiGraph):
         schema_cb,
         artifact_node: ArtifactNode,
         strategy: str = None,
+        include_motif_attrs=False,
+        artifact_cb=None,
         cache={},
     ):
-
         """
         Adds relevant steps from an operation to an existing process provenance, starting at
         a particular artifact.
@@ -160,7 +218,10 @@ class ProvenanceStepGraph(networkx.MultiDiGraph):
         operation_provenance: ProvenanceStepGraph = cache.get(operation.id)
         if operation_provenance is None:
             operation_provenance = ProvenanceStepGraph().build_from_operation(
-                operation, schema_cb()
+                operation,
+                schema_cb(),
+                include_motif_attrs=include_motif_attrs,
+                artifact_cb=artifact_cb,
             )
             cache[operation.id] = operation_provenance
 
@@ -183,6 +244,7 @@ class ProvenanceStepGraph(networkx.MultiDiGraph):
                 )
             )
 
+        self.add_nodes_from(extended_provenance.nodes(data=True))
         self.add_edges_from(extended_provenance.edges(keys=True, data=True))
 
         # A strategy may include a "radius", which allows us to search outward a configurable
@@ -195,7 +257,6 @@ class ProvenanceStepGraph(networkx.MultiDiGraph):
             radius = int(radius_split[1])
 
         if radius > 0:
-
             for ext_artifact_node in filter(
                 lambda n: isinstance(n, ProvenanceStepGraph.ArtifactNode),
                 extended_provenance.nodes(),
@@ -209,6 +270,7 @@ class ProvenanceStepGraph(networkx.MultiDiGraph):
                     ).nodes()
                 )
 
+                self.add_nodes_from(bfs_provenance.nodes(data=True))
                 self.add_edges_from(bfs_provenance.edges(keys=True, data=True))
 
         return extended_provenance
@@ -227,9 +289,8 @@ class ProvenanceStepGraph(networkx.MultiDiGraph):
         builder = []
         builder.append("Nodes:")
         for node in self.nodes():
-            builder.append("  " + node.__repr__())
+            builder.append("  " + node.__repr__() + f" {self.nodes[node]}")
             if repo_layer:
-
                 if isinstance(node, ProvenanceStepGraph.ArtifactNode):
                     artifact = repo_layer.artifacts.query_one(id=node.artifact_id)
                     builder.append("    " + f"{artifact.type_urn} {artifact.name}")
@@ -244,6 +305,33 @@ class ProvenanceStepGraph(networkx.MultiDiGraph):
         return "\n".join(builder)
 
 
+class ProvenanceStepPath(networkx.DiGraph):
+
+    """
+    ProvenanceStepPaths are subgraphs of ProvenanceStepGraphs that also contain an ordered list of nodes in a path.
+
+    Implicitly this also defines an ordered set of edges in the path (of size len(path_nodes) - 1))
+    """
+
+    def __init__(self, path, graph: networkx.MultiDiGraph):
+        super().__init__(self)
+        self.path_nodes = path
+        subgraph: networkx.MultiDiGraph = graph.subgraph(self.path_nodes)
+        self.add_nodes_from(subgraph.nodes())
+        for node_a, node_b, key in subgraph.edges(keys=True):
+            self.add_edge(node_a, node_b, key=key)
+
+    @property
+    def path_edges(self):
+        for node_a, node_b in zip(self.path_nodes[0:-1], self.path_nodes[1:]):
+            edge = (
+                (node_a, node_b)
+                if (node_a, node_b) in self.edges()
+                else (node_b, node_a)
+            )
+            yield (edge[0], edge[1], self.edges[edge[0], edge[1]])
+
+
 class ArtifactFrameGraph(networkx.DiGraph):
 
     """
@@ -253,25 +341,9 @@ class ArtifactFrameGraph(networkx.DiGraph):
     systems of one artifact to another.  Each edge between artifacts is associated with a spatial frame.
     """
 
-    # NOTE that these nodes must support equality comparisons
-    class ArtifactNode(pydantic.BaseModel):
-
-        artifact_id: str
-
-        def __members(self):
-            return (self.artifact_id,)
-
-        def __eq__(self, other):
-            if type(other) is type(self):
-                return self.__members() == other.__members()
-            else:
-                return False
-
-        def __hash__(self):
-            return hash(self.__members())
+    ArtifactNode = ProvenanceStepGraph.ArtifactNode
 
     def add_spatial_artifact(self, artifact: models.DigitalArtifact):
-
         child_node = ArtifactFrameGraph.ArtifactNode(artifact_id=str(artifact.id))
 
         if not artifact.spatial_frame or not artifact.spatial_frame.parent_frame:
@@ -332,14 +404,12 @@ class ProvenanceServices:
     """
 
     def __init__(self, service_layer):
-
         from .service_layer import ServiceLayer
 
         self.service_layer: ServiceLayer = service_layer
         self.repo_layer = self.service_layer.repo_layer
 
     def build_operation_steps(self, operation: models.Operation) -> ProvenanceStepGraph:
-
         """
         Build the operation steps and artifact relationships for a single operation
         """
@@ -353,9 +423,11 @@ class ProvenanceServices:
         return ProvenanceStepGraph().build_from_operation(operation, schema)
 
     def build_artifact_provenance(
-        self, artifact_id, strategy: str = None
+        self,
+        artifact_id,
+        strategy: str = None,
+        include_motif_attrs=False,
     ) -> ProvenanceStepGraph:
-
         """
         Grow a provenance starting from a particular artifact.
 
@@ -367,15 +439,22 @@ class ProvenanceServices:
           - continue until all seen artifacts are explored
         """
 
+        artifact_ids = (
+            artifact_id if isinstance(artifact_id, (tuple, list)) else [artifact_id]
+        )
+
         provenance_graph = ProvenanceStepGraph()
-        seed_node = ProvenanceStepGraph.ArtifactNode(artifact_id=str(artifact_id))
-        fringe: List[ProvenanceStepGraph.ArtifactNode] = [seed_node]
+        fringe = [
+            ProvenanceStepGraph.ArtifactNode(artifact_id=str(artifact_id))
+            for artifact_id in artifact_ids
+        ]
         seen_artifact_nodes: Set[ProvenanceStepGraph.ArtifactNode] = set(fringe)
 
         operations_repo: repositories.OperationRepository = self.repo_layer.operations
+        artifacts_repo: repositories.ArtifactRepository = self.repo_layer.artifacts
+        artifact_cb = lambda id: artifacts_repo.query_one(id=id)
 
         while fringe:
-
             next_artifact_node = fringe.pop()
 
             artifact_operations = operations_repo.query_by_attached(
@@ -383,7 +462,6 @@ class ProvenanceServices:
             )
 
             for operation in artifact_operations:
-
                 schema_cb = (
                     lambda: self.service_layer.schema_services()
                     .query_resolved_project_schema(
@@ -393,11 +471,15 @@ class ProvenanceServices:
                 )
 
                 extended_provenance = provenance_graph.extend_with_operation(
-                    operation, schema_cb, next_artifact_node, strategy=strategy
+                    operation,
+                    schema_cb,
+                    next_artifact_node,
+                    strategy=strategy,
+                    include_motif_attrs=include_motif_attrs,
+                    artifact_cb=artifact_cb,
                 )
 
                 for artifact_node in extended_provenance.nodes():
-
                     if not isinstance(artifact_node, ProvenanceStepGraph.ArtifactNode):
                         continue
 
@@ -407,14 +489,38 @@ class ProvenanceServices:
 
         return provenance_graph
 
-    def build_artifact_frame_graph(self, artifact_id, strategy: str = None):
+    def query_artifact_provenance(
+        self,
+        from_artifact_id,
+        cypher_query,
+        **kwargs,
+    ):
+        """
+        Query artifact(s) provenance via a cypher graph query.  Attributes for the query are pulled from the
+        operation and artifact nodes.
 
+        Currently only node return is supported.
+
+        TODO: Include other query types
+        """
+
+        artifact_provenance_graph = self.build_artifact_provenance(
+            from_artifact_id, include_motif_attrs=True, **kwargs
+        )
+
+        results = grandcypher.GrandCypher(
+            networkx.DiGraph(artifact_provenance_graph)
+        ).run(cypher_query)
+
+        return (results, artifact_provenance_graph)
+
+    def build_artifact_frame_graph(self, artifact_id, strategy: str = None):
         """
         Grow a frame graph starting from a particular artifact.
 
         The exact exploration strategy is configurable to "full", "parents", and "children".
 
-        The exploration proceeds by:
+        The exploration proceed/s by:
           - finding all frame parents and/or children of the current artifact node
             - parents are artifacts that are spatial_frame.parent_frames of the current artifact
             - children are artifacts that reference the current artifact in their spatial_frame.parent_frame
@@ -423,18 +529,23 @@ class ProvenanceServices:
           - continue until all seen artifacts are explored
         """
 
+        artifact_ids = (
+            artifact_id if isinstance(artifact_id, (tuple, list)) else [artifact_id]
+        )
+
         if strategy is None:
             strategy = "full"
 
         frame_graph = ArtifactFrameGraph()
-        seed_node = ArtifactFrameGraph.ArtifactNode(artifact_id=str(artifact_id))
-        fringe: List[ArtifactFrameGraph.ArtifactNode] = [seed_node]
+        fringe = [
+            ArtifactFrameGraph.ArtifactNode(artifact_id=str(artifact_id))
+            for artifact_id in artifact_ids
+        ]
         seen_artifact_nodes: Set[ArtifactFrameGraph.ArtifactNode] = set(fringe)
 
         artifacts_repo: repositories.ArtifactRepository = self.repo_layer.artifacts
 
         while fringe:
-
             next_artifact_node = fringe.pop()
 
             related_artifacts: List[models.DigitalArtifact] = []
@@ -464,7 +575,6 @@ class ProvenanceServices:
         return frame_graph
 
     def build_artifact_frame_path(self, from_artifact_id, to_artifact_id):
-
         """
         Grow a frame graph path starting from a particular artifact and ending at another artifact.
 
@@ -495,3 +605,72 @@ class ProvenanceServices:
             )
         except networkx.NetworkXNoPath:
             return None
+
+    def build_nearest_related_artifact_frame_path(
+        self,
+        from_artifact_id,
+        related_artifact_cypher_query,
+        to_artifact_id,
+        **kwargs,
+    ):
+        """
+        Build a frame path from the from_artifact to the nearest digital artifact related to the to_artifact.
+
+        Returns the ProvenanceStepPath between the from_artifact and the nearest related digital artifact, as
+        well as the shortest FramePath between the nearest related artifact and the to_artifact.
+
+        A related_artifact_cypher_query is used to filter the nearest related digital artifacts if particular
+        types of artifacts are wanted.
+        """
+
+        related_artifact_results, provenance_graph = self.query_artifact_provenance(
+            from_artifact_id, related_artifact_cypher_query, **kwargs
+        )
+
+        if not related_artifact_results:
+            return None
+
+        related_artifact_nodes = next(related_artifact_results.items().__iter__())[1]
+
+        frame_graph = self.build_artifact_frame_graph(to_artifact_id, strategy="full")
+
+        frame_related_artifact_nodes = set(frame_graph.nodes).intersection(
+            related_artifact_nodes
+        )
+
+        if not frame_related_artifact_nodes:
+            return None
+
+        undir_provenance_graph = provenance_graph.to_undirected(as_view=True)
+
+        from_artifact_node = ProvenanceStepGraph.ArtifactNode(
+            artifact_id=str(from_artifact_id)
+        )
+
+        to_artifact_node = ProvenanceStepGraph.ArtifactNode(
+            artifact_id=str(to_artifact_id)
+        )
+
+        provenance_paths = [
+            networkx.algorithms.shortest_path(
+                undir_provenance_graph, from_artifact_node, frame_related_artifact_node
+            )
+            for frame_related_artifact_node in frame_related_artifact_nodes
+        ]
+
+        shortest_provenance_path = ProvenanceStepPath(
+            sorted(provenance_paths, key=lambda p: len(p))[0], provenance_graph
+        )
+
+        undir_frame_graph = frame_graph.to_undirected(as_view=True)
+
+        shortest_frame_path = ArtifactFramePath(
+            networkx.algorithms.shortest_path(
+                undir_frame_graph,
+                shortest_provenance_path.path_nodes[-1],
+                to_artifact_node,
+            ),
+            frame_graph,
+        )
+
+        return (shortest_provenance_path, shortest_frame_path)

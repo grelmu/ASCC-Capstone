@@ -30,7 +30,6 @@ class NewArtifactTransform(models.ArtifactTransform):
 
 
 def create_router(app):
-
     router = fastapi.APIRouter(prefix="/api/operations")
 
     #
@@ -50,7 +49,6 @@ def create_router(app):
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
-
         project_endpoints.check_project_claims_for_user(user, [str(operation.project)])
 
         return repo_layer.operations.create(operation)
@@ -67,7 +65,6 @@ def create_router(app):
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
-
         result = repo_layer.operations.query_one(
             id=id, project_ids=project_endpoints.project_claims_for_user(user)
         )
@@ -94,7 +91,6 @@ def create_router(app):
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
-
         if project_ids is None:
             project_ids = project_endpoints.project_claims_for_user(user)
 
@@ -140,7 +136,6 @@ def create_router(app):
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
-
         if project_ids is None:
             project_ids = project_endpoints.project_claims_for_user(user)
 
@@ -183,7 +178,6 @@ def create_router(app):
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
-
         if id != str(operation.id):
             raise fastapi.HTTPException(status_code=fastapi.status.HTTP_400_BAD_REQUEST)
 
@@ -211,7 +205,6 @@ def create_router(app):
         repo_layer=Depends(request_repo_layer(app)),
     ):
         def update_fn(metadata: models.Operation):
-
             for change in changes:
                 if change.op == "replace":
                     setattr(metadata, change.path, change.value)
@@ -244,7 +237,6 @@ def create_router(app):
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
-
         modified = (
             repo_layer.operations.deactivate
             if preserve_data
@@ -273,7 +265,6 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         operation: models.Operation = read(id, user, service_layer.repo_layer)
         services = service_layer.operation_services_for(operation)
         return services.init(operation, **args)
@@ -319,7 +310,6 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         operation: models.Operation = read(id, user, service_layer.repo_layer)
         services = service_layer.operation_services_for(operation)
         modified = services.attach(operation, attachment)
@@ -382,7 +372,6 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         operation: models.Operation = read(id, user, service_layer.repo_layer)
         services = service_layer.operation_services_for(operation)
         claimed = services.claim(operation, attachment)
@@ -405,7 +394,6 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         operation: models.Operation = read(id, user, service_layer.repo_layer)
         services = service_layer.operation_services_for(operation)
         modified = services.detach(operation, attachment)
@@ -483,7 +471,6 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         op: models.Operation = read(id, user, service_layer.repo_layer)
         service: services.OperationServices = service_layer.operation_services_for(op)
         return service.get_default_attachments_artifact(op)
@@ -495,7 +482,7 @@ def create_router(app):
     @router.get(
         "/{id}/services/operation/provenance/steps",
         response_model=endpoints.ProvenanceGraphModel,
-        tags=["operations"],
+        tags=["operations", "provenance"],
     )
     def get_provenance_steps(
         id: str,
@@ -504,6 +491,14 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
+        """
+        Get the OperationStep nodes created by this operation as well as Artifact inputs and
+        outputs.
+
+        As a subgraph of a provenance graph, the returned graph is bipartite, with OperationStep
+        nodes and Artifact nodes.  However the graph is usually not fully connected as it contains
+        only the relationships created by this operation.
+        """
 
         op: models.Operation = read(id, user, service_layer.repo_layer)
         service: services.ProvenanceServices = service_layer.provenance_services()

@@ -30,7 +30,6 @@ from . import endpoints
 
 
 def create_router(app):
-
     router = fastapi.APIRouter(
         prefix="/api/artifacts",
     )
@@ -52,7 +51,6 @@ def create_router(app):
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
-
         project_endpoints.check_project_claims_for_user(user, [str(artifact.project)])
 
         art_repo = repo_layer.artifacts
@@ -70,7 +68,6 @@ def create_router(app):
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
-
         result = repo_layer.artifacts.query_one(
             id=id, project_ids=project_endpoints.project_claims_for_user(user)
         )
@@ -95,7 +92,6 @@ def create_router(app):
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
-
         if project_ids is None:
             project_ids = project_endpoints.project_claims_for_user(user)
 
@@ -133,7 +129,6 @@ def create_router(app):
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
-
         if project_ids is None:
             project_ids = project_endpoints.project_claims_for_user(user)
 
@@ -173,7 +168,6 @@ def create_router(app):
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
-
         if id != str(artifact.id):
             raise fastapi.HTTPException(status_code=fastapi.status.HTTP_400_BAD_REQUEST)
 
@@ -201,7 +195,6 @@ def create_router(app):
         repo_layer=Depends(request_repo_layer(app)),
     ):
         def update_fn(artifact: models.DigitalArtifact):
-
             for change in changes:
                 if change.op == "replace":
                     setattr(artifact, change.path, change.value)
@@ -234,7 +227,6 @@ def create_router(app):
         ),
         repo_layer=Depends(request_repo_layer(app)),
     ):
-
         modified = (
             repo_layer.artifacts.deactivate
             if preserve_data
@@ -261,7 +253,6 @@ def create_router(app):
         user: models.User = Security(request_user(app), scopes=[MODIFY_ARTIFACT_SCOPE]),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         """
         Initializes an artifact in a type-specific way using a set of parameters specified
         in the body of the request.
@@ -336,7 +327,7 @@ def create_router(app):
     @router.get(
         "/{id}/services/artifact/provenance",
         response_model=endpoints.ProvenanceGraphModel,
-        tags=["artifacts"],
+        tags=["artifacts", "provenance"],
     )
     def get_provenance(
         id: str,
@@ -346,6 +337,17 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
+        """
+        Get an artifact's provenance, computed via a particular strategy.
+
+        The returned graph is bipartite, with OperationStep nodes and Artifact nodes.
+        Edges include information about the artifact/operation attachment that creates
+        the Artifact/OperationStep provenance relationship.
+
+        The strategy is of the format "ancestors[+N]" or "descendents[+N]", where
+        the optional "+N" specifies that any nodes N edges from a node in the
+        ancestry or descendants tree should be included in the provenance.
+        """
 
         artifact: models.Artifact = read(id, user, service_layer.repo_layer)
         services = service_layer.provenance_services()
@@ -357,6 +359,12 @@ def create_router(app):
         "/{id}/services/artifact/frame_graph",
         response_model=endpoints.ArtifactFrameGraphModel,
         tags=["artifacts"],
+        deprecated=True,
+    )
+    @router.get(
+        "/{id}/services/artifact/provenance/frame_graph",
+        response_model=endpoints.ArtifactFrameGraphModel,
+        tags=["artifacts", "provenance"],
     )
     def get_frame_graph(
         id: str,
@@ -366,6 +374,16 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
+        """
+        Get an artifact's frame graph, computed via a particular strategy (defaults to "full").
+
+        The returned graph has nodes of artifacts.  Edges include information about the spatial
+        frame relationship between artifacts.
+
+        The strategy is of the format "parents", "children", or "full" (default) indicating
+        whether to explore the frame parents or children of an artifact.  Note that frame parents
+        and children are not necessarily ancestors or descendants in an artifact's provenance.
+        """
 
         artifact: models.Artifact = read(id, user, service_layer.repo_layer)
         services = service_layer.provenance_services()
@@ -377,6 +395,12 @@ def create_router(app):
         "/{id}/services/artifact/frame_path",
         response_model=typing.Optional[endpoints.ArtifactFramePathModel],
         tags=["artifacts"],
+        deprecated=True,
+    )
+    @router.get(
+        "/{id}/services/artifact/provenance/frame_path",
+        response_model=typing.Optional[endpoints.ArtifactFramePathModel],
+        tags=["artifacts", "provenance"],
     )
     def get_frame_path(
         id: str,
@@ -386,12 +410,59 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
+        """
+        Get the (shortest) frame path between artifacts.
+
+        The returned path includes an ordered list of nodes and edges indicating the intermediate spatial
+        frames between two artifacts.
+        """
 
         artifact: models.Artifact = read(id, user, service_layer.repo_layer)
         services = service_layer.provenance_services()
         return endpoints.ArtifactFramePathModel.from_path(
             services.build_artifact_frame_path(artifact.id, to_id)
         )
+
+    @router.get(
+        "/{id}/services/artifact/provenance/nearest_related_frame_path",
+        response_model=endpoints.RelatedFramePathModel,
+        tags=["artifacts", "provenance"],
+    )
+    def get_provenance_nearest_related_frame_path(
+        id: str,
+        to_id: str,
+        related_artifact_cypher_query: str,
+        strategy: str = None,
+        user: security.ScopedUser = Security(
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
+        ),
+        service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
+    ):
+        """
+        Query the nearest related artifact with any frame path to the specified artifact, and return both
+        the (shortest) provenance path to the related artifact along with the (shortest) frame path to
+        the specified artifact.
+
+        Essentially this is a combination provenance/geometry search and allows searching for digital artifacts
+        related to a source artifact which can then be geometrically related to a target digital artifact.
+
+        To specify the types of related digital artifacts, a graph query is used to specify allowable related
+        provenance nodes.
+
+        See project/-/services/project/provenance for more info on graph queries.
+        """
+
+        artifact: models.Artifact = read(id, user, service_layer.repo_layer)
+        services = service_layer.provenance_services()
+
+        (
+            provenance_path,
+            frame_path,
+        ) = services.build_nearest_related_artifact_frame_path(
+            artifact.id, related_artifact_cypher_query, to_id, strategy=strategy
+        )
+
+        return endpoints.RelatedFramePathModel.from_paths(provenance_path, frame_path)
 
     from .services.artifacts.digital_file_services import FileServices
 
@@ -406,7 +477,6 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         artifact: models.DigitalArtifact = read(id, user, service_layer.repo_layer)
         service: FileServices = service_layer.artifact_services_for(
             artifact, FileServices
@@ -436,7 +506,6 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         artifact: models.DigitalArtifact = read(id, user, service_layer.repo_layer)
         service: FileBucketServices = service_layer.artifact_services_for(
             artifact, FileBucketServices
@@ -481,7 +550,6 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         if path is None:
             raise fastapi.HTTPException(
                 status_code=fastapi.status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -507,7 +575,6 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         artifact: models.DigitalArtifact = read(id, user, service_layer.repo_layer)
         service: FileBucketServices = service_layer.artifact_services_for(
             artifact, FileBucketServices
@@ -527,7 +594,6 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         artifact: models.Artifact = read(id, user, service_layer.repo_layer)
 
         service: services.DatabaseBucketServices = service_layer.artifact_services_for(
@@ -552,7 +618,6 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         artifact: models.DigitalArtifact = read(id, user, service_layer.repo_layer)
         service: FileBucketServices = service_layer.artifact_services_for(
             artifact, FileBucketServices
@@ -576,7 +641,6 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         if path is None:
             raise fastapi.HTTPException(
                 status_code=fastapi.status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -665,7 +729,6 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         """
         Search for points in a point cloud artifact.
 
@@ -734,7 +797,6 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         """
         Search for points in a point cloud artifact and return a file in a specified format.
 
@@ -748,7 +810,6 @@ def create_router(app):
         )
 
         if format == "pcd":
-
             try:
                 from mppw import pcl
             except Exception as ex:
@@ -867,7 +928,6 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         """
         Search for events in a time series artifact.
 
@@ -937,7 +997,6 @@ def create_router(app):
         ),
         service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
     ):
-
         """
         Get statistics about storage of a time series artifact.
 
@@ -950,5 +1009,43 @@ def create_router(app):
             artifact, TimeSeriesServices
         )
         return service.stats(artifact)
+
+    from .services.artifacts.digital_bounding_box_services import (
+        BoundingBoxServices,
+    )
+
+    @router.post(
+        "/{id}/services/bounding-box/transform",
+        response_model=dict,
+        tags=["artifacts"],
+    )
+    def bounding_box_transform(
+        id: str,
+        frame_artifact_id: str,
+        user: models.User = Security(request_user(app), scopes=[MODIFY_ARTIFACT_SCOPE]),
+        service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
+    ):
+        """
+        Get a transformed version of the bounding box artifact in the frame of another specified
+        digital artifact.
+
+        Returns a bounding box in the JSON schema representation of :bounding-box.
+        
+        Uses the shortest frame path possible for projection.  Note that bounding boxes are
+        axis-aligned, but are transfomed as oriented geometries before being bounded by axis-aligned
+        coordinates again for return.  This means that a 45 degree rotation, for example, may make
+        the transformed bounding box larger in volume and other dimensions.
+          
+        If the bounding box is not related to the frame of the other artifact, returns an
+        error.
+        """
+
+        artifact: models.Artifact = read(id, user, service_layer.repo_layer)
+
+        service: BoundingBoxServices = service_layer.artifact_services_for(
+            artifact, BoundingBoxServices
+        )
+
+        return service.transform_artifact_bbox_into_frame(artifact, frame_artifact_id)
 
     return router
