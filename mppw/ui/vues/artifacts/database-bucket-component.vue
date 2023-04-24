@@ -72,7 +72,6 @@ export default {
     refreshArtifact() {
       this.artifact = null;
       return this.$root.apiFetchArtifact(this.artifactId).then((artifact) => {
-        console.log(this)
         this.artifact = artifact;
         this.local_url = this.replace_mongo_local(artifact.url_data);
         this.read_only_url = this.generate_read_only_link(artifact.url_data);
