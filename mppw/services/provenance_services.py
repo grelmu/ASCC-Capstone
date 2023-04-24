@@ -4,7 +4,6 @@ import networkx
 import json
 import re
 from typing import List, Set, Sequence, Optional
-import dotmotif
 import grandcypher
 
 from .. import repositories
@@ -496,6 +495,15 @@ class ProvenanceServices:
         cypher_query,
         **kwargs,
     ):
+        """
+        Query artifact(s) provenance via a cypher graph query.  Attributes for the query are pulled from the
+        operation and artifact nodes.
+
+        Currently only node return is supported.
+
+        TODO: Include other query types
+        """
+
         artifact_provenance_graph = self.build_artifact_provenance(
             from_artifact_id, include_motif_attrs=True, **kwargs
         )
@@ -605,6 +613,16 @@ class ProvenanceServices:
         to_artifact_id,
         **kwargs,
     ):
+        """
+        Build a frame path from the from_artifact to the nearest digital artifact related to the to_artifact.
+
+        Returns the ProvenanceStepPath between the from_artifact and the nearest related digital artifact, as
+        well as the shortest FramePath between the nearest related artifact and the to_artifact.
+
+        A related_artifact_cypher_query is used to filter the nearest related digital artifacts if particular
+        types of artifacts are wanted.
+        """
+
         related_artifact_results, provenance_graph = self.query_artifact_provenance(
             from_artifact_id, related_artifact_cypher_query, **kwargs
         )

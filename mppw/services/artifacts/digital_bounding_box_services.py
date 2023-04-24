@@ -9,7 +9,14 @@ from .. import provenance_services
 TODO: Refactor and add support for meshes
 """
 
+
 class BoundingBoxServices(ArtifactServices):
+
+    """
+    Services related to bounding box artifacts
+    """
+
+    # Open3D doesn't have a named constant for this
     OPEN3D_GEOMETRY_TYPE_ORIENTED_BOUNDING_BOX_VALUE = 11
 
     def transform_artifact_bbox_into_frame(
@@ -17,6 +24,15 @@ class BoundingBoxServices(ArtifactServices):
         geometry_artifact: models.DigitalArtifact,
         frame_artifact_id,
     ):
+        """
+        Given an artifact bounding box, transform the bounds into the frame
+        of another artifact.
+
+        Works by finding a path between artifacts and then transforming the (oriented)
+        box frame-by-frame until reaching the target frame.  Produces another axis-aligned
+        bounding box.
+        """
+
         geometry_3d = self.artifact_to_geometry_3d(geometry_artifact)
 
         provenance_services = self.service_layer.provenance_services()
@@ -38,12 +54,18 @@ class BoundingBoxServices(ArtifactServices):
         )
 
     def transform_geometry_3d(self, geometry_3d, transforms_h3d):
+        """
+        Given a 3d geometry and a number of (homogenous) 3d transforms, transforms
+        the geometry via each transform in-order.
+        """
+
         is_bbox = (
             geometry_3d.get_geometry_type().value
             == BoundingBoxServices.OPEN3D_GEOMETRY_TYPE_ORIENTED_BOUNDING_BOX_VALUE
         )
 
-        # DRAGONS: BBoxes can't currently be transformed this way for reasons in O3D
+        # DRAGONS: BBoxes can't currently be transformed this way for reasons in O3D,
+        # so transform an equivalent point cloud instead.
         if is_bbox:
             geometry_3d = open3d.geometry.PointCloud(geometry_3d.get_box_points())
 
@@ -58,6 +80,13 @@ class BoundingBoxServices(ArtifactServices):
     def frame_path_to_transforms_h3d(
         self, frame_path: provenance_services.ArtifactFramePath
     ):
+        """
+        Convert a frame path from an artifact frame graph into a set
+        of transforms.
+
+        Converting to an artifact child vs parent inverts the transform.
+        """
+
         transforms_h3d = []
         for path_node, (from_node, to_node, data) in zip(
             frame_path.path_nodes, frame_path.path_edges
@@ -99,6 +128,10 @@ class BoundingBoxServices(ArtifactServices):
         return transforms_h3d
 
     def artifact_to_geometry_3d(self, artifact: models.DigitalArtifact):
+        """
+        Convert a digital artifact into an (open)3D geometry
+        """
+
         if artifact.type_urn in ["urn:x-mfg:artifact:digital:document:bounding-box"]:
             return open3d.geometry.AxisAlignedBoundingBox(
                 numpy.array(
@@ -124,6 +157,10 @@ class BoundingBoxServices(ArtifactServices):
             )
 
     def geometry_3d_to_artifact_bbox(self, geometry_3d: open3d.geometry.Geometry3D):
+        """
+        Convert an (open)3D geometry into an artifact bounding box schema
+        """
+
         aabb_3d: open3d.geometry.AxisAlignedBoundingBox = (
             geometry_3d.get_axis_aligned_bounding_box()
         )
