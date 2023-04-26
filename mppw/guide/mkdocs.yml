@@ -6,4 +6,5 @@ nav:
       - "Add Operations": tutorial/add_operations.md
       - "Modify Schema": tutorial/modify_schema.md
   - Roadmap: roadmap.md
+  - User Interface: notes.md
 theme: readthedocs
