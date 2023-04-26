@@ -1,6 +1,7 @@
 site_name: Guide to the MPPW
 nav:
   - Home: index.md
+  - Deployment: deploy.md
   - Tutorial:
       - "Create a Project": tutorial/create_a_project.md
       - "Add Operations": tutorial/add_operations.md
