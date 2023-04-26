@@ -1,13 +1,13 @@
 # Login page
 `url`: http://localhost:8000/ui/index.html#/
-![login page](../images/LoginPage.png)
+![login page](./images/LoginPage.png)
 
 This will be the default page for users who are not signed in. There is a 
   username and password field used for signin. A successful login will redirect 
   the user to the Browse operations view.
 
 # Site Navigation
-![Browse Operations Page](../images/BrowseOperationsPage.png)
+![Browse Operations Page](./images/BrowseOperationsPage.png)
 ## Top Nav
 At the top of the site is a navigation bar that features three key elements. 
 From left to right they are the site logo (which returns to the "browse 
@@ -26,14 +26,14 @@ associated views are:
 
 # Browse Operations View
 `url`: http://localhost:8000/ui/index.html#/
-![Browse Operations Page](../images/BrowseOperationsPage.png)
+![Browse Operations Page](./images/BrowseOperationsPage.png)
 
 This acts as the landing page for the site once the user is logged in.
 
 First the user will need to select a project from the dropdown which will 
   display all the associated operations on that project, as well as allow the  
   user to create new operations.
-![Browse Operations Page Populated](../images/BrowseOperationsPagePopulated.png)
+![Browse Operations Page Populated](./images/BrowseOperationsPagePopulated.png)
 
 clicking the new operation button will open the Create Operation view which 
   has fields for operation name, description, and type. By default, several 
@@ -55,7 +55,7 @@ Each operation row has 5 columns:
 # Operation Details Page
 
 `url`: http://localhost:8000/ui/index.html#/operations/{operation_id}
-![Operation Details Page](../images/OperationDetailsPage.png)
+![Operation Details Page](./images/OperationDetailsPage.png)
 
 This view is split between two parts: 
 - `Operation details`, which cover basic properties that are common to all 
@@ -91,11 +91,11 @@ If the artifact belongs to a different operation, there will be three new
   replaces the delete artifact button. This will remove it from the operation,
   but leave the artifact itself alone since it belongs to a different 
   operation.
-![Linked Artifact](../images/OperationsPAgeLinkedArtifact.png)
+![Linked Artifact](./images/OperationsPAgeLinkedArtifact.png)
 
 The detailed view of an artifact depends heavily on the artifact type. 
   (get list and show current things available)
-  ![Expanded Artifact](../images/ArtifactExpanded.png)
+  ![Expanded Artifact](./images/ArtifactExpanded.png)
 
 # Provenance/Artifact Details Page
 `url`: http://localhost:8000/ui/index.html#/artifacts/{artifact_id}
@@ -106,7 +106,7 @@ This page has three sections:
  - The JSON data of the Provenance
 
 ## Provenance
-![Provenance Page](../images/OperationProvenancePage.png)
+![Provenance Page](./images/OperationProvenancePage.png)
 The provenance DAG is the only section expanded by default and functions to 
 show how the artifact relates to other artifacts and operations in the project. 
 
@@ -137,14 +137,14 @@ pieces of text to describe itself as quick as possible:
   Provenance/Artifact Details page of the node they clicked on.
 
 ## Artifact
-![Provenance Artifact Details](../images/OperationProvenancePAgeArtifact.png)
+![Provenance Artifact Details](./images/OperationProvenancePAgeArtifact.png)
 This section is at the top of the page and can be expanded by clicking anywhere 
 on the `> Artifact` row. It displays all the related JSON for the artifact, 
 allowing the user to see useful details such as the ProjectID, its type, and so 
 on.
 
 ## Provenance JSON
-![Expanded Artifact](../images/ProvenancePageDetailed.png)
+![Expanded Artifact](./images/ProvenancePageDetailed.png)
 This section is at the top of the page and can be expanded by clicking anywhere 
 on the `> Provenance` row. This is the JSON data used to construct the DAG 
 shown above it. 
@@ -182,7 +182,7 @@ The configuration view presents the user with two tabs, one for editing
 project metadata the other for editing user metadata. 
 
 ## Project Configuration Tab
-![Project Configuration](../images/ConfigurationViewProjects.png)
+![Project Configuration](./images/ConfigurationViewProjects.png)
 Beginning with the project configuration tab, there is a large table that holds 
 references to all existing projects. In each row of the table there is an 
 edit button that opens a dialog for changing the project name and description. 
@@ -192,16 +192,16 @@ project` button that opens a dialog to create a new project. A new project
 may be created by simply supplying a name and optionally a description.
 
 ## User Configuration Tab
-![User Configuration](../images/ConfigurationPageUSers.png)
+![User Configuration](./images/ConfigurationPageUSers.png)
 On the user configuration tab, there is a large table that holds 
 references to all existing users. In each row of the table there is an 
 edit button that opens a dialog for changing the username, associated projects,
 and permissions. 
 
-![User Configuration](../images/EditUserView.png)
+![User Configuration](./images/EditUserView.png)
 
 # About Page
-![About Page](../images/AboutPage.png)
+![About Page](./images/AboutPage.png)
 `url`: http://localhost:8000/ui/index.html#/about
 
 The about view displays the list of feature changes and improvements that 
