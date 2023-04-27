@@ -12,6 +12,18 @@ At the highest level, the MPPW consists of three loosely-coupled components:
 
 - An analysis sandbox, backed by a scripting platform (JupyterHub) and integrated with the API, packaging researcher data analysis scripts as well as user-driven automation scripts.
 
-The [deployment section](./deploy.md) describes how to setup and deploy the MPPW stack.
+# For software and data integrators
 
-The [tutorial section](./tutorial/create_a_project.md) has an overview of how to set up a new project in the MPPW.
+* The [deployment section](./deploy.md) describes how to setup and deploy the MPPW stack.
+* The [sensor data integration section](./data_integration/sensor_data.md) shows how to ingest data from manufacturing or other processes into the warehouse.
+
+# For project administrators
+
+* The [tutorial section](./tutorial/create_a_project.md) has an overview of how to set up a new project in the MPPW and define data collection operation and artifact schemas.
+
+# For scientists and researchers
+
+* The [data entry](./data_integration/data_entry.md) section introduces data collection via file and other web UIs. 
+
+TODO: Add more focused links here
+

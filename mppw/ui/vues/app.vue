@@ -83,9 +83,9 @@
                   </router-link>
                 </li>
                 <li class="nav-item mt-3">
-                  <router-link to="/about" class="nav-link">
-                    <o-icon icon="information"></o-icon>&nbsp;&nbsp;About
-                  </router-link>
+                  <a href="/guide" class="nav-link">
+                    <o-icon icon="information"></o-icon>&nbsp;&nbsp;Guide
+                  </a>
                 </li>
               </ul>
 
@@ -133,7 +133,6 @@ const routes = [
     path: "/schema",
     component: RemoteVue.lazyComponent("vues/browse-schema-page.vue"),
   },
-  { path: "/about", component: RemoteVue.lazyComponent("vues/about-page.vue") },
   {
     path: "/config",
     component: RemoteVue.lazyComponent("vues/config-page.vue"),

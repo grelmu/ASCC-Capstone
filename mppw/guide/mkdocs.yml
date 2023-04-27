@@ -3,6 +3,7 @@ nav:
   - Home: index.md
   - Deployment: deploy.md
   - Roadmap: roadmap.md
+  - Release Notes: release_notes.md
   - Tutorial:
       - "Create a Project": tutorial/create_a_project.md
       - "Add Operations": tutorial/add_operations.md

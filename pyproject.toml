@@ -3,7 +3,6 @@ name = "mppw"
 version = "0.10.0"
 description = ""
 authors = ["ASCC <ascc@maine.edu>"]
-include = ["MPPW_RELEASE_NOTES.md"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
