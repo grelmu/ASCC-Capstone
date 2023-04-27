@@ -8,7 +8,7 @@ except:
 
 try:
     distribution = importlib_metadata.Distribution.from_name(__name__)
-    with open(distribution.locate_file("MPPW_RELEASE_NOTES.md"), "r") as f:
+    with open(distribution.locate_file("guide/docs/release_notes.md"), "r") as f:
         RELEASE_NOTES = f.read()
 except:
     RELEASE_NOTES = None
