@@ -11,7 +11,7 @@ The Material-Process-Property Warehouse is a software stack which allows storing
 
 For more details installing these basics on WSL, see [`README_WSL.md`](./README_WSL.md).
 
-> If your use case is just to install/deploy released versions of the warehouse, see [`DEPLOY.md`](./DEPLOY.md).  The instructions below are for building the data warehouse from source code.
+> If your use case is just to install/deploy released versions of the warehouse, see [`mppw/guide/docs/deploy.md`](./mppw/guide/docs/deploy.md).  The instructions below are for building the data warehouse from source code.
 
 ## Quickstart
 
