@@ -4,12 +4,11 @@ nav:
   - Deployment: deploy.md
   - Roadmap: roadmap.md
   - Release Notes: release_notes.md
+  - User Interface: user_interface/notes.md
   - Tutorial:
       - "Create a Project": tutorial/create_a_project.md
       - "Add Operations": tutorial/add_operations.md
       - "Modify Schema": tutorial/modify_schema.md
-  - Roadmap: roadmap.md
-  - User Interface: notes.md
   - Data Integration:
       - "Data Entry": data_integration/data_entry.md
       - "Sensor Data and Automation": data_integration/sensor_data.md
