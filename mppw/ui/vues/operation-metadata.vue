@@ -41,7 +41,8 @@
             v-on:update:modelValue="checkChanges('start_at')"
             icon="clock"
             placeholder="Click to select..."
-            :timepicker="{ enableSeconds : true }"
+            :timepicker="{ enableSeconds : true, size: 'default' }"
+            :datepicker="{ size: 'default' }"
           ></o-datetimepicker>
         </o-field>
       </div>
@@ -52,7 +53,8 @@
             v-on:update:modelValue="checkChanges('end_at')"
             icon="clock"
             placeholder="Click to select..."
-            :timepicker="{ enableSeconds : true }"
+            :timepicker="{ enableSeconds : true, size: 'default' }"
+            :datepicker="{ size: 'default' }"
           ></o-datetimepicker>
         </o-field>
       </div>
