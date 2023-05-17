@@ -35,7 +35,7 @@ Password:
 ...
 ```
 
-> Unfortunately, the composites.maine.edu domains currently use self-signed certificates. To work around this, it is necessary to explicitly whitelist the `docker-images.composites.maine.edu:5000` hostname in `daemon.json`. See [`docs.docker`](https://docs.docker.com/registry/insecure/) for more details on how to do so.
+> The composites.maine.edu domains now have secure certificates, but to use docker repositories from unverified domains see [`docs.docker`](https://docs.docker.com/registry/insecure/).
 
 Once logged in, docker images of the form `docker-images.composites.maine.edu:5000/ascc/xyz` are available to `pull`.
 

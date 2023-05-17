@@ -14,6 +14,10 @@ At the highest level, the MPPW consists of three loosely-coupled components:
 
 More information around the software design is in the [architecture section](./architecture.md).
 
+# For all users
+
+* The [user interface section](./user_interface/notes.md) includes an overview of the web interface and how it is used.
+
 # For software and data integrators
 
 * The [deployment section](./deploy.md) describes how to setup and deploy the MPPW stack.
@@ -27,5 +31,4 @@ More information around the software design is in the [architecture section](./a
 
 * The [data entry](./data_integration/data_entry.md) section introduces data collection via file and other web UIs. 
 
-TODO: Add more focused links here
 

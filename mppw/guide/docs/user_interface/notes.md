@@ -30,7 +30,7 @@ associated views are:
 - `Operations`: Browse Operations view
 - `Schema`: Browse Schema view
 - `Configure`: Configure Settings view
-- `About`: MPPW Deployment release notes
+- `Guide`: (Previously "About") A link to a hosted version of the documentation here
 
 ## Browse Operations View
 
@@ -226,14 +226,3 @@ edit button that opens a dialog for changing the username, associated projects,
 and permissions. 
 
 ![User Configuration](./images/EditUserView.png)
-
-## About Page
-
-![About Page](./images/AboutPage.png)
-`url`: http://localhost:8000/ui/index.html#/about
-
-The about view displays the list of feature changes and improvements that 
-have been introduced with each subsequent release of the MPPW software. The 
-notes provide context and help keep users apprised of new features and fixes 
-that have been applied.
-

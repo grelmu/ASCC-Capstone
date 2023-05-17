@@ -2,8 +2,8 @@ site_name: Guide to the MPPW
 nav:
   - Home: index.md
   - Deployment: deploy.md
-  - Architecture: architecture.md
   - User Interface: user_interface/notes.md
+  - Architecture: architecture.md
   - Roadmap: roadmap.md
   - Release Notes: release_notes.md
   - Tutorial:
