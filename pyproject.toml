@@ -39,6 +39,7 @@ scikit-learn = "^1.2.2"
 addict = "^2.4.0"
 # REQUIRED for open3d
 pillow = "^9.5.0"
+mkdocs-mermaid2-plugin = "^0.6.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"

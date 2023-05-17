@@ -86,6 +86,15 @@
         >Save Changes</o-button
       >
     </div>
+
+    <o-loading
+        :full-page="true"
+        :active="isUploading"
+        :can-cancel="false"
+      >
+        <o-icon icon="file-upload" size="large" spin> </o-icon>
+    </o-loading>
+
   </div>
 </template>
 
@@ -99,6 +108,7 @@ export default {
 
       attachmentPath: null,
       uploadFile: null,
+      isUploading: false,
       remoteUrl: null,
     };
   },
@@ -207,6 +217,7 @@ export default {
 
       if (this.storageType == "attachment") {
         if (this.uploadFile) {
+          this.isUploading = true;
           urlPromise = this.$root.apiUploadAttachment(
             this.opAttachments["id"],
             this.attachmentPath,
@@ -229,6 +240,7 @@ export default {
           return this.$root.apiPatchArtifact(this.artifactId, changes);
         })
         .finally(() => {
+          this.isUploading = false;
           return this.refreshArtifact();
         });
     },
