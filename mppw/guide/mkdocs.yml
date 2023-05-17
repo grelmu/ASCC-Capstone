@@ -3,6 +3,7 @@ nav:
   - Home: index.md
   - Deployment: deploy.md
   - Architecture: architecture.md
+  - User Interface: user_interface/notes.md
   - Roadmap: roadmap.md
   - Release Notes: release_notes.md
   - Tutorial:
