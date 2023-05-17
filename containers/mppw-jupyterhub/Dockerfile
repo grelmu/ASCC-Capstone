@@ -1,12 +1,11 @@
 FROM jupyterhub/jupyterhub:2.1.1
 
-RUN apt-get update
-RUN apt-get install git vim -y
+RUN --mount=type=cache,target=/var/cache/apt apt-get update && apt-get install git vim python3-tk -y
 
 COPY dist /root/dist
 RUN mkdir -p /root/.ssh
 COPY ssh_config /root/.ssh/config
-RUN --mount=type=ssh ["bash", "-c", "pip install /root/dist/*.whl"]
+RUN --mount=type=ssh --mount=type=cache,target=/root/.cache ["bash", "-c", "pip install /root/dist/*.whl"]
 
 RUN pip install pkginfo
 RUN mkdir -p /etc/skel/notebooks
