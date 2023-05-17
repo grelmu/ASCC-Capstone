@@ -1,3 +1,16 @@
+# 0.11.0
+
+New Features:
+
+* ** Help Guide for all users **
+* Time series init/insertion endpoints
+* Even more improved API docs
+* ** Operator data collection "button" ** - proof-of-concept
+
+Bugfixes:
+
+* Fixed warning spam in Web UI datepickers
+
 # 0.10.0
 
 New Features:
