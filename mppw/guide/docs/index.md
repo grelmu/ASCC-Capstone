@@ -12,6 +12,8 @@ At the highest level, the MPPW consists of three loosely-coupled components:
 
 - An analysis sandbox, backed by a scripting platform (JupyterHub) and integrated with the API, packaging researcher data analysis scripts as well as user-driven automation scripts.
 
+More information around the software design is in the [architecture section](./architecture.md).
+
 # For software and data integrators
 
 * The [deployment section](./deploy.md) describes how to setup and deploy the MPPW stack.
