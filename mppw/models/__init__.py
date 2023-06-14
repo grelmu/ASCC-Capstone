@@ -231,6 +231,14 @@ class DigitalArtifact(Artifact):
                 f"digital artifact URNs must start with {DigitalArtifact.URN_PREFIX}: {v}"
             )
         return v
+    
+    def dict(self, *args, **kwargs):
+        values = super().dict(*args, **kwargs)
+        # Force spatial frame parent frames to DbIds
+        if values.get("spatial_frame") is not None:
+            if values["spatial_frame"]["parent_frame"] is not None:
+                values["spatial_frame"]["parent_frame"] = DbId.init(values["spatial_frame"]["parent_frame"])
+        return values
 
 
 AnyArtifact = Union[MaterialArtifact, DigitalArtifact]

@@ -1,4 +1,5 @@
 from mppw_clients import mppw_clients
+import furl
 
 def test_basic_artifact_crud(api_pytest_client: mppw_clients.MppwApiClient):
 
@@ -28,3 +29,29 @@ def test_basic_artifact_crud(api_pytest_client: mppw_clients.MppwApiClient):
     api.delete_artifact(part["id"])
 
     assert 0 == len(api.find_artifacts())
+
+def test_artifact_spatial_frame_update(api_pytest_client: mppw_clients.MppwApiClient):
+
+    """
+    Basic test of updating spatial frame, and making sure it's a DbId
+    """
+
+    api = api_pytest_client
+
+    parent = api.create_artifact({"type_urn": ":digital:document", "name": "Parent Document"})
+    child = api.create_artifact({"type_urn": ":digital:document", "name": "Child Document"})
+
+    spatial_frame = { "parent_frame": parent["id"], "transform": {} }
+
+    api.patch_artifact(child["id"], spatial_frame=spatial_frame)
+
+    child = api.get_artifact(child["id"])
+
+    assert child["spatial_frame"]["parent_frame"] == parent["id"]
+
+    frame_graph_furl = furl.furl(f"/artifacts/{parent['id']}/services/artifact/frame_graph")
+    frame_graph_furl.query.params["strategy"] = "full"
+
+    frame_graph = api.get_json(frame_graph_furl.url)
+
+    assert len(frame_graph["nodes"]) == 2

@@ -344,10 +344,12 @@ class ArtifactFrameGraph(networkx.DiGraph):
     ArtifactNode = ProvenanceStepGraph.ArtifactNode
 
     def add_spatial_artifact(self, artifact: models.DigitalArtifact):
+        
         child_node = ArtifactFrameGraph.ArtifactNode(artifact_id=str(artifact.id))
+        self.add_node(child_node)
 
         if not artifact.spatial_frame or not artifact.spatial_frame.parent_frame:
-            return (None, None, None)
+            return (None, child_node, None)
 
         parent_node = ArtifactFrameGraph.ArtifactNode(
             artifact_id=str(artifact.spatial_frame.parent_frame)
