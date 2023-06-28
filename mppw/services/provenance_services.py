@@ -343,19 +343,6 @@ class ArtifactFrameGraph(networkx.DiGraph):
 
     ArtifactNode = ProvenanceStepGraph.ArtifactNode
 
-    def add_spatial_artifact(self, artifact: models.DigitalArtifact):
-        child_node = ArtifactFrameGraph.ArtifactNode(artifact_id=str(artifact.id))
-
-        if not artifact.spatial_frame or not artifact.spatial_frame.parent_frame:
-            return (None, None, None)
-
-        parent_node = ArtifactFrameGraph.ArtifactNode(
-            artifact_id=str(artifact.spatial_frame.parent_frame)
-        )
-
-        self.add_edge(parent_node, child_node, frame=artifact.spatial_frame)
-        return (parent_node, child_node, self.edges[parent_node, child_node])
-
     def __human_str__(self, repo_layer=None):
         builder = []
         builder.append("Nodes:")
@@ -541,36 +528,37 @@ class ProvenanceServices:
             ArtifactFrameGraph.ArtifactNode(artifact_id=str(artifact_id))
             for artifact_id in artifact_ids
         ]
-        seen_artifact_nodes: Set[ArtifactFrameGraph.ArtifactNode] = set(fringe)
 
         artifacts_repo: repositories.ArtifactRepository = self.repo_layer.artifacts
 
         while fringe:
             next_artifact_node = fringe.pop()
 
-            related_artifacts: List[models.DigitalArtifact] = []
+            frame_graph.add_node(next_artifact_node)
+            
             if strategy == "full" or strategy == "parents":
-                related_artifacts.extend(
-                    [artifacts_repo.query_one(next_artifact_node.artifact_id)]
-                )
+                
+                next_artifact: models.AnyArtifact = artifacts_repo.query_one(next_artifact_node.artifact_id)
+                
+                if next_artifact.spatial_frame is not None and next_artifact.spatial_frame.parent_frame is not None:
+                    
+                    parent_node = ArtifactFrameGraph.ArtifactNode(artifact_id=str(next_artifact.spatial_frame.parent_frame))
+                    
+                    if parent_node not in frame_graph:
+                        fringe.append(parent_node)
+
+                    frame_graph.add_edge(parent_node, next_artifact_node, frame=next_artifact.spatial_frame)
 
             if strategy == "full" or strategy == "children":
-                related_artifacts.extend(
-                    list(
-                        artifacts_repo.query(
-                            parent_frame_id=next_artifact_node.artifact_id
-                        ),
-                    )
-                )
+                
+                for child_artifact in list(artifacts_repo.query(parent_frame_id=next_artifact_node.artifact_id)):
+                    
+                    child_artifact_node = ArtifactFrameGraph.ArtifactNode(artifact_id=str(child_artifact.id))
 
-            for related_artifact in related_artifacts:
-                parent_node, child_node, _ = frame_graph.add_spatial_artifact(
-                    related_artifact
-                )
-                for new_node in [parent_node, child_node]:
-                    if new_node is not None and new_node not in seen_artifact_nodes:
-                        seen_artifact_nodes.add(new_node)
-                        fringe.append(new_node)
+                    if child_artifact_node not in frame_graph:
+                        fringe.append(child_artifact_node)
+
+                    frame_graph.add_edge(next_artifact_node, child_artifact_node, frame=child_artifact.spatial_frame)
 
         return frame_graph
 
