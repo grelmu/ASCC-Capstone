@@ -724,7 +724,7 @@ def test_explore_frame_graph(storage_layer, test_project):
             test_frame_graph.mesh.id, strategy="children"
         )
 
-        assert len(list(frame_graph.nodes())) == 0
+        assert len(list(frame_graph.nodes())) == 1
         assert len(list(frame_graph.edges())) == 0
 
         # Parents from fiducials
@@ -751,7 +751,7 @@ def test_explore_frame_graph(storage_layer, test_project):
             test_frame_graph.toolpath.id, strategy="parents"
         )
 
-        assert len(list(frame_graph.nodes())) == 0
+        assert len(list(frame_graph.nodes())) == 1
         assert len(list(frame_graph.edges())) == 0
 
         # Children from toolpath
@@ -769,7 +769,7 @@ def test_explore_frame_graph(storage_layer, test_project):
             test_frame_graph.mesh3.id, strategy="full"
         )
 
-        assert len(list(frame_graph.nodes())) == 0
+        assert len(list(frame_graph.nodes())) == 1
         assert len(list(frame_graph.edges())) == 0
 
 
@@ -957,7 +957,7 @@ def test_query_provenance(storage_layer, test_project):
         results = provenance_services.query_artifact_provenance(
             [process_with_geometry.specimen.id, process_with_geometry.wall.id],
             """
-                MATCH (TC:ArtifactNode)<--(FFF:OperationStepNode)-[*1..99]->(CUT:OperationStepNode)-->(S:ArtifactNode) 
+                MATCH (TC:ArtifactNode)<--(FFF:OperationStepNode)-->(PART:ArtifactNode)-[*1..99]->(CUT:OperationStepNode)-->(S:ArtifactNode) 
                 WHERE
                     TC.type_urn = "urn:x-mfg:artifact:digital:point-cloud" AND
                     FFF.type_urn = "urn:x-mfg:operation:fff" AND
@@ -979,7 +979,7 @@ def test_query_provenance(storage_layer, test_project):
         ) = provenance_services.build_nearest_related_artifact_frame_path(
             results[0]["S"][0].artifact_id,
             """
-                MATCH (P:ArtifactNode)-->()-->(B:ArtifactNode) 
+                MATCH (P:ArtifactNode)-->()-->(B:ArtifactNode)
                 WHERE
                     P.type_urn = "urn:x-mfg:artifact:material:part" AND
                     B.type_urn = "urn:x-mfg:artifact:digital:document:bounding-box"
