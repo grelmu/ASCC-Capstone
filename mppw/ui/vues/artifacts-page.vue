@@ -9,6 +9,14 @@
 
     <h2>Provenance</h2>
 
+    <o-field label="Strategy">
+      <o-input
+       type="text"
+       v-model="strategy"
+       v-on:change="refreshProvenance"
+      ></o-input>
+    </o-field>
+
     <!-- Provenance DAG goes here: -->
     <svg></svg>
 
@@ -39,6 +47,7 @@ export default {
       artifactId: null,
       artifact: null,
       provenance: null,
+      strategy: "ancestors",
       graphElId: null,
       graphWidth: null,
       graphHeight: null
@@ -56,7 +65,7 @@ export default {
     refreshProvenance() {
       this.provenance = null;
       return this.$root
-        .apiFetchArtifactProvenance(this.artifactId, "ancestors")
+        .apiFetchArtifactProvenance(this.artifactId, this.strategy)
         .then((provenance) => {
           this.provenance = provenance;
         })
@@ -172,7 +181,7 @@ export default {
       let parsedLinks = [];
       network.links.forEach(link => {
         let datapoint = {
-          id: link.source, 
+          id: link.source,
           parentIds: network.links.filter(ln => ln.target == link.source)
             .map(l => l.source)
         }
@@ -198,9 +207,11 @@ export default {
         i1.push(l.id); i2.push(l)
       }});
 
+      d3.selectAll("svg > *").remove();
+
       let dagGraph = Dag(i2, network, {
         nodeGroup: (d) => d.group,
-        icons: ["\u{F01A6}", "\u{F072A}"]
+        icons: ["\u{F01A6}", "\u{F072A}"],
       })
 
       this.graphWidth = dagGraph[0];
