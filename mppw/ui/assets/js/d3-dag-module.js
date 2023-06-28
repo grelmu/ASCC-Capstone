@@ -49,7 +49,7 @@ function Dag(graphData, network, {
   const nodeRadius = 70; // Adjusting this seems to only impact the inner text size?
   const layout = d3
     .sugiyama() 
-    .decross(d3.decrossOpt()) // minimize number of crossings
+    .decross(d3.decrossDfs()) // minimize number of crossings - do *not* use decrossOpt as it fails for big graphs
     .nodeSize((node) => [(node ? 3.6 : 0.25) * nodeRadius, 3 * nodeRadius]); 
 
   // Flip x and y to horizontal
