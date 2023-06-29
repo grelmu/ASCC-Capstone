@@ -159,6 +159,25 @@ def test_project_provenance_query_endpoint(
     assert results_df["TC"].iloc[0] == str(process_with_geometry.thermal_cloud.id)
     assert results_df["S"].iloc[0] == str(process_with_geometry.specimen.id)
 
+    # Translate query to a POST query
+
+    body_query = {
+        "from_artifact_ids": [
+            str(id) for id in query_furl.query.params.allvalues("from_artifact_ids")
+        ],
+        "cypher_query": query_furl.query.params["cypher_query"],
+        "strategy": query_furl.query.params["strategy"],
+    }
+    query_furl.query = None
+
+    results = api_client.post_json(query_furl.url, json=body_query)
+
+    results_df = pandas.DataFrame(results).applymap(lambda r: r["artifact_id"])
+    assert results_df["TC"].iloc[0] == str(process_with_geometry.thermal_cloud.id)
+    assert results_df["S"].iloc[0] == str(process_with_geometry.specimen.id)
+
+    # Nearest related query
+
     nearest_related_furl = furl.furl(
         f"/artifacts/{process_with_geometry.specimen.id}/services/artifact/provenance/nearest_related_frame_path"
     )
@@ -190,3 +209,10 @@ def test_project_provenance_query_endpoint(
     assert paths["frame_path"]["path_nodes"][-1]["artifact_id"] == str(
         process_with_geometry.thermal_cloud.id
     )
+
+    # Test when no frame path exists
+    nearest_related_furl.path = f"/artifacts/{process_with_geometry.batch.id}/services/artifact/provenance/nearest_related_frame_path"
+
+    paths = api_client.get_json(nearest_related_furl.url)
+
+    assert paths is None

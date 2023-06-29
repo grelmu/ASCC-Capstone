@@ -425,7 +425,7 @@ def create_router(app):
 
     @router.get(
         "/{id}/services/artifact/provenance/nearest_related_frame_path",
-        response_model=endpoints.RelatedFramePathModel,
+        response_model=typing.Optional[endpoints.RelatedFramePathModel],
         tags=["artifacts", "provenance"],
     )
     def get_provenance_nearest_related_frame_path(
@@ -455,14 +455,14 @@ def create_router(app):
         artifact: models.Artifact = read(id, user, service_layer.repo_layer)
         services = service_layer.provenance_services()
 
-        (
-            provenance_path,
-            frame_path,
-        ) = services.build_nearest_related_artifact_frame_path(
+        related_paths = services.build_nearest_related_artifact_frame_path(
             artifact.id, related_artifact_cypher_query, to_id, strategy=strategy
         )
 
-        return endpoints.RelatedFramePathModel.from_paths(provenance_path, frame_path)
+        if related_paths is None:
+            return None
+
+        return endpoints.RelatedFramePathModel.from_paths(*related_paths)
 
     from .services.artifacts.digital_file_services import FileServices
 

@@ -247,6 +247,40 @@ def create_router(app):
         return endpoints.ProvenanceGraphModel.cypher_node_results_model(
             results, provenance_graph
         )
+    
+    class ProvenanceQueryModel(models.BaseJsonModel):
+        from_artifact_ids: List[str]
+        cypher_query: str
+        strategy: str = None
+
+    @router.post(
+        "/{id}/services/project/provenance/",
+        response_model=typing.Dict[str, List[endpoints.ProvenanceNode]],
+        tags=["projects", "provenance"],
+    )
+    def query_provenance_via_post(
+        id: str,
+        query_model: ProvenanceQueryModel,
+        user: security.ScopedUser = Security(
+            request_user(app), scopes=[READ_PROVENANCE_SCOPE]
+        ),
+        service_layer: services.ServiceLayer = Depends(request_service_layer(app)),
+    ):
+        """
+        Query the provenance of multiple artifact ids with a graph query, and return a named result set
+        of nodes.
+
+        Wrapped as a POST call to avoid URL parameter length limits.
+        """
+
+        return query_provenance(
+            id,
+            from_artifact_ids=query_model.from_artifact_ids,
+            cypher_query=query_model.cypher_query,
+            strategy=query_model.strategy,
+            user=user,
+            service_layer=service_layer,
+        )
 
     return router
 
