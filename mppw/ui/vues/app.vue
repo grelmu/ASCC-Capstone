@@ -851,6 +851,18 @@ export default {
           );
         });
     },
+    apiDeleteOperation(id) {
+      return this.apiFetch("operations/" + id, {
+        method: "DELETE",
+      }).then((response) => {
+        if (response.status == 200 || response.status == 204)
+          return response.json();
+        this.throwApiResponseError(
+          response,
+          "Unknown response when deleting operation"
+        );
+      });
+    },
     apiFetchArtifactGraph(operation) {
       let fetches = [];
       let graph = {};

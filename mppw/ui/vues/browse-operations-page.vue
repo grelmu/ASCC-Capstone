@@ -141,6 +141,13 @@
                     {{ new Date(props.row[column.field]).toLocaleDateString() }}
                   </span>
                 </span>
+                <span v-else-if="column.field == '_delete'">
+                  <o-icon
+                    :icon="'trash-can'"
+                    @click="onDeleteOperation(props.row.id)"
+                    style="color: red"
+                  ></o-icon>
+                </span>
                 <span v-else>
                   {{ props.row[column.field] }}
                 </span>
@@ -202,6 +209,11 @@ export default {
           field: "end_at",
           label: "End",
           sortable: true,
+        },
+        {
+          field: "_delete",
+          label: "",
+          sortable: false,
         },
       ],
 
@@ -317,7 +329,6 @@ export default {
           this.opTypes = opSchemas.map((o) => o["schema_model"]);
         });
     },
-
     onProjectSelected(projectId) {
       this.projectId = projectId;
 
@@ -328,7 +339,6 @@ export default {
         });
       }
     },
-
     loadOpsTable() {
       this.opsLoading = true;
       return this.apiFetchProjectOpsPaged(this.projectId).then((ops) => {
@@ -408,8 +418,29 @@ export default {
         }
       );
     },
-  },
+    onDeleteOperation(opId) {
+      return this.$root.apiFetchOperation(opId).then((op) => {
+        if (
+          !confirm(
+            "Are you sure that you want to delete the operation ''" +
+              op.name +
+              "'?"
+          )
+        )
+          return;
 
+        return this.$root
+          .apiDeleteOperation(opId)
+          .then(() => this.onPageChange(this.parameters.page_num));
+      });
+    },
+  },
+  created() {
+    // Don't show deletion option to unauthorized users
+    if (!this.$root.isModifyProvenanceUser()) {
+      this.opsColumns = this.opsColumns.splice(0, this.opsColumns.length - 1);
+    }
+  },
   mounted() {
     this.refreshProjects();
   },
