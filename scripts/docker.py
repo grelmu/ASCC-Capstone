@@ -76,6 +76,14 @@ def build(*args):
             jupyterhub_dist_dir, dirs_exist_ok=True
         )
 
+        prop_analysis_dir = os.path.join(root_dir, "prop_analysis")
+        subprocess.run(["poetry", "build"], cwd=prop_analysis_dir)
+
+        shutil.copytree(
+            os.path.join(prop_analysis_dir, "dist"),
+            jupyterhub_dist_dir, dirs_exist_ok=True
+        )
+
         subprocess.run(
             [
                 "docker",
