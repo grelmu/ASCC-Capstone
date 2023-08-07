@@ -1,3 +1,17 @@
+# 0.12.0
+
+New Features:
+
+* Add prop_analysis repo and sample process-property analysis code to Jupyter analysis platform
+* Artifact/operation queries by type_urn
+* **Deletion UI for operations**
+* Configurable provenance DAG UI strategy
+
+Bugfixes:
+
+* **Ensure parent ids properly referenced in database for spatial parent frames**
+* Assorted small provenance and DAG visualization fixes
+
 # 0.11.0
 
 New Features:
