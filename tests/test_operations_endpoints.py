@@ -242,3 +242,67 @@ def test_basic_artifact_reclaim(api_pytest_client: mppw_clients.MppwApiClient):
         mppw_clients.MppwApiClient.OUTPUT
         == api.find_operation_attachment(op_b, [":first", part["id"], ":second"])[2]
     )
+
+
+def test_operation_type_query(api_pytest_client: mppw_clients.MppwApiClient):
+
+    """
+    Basic test of queries by operation type
+    """
+
+    api = api_pytest_client
+
+    fff = api.create_operation({"type_urn": ":fff", "name": "Test FFF"})
+    compute = api.create_operation(
+        {"type_urn": ":compute:default", "name": "Test Compute"}
+    )
+    machine = api.create_operation(
+        {"type_urn": ":prepare:machining", "name": "Test Machining"}
+    )
+    wjet = api.create_operation(
+        {"type_urn": ":prepare:waterjetcut", "name": "Test Waterjet Cut"}
+    )
+
+    found_ops = api.find_operations(type_urn=fff["type_urn"])
+
+    assert 1 == len(found_ops)
+    assert fff["name"] == found_ops[0]["name"]
+
+    found_ops = api.find_operations(type_urns=[fff["type_urn"], compute["type_urn"]])
+
+    assert 2 == len(found_ops)
+    assert set([fff["name"], compute["name"]]) == set(
+        [found_ops[0]["name"], found_ops[1]["name"]]
+    )
+
+    found_ops = api.find_operations(type_urn_prefix="urn:x-mfg:operation:prepare")
+
+    assert 2 == len(found_ops)
+    assert set([machine["name"], wjet["name"]]) == set(
+        [found_ops[0]["name"], found_ops[1]["name"]]
+    )
+
+    found_paged_ops = api.find_operations(type_urns=[fff["type_urn"]], paged=True)[
+        "results"
+    ]
+
+    assert 1 == len(found_paged_ops)
+    assert fff["name"] == found_paged_ops[0]["name"]
+
+    found_paged_ops = api.find_operations(
+        type_urns=[fff["type_urn"], compute["type_urn"]], paged=True
+    )["results"]
+
+    assert 2 == len(found_ops)
+    assert set([fff["name"], compute["name"]]) == set(
+        [found_paged_ops[0]["name"], found_paged_ops[1]["name"]]
+    )
+
+    found_paged_ops = api.find_operations(
+        type_urn_prefix="urn:x-mfg:operation:prepare", paged=True
+    )["results"]
+
+    assert 2 == len(found_ops)
+    assert set([machine["name"], wjet["name"]]) == set(
+        [found_paged_ops[0]["name"], found_paged_ops[1]["name"]]
+    )
