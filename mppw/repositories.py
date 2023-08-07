@@ -383,6 +383,8 @@ class ArtifactRepository(MongoDBRepository):
         id: str = None,
         project_ids: List[str] = None,
         name: str = None,
+        type_urns: List[str] = None,
+        type_urn_prefix: str = None,
         tags: List[str] = None,
         parent_frame_id: str = None,
         active: Optional[bool] = None,
@@ -394,6 +396,10 @@ class ArtifactRepository(MongoDBRepository):
             query_doc["project"] = {"$in": list(map(coerce_doc_id, project_ids))}
         if name is not None:
             query_doc["name"] = name
+        if type_urns is not None:
+            query_doc["type_urn"] = {"$in": list(type_urns)}
+        if type_urn_prefix is not None:
+            query_doc["type_urn"] = {"$regex": f"^{re.escape(type_urn_prefix)}"}
         if tags is not None:
             query_doc["tags"] = {"$in": list(tags)}
         if parent_frame_id is not None:
@@ -412,6 +418,8 @@ class ArtifactRepository(MongoDBRepository):
         id: str = None,
         project_ids: List[str] = None,
         name: str = None,
+        type_urns: List[str] = None,
+        type_urn_prefix: str = None,
         tags: List[str] = None,
         parent_frame_id: str = None,
         active: Optional[bool] = None,
@@ -424,6 +432,8 @@ class ArtifactRepository(MongoDBRepository):
                         id=id,
                         project_ids=project_ids,
                         name=name,
+                        type_urns=type_urns,
+                        type_urn_prefix=type_urn_prefix,
                         tags=tags,
                         parent_frame_id=parent_frame_id,
                         active=active,
@@ -437,6 +447,8 @@ class ArtifactRepository(MongoDBRepository):
         id: str = None,
         project_ids: List[str] = None,
         name: str = None,
+        type_urns: List[str] = None,
+        type_urn_prefix: str = None,
         tags: List[str] = None,
         parent_frame_id: str = None,
         active: Optional[bool] = None,
@@ -451,6 +463,8 @@ class ArtifactRepository(MongoDBRepository):
                 id=id,
                 project_ids=project_ids,
                 name=name,
+                type_urns=type_urns,
+                type_urn_prefix=type_urn_prefix,
                 tags=tags,
                 parent_frame_id=parent_frame_id,
                 active=active,
@@ -532,6 +546,8 @@ class OperationRepository(MongoDBRepository):
         id: str = None,
         project_ids: List[str] = None,
         name: Optional[str] = None,
+        type_urns: Optional[List[str]] = None,
+        type_urn_prefix: Optional[str] = None,
         tags: Optional[List[str]] = None,
         status: Optional[str] = None,
         type_urn: Optional[str] = None,
@@ -548,6 +564,10 @@ class OperationRepository(MongoDBRepository):
         if name is not None:
             # Using a regex to match any names with $name in the string
             query_doc["name"] = {"$regex": name, "$options": "i"}
+        if type_urns is not None:
+            query_doc["type_urn"] = {"$in": list(type_urns)}
+        if type_urn_prefix is not None:
+            query_doc["type_urn"] = {"$regex": f"^{re.escape(type_urn_prefix)}"}
         if tags is not None:
             query_doc["tags"] = {"$in": list(tags)}
         if status is not None:
@@ -620,6 +640,8 @@ class OperationRepository(MongoDBRepository):
         id: str = None,
         project_ids: List[str] = None,
         name: Optional[str] = None,
+        type_urns: Optional[List[str]] = None,
+        type_urn_prefix: Optional[str] = None,
         tags: Optional[List[str]] = None,
         active: Optional[bool] = None,
         fulltext_query: str = None,
@@ -633,6 +655,8 @@ class OperationRepository(MongoDBRepository):
                             id=id,
                             project_ids=project_ids,
                             name=name,
+                            type_urns=type_urns,
+                            type_urn_prefix=type_urn_prefix,
                             tags=tags,
                             active=active,
                         )
@@ -657,6 +681,8 @@ class OperationRepository(MongoDBRepository):
         id: str = None,
         project_ids: List[str] = None,
         name: Optional[str] = None,
+        type_urns: Optional[List[str]] = None,
+        type_urn_prefix: Optional[str] = None,
         tags: Optional[List[str]] = None,
         active: Optional[bool] = None,
         status: Optional[str] = None,
@@ -675,6 +701,8 @@ class OperationRepository(MongoDBRepository):
                     id=id,
                     project_ids=project_ids,
                     name=name,
+                    type_urns=type_urns,
+                    type_urn_prefix=type_urn_prefix,
                     tags=tags,
                     active=active,
                     status=status,
@@ -703,6 +731,8 @@ class OperationRepository(MongoDBRepository):
                 id=id,
                 project_ids=project_ids,
                 name=name,
+                type_urns=type_urns,
+                type_urn_prefix=type_urn_prefix,
                 tags=tags,
                 active=active,
                 status=status,

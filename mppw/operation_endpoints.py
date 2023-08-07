@@ -82,6 +82,9 @@ def create_router(app):
     def query(
         project_ids: List[str] = fastapi.Query(None),
         name: str = fastapi.Query(None),
+        type_urn: str = fastapi.Query(None),
+        type_urns: List[str] = fastapi.Query(None),
+        type_urn_prefix: str = fastapi.Query(None),
         tags: List[str] = fastapi.Query(None),
         active: bool = fastapi.Query(True),
         fulltext_query: str = fastapi.Query(None),
@@ -96,9 +99,14 @@ def create_router(app):
 
         project_endpoints.check_project_claims_for_user(user, project_ids)
 
+        if type_urn is not None:
+            type_urns = [type_urn]
+
         result = repo_layer.operations.query(
             project_ids=project_ids,
             name=name,
+            type_urns=type_urns,
+            type_urn_prefix=type_urn_prefix,
             tags=tags,
             active=active,
             fulltext_query=fulltext_query,
@@ -122,10 +130,12 @@ def create_router(app):
     def paged_query(
         project_ids: List[str] = fastapi.Query(None),
         name: str = fastapi.Query(None),
+        type_urn: str = fastapi.Query(None),
+        type_urns: List[str] = fastapi.Query(None),
+        type_urn_prefix: str = fastapi.Query(None),
         tags: List[str] = fastapi.Query(None),
         active: bool = fastapi.Query(True),
         status: str = fastapi.Query(None),
-        type_urn: str = fastapi.Query(None),
         fulltext_query: str = fastapi.Query(None),
         page_size: int = fastapi.Query(None),
         page_num: int = fastapi.Query(None),
@@ -141,6 +151,9 @@ def create_router(app):
 
         project_endpoints.check_project_claims_for_user(user, project_ids)
 
+        if type_urn is not None:
+            type_urns = [type_urn]
+
         # Calculate the skip value based on page_size and page_num args
         skip = page_size * (page_num - 1) if None not in (page_size, page_num) else None
 
@@ -152,6 +165,8 @@ def create_router(app):
         results, total = repo_layer.operations.paged_query(
             project_ids=project_ids,
             name=name,
+            type_urns=type_urns,
+            type_urn_prefix=type_urn_prefix,
             tags=tags,
             active=active,
             status=status,

@@ -85,6 +85,9 @@ def create_router(app):
     def query(
         project_ids: List[str] = fastapi.Query(None),
         name: str = fastapi.Query(None),
+        type_urn: str = fastapi.Query(None),
+        type_urns: List[str] = fastapi.Query(None),
+        type_urn_prefix: str = fastapi.Query(None),
         tags: List[str] = fastapi.Query(None),
         active: bool = fastapi.Query(True),
         user: security.ScopedUser = Security(
@@ -97,10 +100,15 @@ def create_router(app):
 
         project_endpoints.check_project_claims_for_user(user, project_ids)
 
+        if type_urn is not None:
+            type_urns = [type_urn]
+
         return list(
             repo_layer.artifacts.query(
                 project_ids=project_ids,
                 name=name,
+                type_urns=type_urns,
+                type_urn_prefix=type_urn_prefix,
                 tags=tags,
                 active=active,
             )
@@ -118,6 +126,9 @@ def create_router(app):
     def paged_query(
         project_ids: List[str] = fastapi.Query(None),
         name: str = fastapi.Query(None),
+        type_urn: str = fastapi.Query(None),
+        type_urns: List[str] = fastapi.Query(None),
+        type_urn_prefix: str = fastapi.Query(None),
         tags: List[str] = fastapi.Query(None),
         active: bool = fastapi.Query(True),
         page_size: int = fastapi.Query(None),
@@ -134,6 +145,9 @@ def create_router(app):
 
         project_endpoints.check_project_claims_for_user(user, project_ids)
 
+        if type_urn is not None:
+            type_urns = [type_urn]
+
         # Calculate the skip value based on page_size and page_num args
         skip = page_size * (page_num - 1) if None not in (page_size, page_num) else None
 
@@ -145,6 +159,8 @@ def create_router(app):
         results, total = repo_layer.artifacts.paged_query(
             project_ids=project_ids,
             name=name,
+            type_urns=type_urns,
+            type_urn_prefix=type_urn_prefix,
             tags=tags,
             active=active,
             skip=skip,
@@ -1030,12 +1046,12 @@ def create_router(app):
         digital artifact.
 
         Returns a bounding box in the JSON schema representation of :bounding-box.
-        
+
         Uses the shortest frame path possible for projection.  Note that bounding boxes are
         axis-aligned, but are transfomed as oriented geometries before being bounded by axis-aligned
         coordinates again for return.  This means that a 45 degree rotation, for example, may make
         the transformed bounding box larger in volume and other dimensions.
-          
+
         If the bounding box is not related to the frame of the other artifact, returns an
         error.
         """
