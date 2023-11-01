@@ -39,12 +39,14 @@
         >
           <span class="navbar-toggler-icon"></span>
         </button>
-        <input
-          class="form-control form-control-dark"
-          type="text"
-          placeholder="Search"
-          aria-label="Search"
-        />
+        <div 
+          class="form-control"
+          style="
+            background-color: transparent;
+            border-color: transparent;
+          "
+        >
+        </div>
         <div class="navbar-nav">
           <div class="nav-item text-nowrap">
             <span class="nav-link px-3">{{ currentUser.username }}</span>
