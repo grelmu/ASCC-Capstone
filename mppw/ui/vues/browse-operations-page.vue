@@ -21,6 +21,22 @@
         >New Project</o-button
       >
     </o-field>
+    <div class="row" v-if="projectId">
+        <div class="col-auto">
+          <o-field label="Tags">
+            <o-inputitems
+              v-model="parameters.tags"
+              icon="tag"
+              :allow-new="false"
+              :data="autoComplete"
+              placeholder="Add tags"
+              @add="onTagFilter"
+              @remove="onTagFilter"
+              @typing="getFilteredTags"
+            ></o-inputitems>
+          </o-field>
+        </div>
+      </div>
 
     <o-modal v-model:active="isCreatingNewProject">
       <h2>Create a new project</h2>
@@ -131,6 +147,15 @@
                   <router-link :to="'/operations/' + props.row.id">
                     {{ props.row.name }}
                   </router-link>
+                  <!-- PUT TAGS HERE -->
+                  <span class="tag-container">
+                    <button disabled size="small" class="o-btn tag"
+                    v-for="tag in props.row.tags || []"
+                    :key="tag.id"
+                    :value="tag.id">
+                      {{ tag }}
+                    </button>
+                  </span>
                 </span>
                 <span
                   v-else-if="
@@ -214,11 +239,12 @@ export default {
           field: "_delete",
           label: "",
           sortable: false,
-        },
+        }
       ],
 
       isCreatingNewOp: false,
       newOp: {},
+      autoComplete: []
     };
   },
   methods: {
@@ -339,6 +365,15 @@ export default {
         });
       }
     },
+    getFilteredTags(){
+      let tags = new Set();
+        this.opsRows?.forEach(result => {
+          result.tags?.forEach(item => tags.add(item))
+        });
+        this.autoComplete = [...tags];
+        console.log(this.autoComplete);
+    },
+
     loadOpsTable() {
       this.opsLoading = true;
       return this.apiFetchProjectOpsPaged(this.projectId).then((ops) => {
@@ -393,6 +428,12 @@ export default {
           this.opsLoading = false;
         }
       );
+    },
+    onTagFilter(data){
+      if (this.parameters.tags == ""){
+        delete this.parameters.tags;
+      }
+      this.onFilter(this.parameters);
     },
     onFilter(parameters) {
       Object.keys(parameters).map((key) => {
@@ -450,5 +491,19 @@ export default {
 <style scoped>
 .o-table__wrapper--mobile {
   overflow-x: visible;
+}
+
+.tag-container {
+  display: block;
+  width: 100%;
+  margin-top: 2px;
+}
+
+.o-btn.tag {
+    background-color: lightslategray;
+    font-size: small;
+    border: none;
+    cursor: default;
+    margin-right: 3px;
 }
 </style>
