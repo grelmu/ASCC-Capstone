@@ -1,8 +1,0 @@
-{
-  type_urn: "urn:x-mfg:artifact:digital:time-series",
-  name: "Time Series",
-  description: "A timestamped file",
-  services: {
-    class_qualname: "mppw.services.artifacts.digital_time_series_services:TimeSeriesServices",
-  },
-}

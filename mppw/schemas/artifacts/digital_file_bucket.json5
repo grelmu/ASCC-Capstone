@@ -1,8 +1,0 @@
-{
-  type_urn: "urn:x-mfg:artifact:digital:file-bucket",
-  name: "File Bucket",
-  description: "A key/value bucket of files",
-  services: {
-    class_qualname: "mppw.services.artifacts.digital_file_bucket_services:FileBucketServices",
-  },
-}

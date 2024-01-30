@@ -1,8 +1,0 @@
-{
-  type_urn: "urn:x-mfg:artifact:digital:file",
-  name: "File",
-  description: "A file containing some kind of data",
-  services: {
-    class_qualname: "mppw.services.artifacts.digital_file_services:FileServices",
-  },
-}
