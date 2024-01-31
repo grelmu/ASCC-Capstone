@@ -14,9 +14,9 @@ import json_stream
 import json_stream.dump
 
 from mppw import models
+import mppw_clients
 
 from .fixtures_api import resolve_bucket_url, build_cloud_url
-from mppw_clients import mppw_clients
 
 
 def build_dataset_filename(local_name):

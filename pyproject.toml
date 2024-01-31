@@ -6,59 +6,25 @@ authors = ["ASCC <ascc@maine.edu>"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-fastapi = "^0.68.2"
 argh = "^0.26.2"
-uvicorn = {extras = ["standard"], version = "^0.15.0"}
-python-jose = {extras = ["cryptography"], version = "^3.3.0"}
-passlib = {extras = ["bcrypt"], version = "^1.7.4"}
-python-multipart = "^0.0.5"
 furl = "^2.1.3"
 toml = "^0.10.2"
+docker = "^6"
 docker-compose = "^1.29.2"
-pymongo-migrate = "^0.11.0"
-aiofiles = "^0.8.0"
 arrow = "^1.2.2"
-dbvox = { git = "git@gitlab.composites.umaine.edu:DataProcessing/dbvox.git", branch = "main" }
-# START for pcl
-numpy = "1.21"
-# END for pcl
 pyjson5 = "^1.6.1"
 importlib-metadata = "^4.11.3"
-networkx = "^2.8.1"
-json-stream = "^2.0.2"
-mongomock = "^4.1.2"
-pymongo = "^4.3.3"
-mkdocs = "^1.4.2"
-watchgod = "^0.8.2"
-dotmotif = "^0.13.0"
-grand-cypher = { git = "https://github.com/aplbrain/grand-cypher.git", rev = "dcd5094" }
-open3d = "^0.17.0"
-# REQUIRED for open3d
-scikit-learn = "^1.2.2"
-# REQUIRED for open3d
-addict = "^2.4.0"
-# REQUIRED for open3d
-pillow = "^9.5.0"
-mkdocs-mermaid2-plugin = "^0.6.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
-requests-toolbelt = "^0.9.1"
-papermill = "^2.4.0"
-nbconvert = "^7.0.0"
 black = {version = "^22.3.0", allow-prereleases = true}
-erdantic = {version = "^0.5.0", optional = true}
 
 [tool.poetry.scripts]
-# TODO: remove
-mppw-docker = "scripts.docker:main"
-mppw-migrations = "scripts.migrations:main"
-mppw-app = "scripts.app:main"
-# END remove
 mppw_docker = "scripts.docker:main"
-mppw_migrations = "scripts.migrations:main"
-mppw_app = "scripts.app:main"
-mppw_diagrams = "scripts.gen_erd:main"
+
+[tool.poetry.group.dev.dependencies]
+licensecheck = "^2023.5.1"
+testcontainers-mongodb = "^0.0.1rc1"
 
 [tool.black]
 extend-exclude = '''

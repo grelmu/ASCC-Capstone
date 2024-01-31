@@ -10,7 +10,7 @@ import tempfile
 import dbvox
 import inspect
 
-from mppw_clients import mppw_clients
+import mppw_clients
 from mppw import storage
 
 """

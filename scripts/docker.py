@@ -100,21 +100,34 @@ def build(*args):
 
     if not args or "mppw" in args:
 
-        subprocess.run(["poetry", "build"])
+        mppw_dist_dir = os.path.join(containers_dir, "mppw", "dist")
+        shutil.rmtree(
+            mppw_dist_dir, ignore_errors=True
+        )
+
+        mppw_dir = os.path.join(root_dir, "mppw")
+        subprocess.run(["poetry", "build"], cwd=mppw_dir)
+
+        shutil.copytree(
+            os.path.join(mppw_dir, "dist"),
+            mppw_dist_dir, dirs_exist_ok=True
+        )
+
+        mppw_web_dir = os.path.join(root_dir, "mppw_web")
+        subprocess.run(["poetry", "build"], cwd=mppw_web_dir)
+
+        shutil.copytree(
+            os.path.join(mppw_web_dir, "dist"),
+            mppw_dist_dir, dirs_exist_ok=True
+        )
 
         # mppw_clients_dir = os.path.join(root_dir, "mppw_clients")
         # subprocess.run(["poetry", "build"], cwd=mppw_clients_dir)
-
-        # shutil.rmtree(os.path.join(dist_dir, "mppw_clients"), ignore_errors=True)
         # shutil.copytree(
         #     os.path.join(mppw_clients_dir, "dist"),
-        #     os.path.join(dist_dir, "mppw_clients"),
+        #     mppw_dist_dir, dirs_exist_ok=True
         # )
 
-        shutil.rmtree(
-            os.path.join(containers_dir, project_name, "dist"), ignore_errors=True
-        )
-        shutil.copytree(dist_dir, os.path.join(containers_dir, project_name, "dist"))
         shutil.copy(
             os.path.join(containers_dir, f"{project_name}-stack.yml"),
             os.path.join(containers_dir, project_name, "dist"),
@@ -179,7 +192,10 @@ def compose_dev():
     os.environ.setdefault("MONGODB_ADMIN_USERNAME", "admin")
     os.environ.setdefault("MONGODB_ADMIN_PASSWORD", "password")
     os.environ.setdefault(
-        "MPPW_LOCAL_PACKAGE_DIR", os.path.abspath(os.path.join(root_dir, "mppw"))
+        "MPPW_LOCAL_PACKAGE_DIR", os.path.abspath(os.path.join(root_dir, "mppw", "mppw"))
+    )
+    os.environ.setdefault(
+        "MPPW_WEB_LOCAL_PACKAGE_DIR", os.path.abspath(os.path.join(root_dir, "mppw_web", "mppw_web"))
     )
 
     subprocess.run(

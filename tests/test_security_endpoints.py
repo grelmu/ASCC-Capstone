@@ -1,9 +1,8 @@
 import pytest
 import requests.exceptions
 
-from mppw_clients import mppw_clients
-
 import mppw.security
+import mppw_clients
 
 
 def test_create_users_basic(api_pytest_client: mppw_clients.MppwApiClient):

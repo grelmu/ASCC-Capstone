@@ -2,10 +2,10 @@ import pytest
 import furl
 import pandas
 
-import mppw.models
+import mppw
+import mppw_clients
 
-from mppw_clients import mppw_clients
-from . import test_provenance
+from mppw.tests import test_provenance
 
 
 def test_operation_provenance_steps_endpoint(
