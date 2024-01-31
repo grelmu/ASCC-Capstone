@@ -4,9 +4,6 @@
 [submodule "mech_analysis"]
 	path = mat_analysis
 	url = git@gitlab.composites.umaine.edu:DataProcessing/cherry.git
-[submodule "image_analysis"]
-	path = image_analysis
-	url = git@gitlab.composites.umaine.edu:DataProcessing/image-processing-experiments-lfs.git
 [submodule "prop_analysis"]
 	path = prop_analysis
 	url = git@gitlab.composites.umaine.edu:DataProcessing/mppw-image-processing-experiments.git
