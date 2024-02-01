@@ -8,3 +8,4 @@
 pytestdebug.log
 .history
 .mppw
+.pytest_cache

@@ -1,4 +1,4 @@
-FROM jupyterhub/jupyterhub:2.1.1
+FROM jupyterhub/jupyterhub:2.3.1
 
 RUN --mount=type=cache,target=/var/cache/apt apt-get update && apt-get install git vim python3-tk -y
 
@@ -33,3 +33,5 @@ RUN cat /etc/adduser.conf | sed -e 's/DIR_MODE=0755/DIR_MODE=0750/' > /etc/addus
 RUN apt-get install mongodb-clients -y
 # Pytorch (CPU)
 RUN pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cpu
+# DRAGONS: Fix JupyterHub pre-v3 broken SQLAlchemy dependency
+RUN pip3 install SQLAlchemy==1.4

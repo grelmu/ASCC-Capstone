@@ -3,7 +3,7 @@ import json
 
 from mppw import schemas
 
-from .fixtures_services import ServiceLayerContext
+from mppw.tests.fixtures_services import ServiceLayerContext
 
 """
 Unit tests of schemas for operations and artifacts
@@ -149,7 +149,6 @@ def test_init_persistent_module_schemas(api_storage_layer, api_pytest_client):
             api_pytest_client.default_project["id"], module_names=["mppw"]
         )
         assert len(module_schemas) > 10
-
 
 def test_resolve_operation_schema(api_storage_layer, api_pytest_client):
 

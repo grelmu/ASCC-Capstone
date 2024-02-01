@@ -1,6 +1,5 @@
-from mppw_clients import mppw_clients
 import furl
-
+import mppw_clients
 
 def test_basic_artifact_crud(api_pytest_client: mppw_clients.MppwApiClient):
 

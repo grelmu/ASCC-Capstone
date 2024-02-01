@@ -1,15 +1,21 @@
-[submodule "mppw/post/fff"]
-	path = fff_analysis
-	url = git@gitlab.composites.umaine.edu:DataProcessing/Thermal.git
+[submodule "mppw"]
+	path = mppw
+	url = git@gitlab.com:composites-maine-edu/advancing-rapid-prototyping/material-process-warehouse-api.git
+[submodule "mppw_web"]
+	path = mppw_web
+	url = git@gitlab.com:composites-maine-edu/advancing-rapid-prototyping/material-process-warehouse-webui.git
+[submodule "mppw_analysis/laam_image_analysis"]
+	path = mppw_analysis/laam_image_analysis
+	url = git@gitlab.com:composites-maine-edu/advancing-rapid-prototyping/laam-image-analysis-module.git
+[submodule "mppw_analysis/laam-analysis"]
+	path = mppw_analysis/laam_analysis
+	url = git@gitlab.com:composites-maine-edu/advancing-rapid-prototyping/laam-analysis-module.git
+[submodule "mppw_analysis/process-property-analysis"]
+	path = mppw_analysis/process_property_analysis
+	url = git@gitlab.com:composites-maine-edu/advancing-rapid-prototyping/process-property-analysis-module.git
+[submodule "mppw_analysis/material_analysis"]
+	path = mppw_analysis/material_analysis
+	url = git@gitlab.com:composites-maine-edu/advancing-rapid-prototyping/material-analysis-module.git
 [submodule "mppw_clients"]
 	path = mppw_clients
-	url = git@gitlab.composites.umaine.edu:DataProcessing/material-process-warehouse-clients.git
-[submodule "mech_analysis"]
-	path = mat_analysis
-	url = git@gitlab.composites.umaine.edu:DataProcessing/cherry.git
-[submodule "image_analysis"]
-	path = image_analysis
-	url = git@gitlab.composites.umaine.edu:DataProcessing/image-processing-experiments-lfs.git
-[submodule "prop_analysis"]
-	path = prop_analysis
-	url = git@gitlab.composites.umaine.edu:DataProcessing/mppw-image-processing-experiments.git
+	url = git@gitlab.com:composites-maine-edu/advancing-rapid-prototyping/material-process-warehouse-clients.git

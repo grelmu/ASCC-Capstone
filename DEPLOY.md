@@ -1,6 +1,6 @@
 # Deploying the Warehouse Stack
 
-The full MPPW stack is deployed via a set of images available at a release repository. For the purposes of this document it is assumed the repository is `docker-images.composites.maine.edu:5000` and the username is `dev`.
+The full MPPW stack is deployed via a set of images available at a release repository. For the purposes of this document it is assumed the repository is `registry.gitlab.com/composites-maine-edu/advancing-rapid-prototyping/material-process-warehouse` and the username is `gitlab-user`.
 
 > The overall deployment process is simple, but the images may be several GiB in size.
 
@@ -30,28 +30,30 @@ deployments.
 A remote repository can be used from the command line in docker using the `login` command with proper credentials:
 
 ```sh
-$ docker login docker-images.composites.maine.edu:5000 -u dev
+$ docker login registry.gitlab.com -u gitlab-user
 Password:
 ...
 ```
 
-> The composites.maine.edu domains now have secure certificates, but to use docker repositories from unverified domains see [`docs.docker`](https://docs.docker.com/registry/insecure/).
+> If using `registry.gitlab.com` via a GitLab user that has external or 2-factor authentication enabled, a GitLab Personal Access Token must be generated and used as the password.
 
-Once logged in, docker images of the form `docker-images.composites.maine.edu:5000/ascc/xyz` are available to `pull`.
+> To use docker repositories from unverified domains see [`docs.docker`](https://docs.docker.com/registry/insecure/).
+
+Once logged in, docker images of the form `registry.gitlab.com/composites-maine-edu/advancing-rapid-prototyping/material-process-warehouse/ascc/*` are available to `pull`.
 
 ### Pull warehouse images
 
 In order to speed up further steps, it is a good idea to pull down the large images to your local docker instance as the first step. This isn't strictly necessary, but it makes debugging any issues simpler:
 
 ```sh
-$ export MPPW_VERSION=0.9.0
-$ docker pull docker-images.composites.maine.edu:5000/ascc/mppw:$MPPW_VERSION
+$ export MPPW_VERSION=0.12.0
+$ docker pull registry.gitlab.com/composites-maine-edu/advancing-rapid-prototyping/material-process-warehouse/ascc/mppw:$MPPW_VERSION
 ...
-$ docker pull docker-images.composites.maine.edu:5000/ascc/mppw-mongodb:$MPPW_VERSION
+$ docker pull registry.gitlab.com/composites-maine-edu/advancing-rapid-prototyping/material-process-warehouse/ascc/mppw-mongodb:$MPPW_VERSION
 ...
-$ docker pull docker-images.composites.maine.edu:5000/ascc/mppw-nginx:$MPPW_VERSION
+$ docker pull registry.gitlab.com/composites-maine-edu/advancing-rapid-prototyping/material-process-warehouse/ascc/mppw-nginx:$MPPW_VERSION
 ...
-$ docker pull docker-images.composites.maine.edu:5000/ascc/mppw-jupyterhub:$MPPW_VERSION
+$ docker pull registry.gitlab.com/composites-maine-edu/advancing-rapid-prototyping/material-process-warehouse/ascc/mppw-jupyterhub:$MPPW_VERSION
 ...
 ```
 
@@ -71,7 +73,7 @@ The full MPPW stack is defined in a configurable `docker-compose` file - this fi
 
 ```sh
 $ docker run --rm --entrypoint cat \
-    docker-images.composites.maine.edu:5000/ascc/mppw:$MPPW_VERSION \
+    registry.gitlab.com/composites-maine-edu/advancing-rapid-prototyping/material-process-warehouse/ascc/mppw:$MPPW_VERSION \
       ./compose.yml > mppw-stack.yml
 ```
 
@@ -80,13 +82,13 @@ $ docker run --rm --entrypoint cat \
 All configuration of the MPPW deployments happens via environment variables. The ones that are mandatory to set are:
 
 - `MPPW_VERSION` - mandatory for a versioned deployment, otherwise defaults to `dev`
-- `MPPW_REPOSITORY_PREFIX` - the repository prefix used above, for example `docker-images.composites.maine.edu:5000/`, to specify the images used. Re-tagging images is also possible. Note the trailing slash.
+- `MPPW_REPOSITORY_PREFIX` - the repository prefix used above, for example `registry.gitlab.com/composites-maine-edu/advancing-rapid-prototyping/material-process-warehouse/`, to specify the images used. Re-tagging images is also possible. Note the trailing slash.
 - `MONGODB_ADMIN_PASSWORD` - the `admin` user password for the warehouse database, and, if not overridden, the `admin` user password for the data warehouse API/UI
 
 By running `docker-compose` with these variables, the stack can be created (and safely upgraded) with:
 
 ```sh
-$ export MPPW_REPOSITORY_PREFIX=docker-images.composites.maine.edu:5000/
+$ export MPPW_REPOSITORY_PREFIX=registry.gitlab.com/composites-maine-edu/advancing-rapid-prototyping/material-process-warehouse/
 $ export MONGODB_ADMIN_PASSWORD=pick-a-better-password
 $ docker-compose -p mppw -f mppw-stack.yml up
 ```
@@ -108,9 +110,9 @@ In order to make it simple to manage deployments, the above steps may be combine
 
 ```sh
 $ scripts/manage_deployment.sh config
-0.9.0: Pulling from ascc/mppw
+0.12.0: Pulling from ascc/mppw
 Digest: sha256:87636e4b22e7d23639e7c666285c64fc4ef1016230645ab3a1bc20fc0272974b
-Status: Image is up to date for docker-images.composites.maine.edu:5000/ascc/mppw:0.9.0
+Status: Image is up to date for registry.gitlab.com/composites-maine-edu/advancing-rapid-prototyping/material-process-warehouse/ascc/mppw:0.12.0
 ...
 name: mppw
 services:
@@ -160,8 +162,8 @@ The deployment variables are not permanently stored anywhere in the stack, by de
 Sometimes a remote host may have different or limited access to the `docker` repository at `docker-images.composites.maine.edu` or elsewhere. In this case, instead of pulling directly we can pull the images locally and then _copy_ them to the remote `docker` host using the form:
 
 ```sh
-$ docker pull docker-images.composites.maine.edu:5000/ascc/mppw:$MPPW_VERSION
-$ docker save docker-images.composites.maine.edu:5000/ascc/mppw:$MPPW_VERSION | bzip2 | pv | \
+$ docker pull registry.gitlab.com/composites-maine-edu/advancing-rapid-prototyping/material-process-warehouse/ascc/mppw:$MPPW_VERSION
+$ docker save registry.gitlab.com/composites-maine-edu/advancing-rapid-prototyping/material-process-warehouse/ascc/mppw:$MPPW_VERSION | bzip2 | pv | \
     ssh user@limited.host.xyz docker load
 ```
 

@@ -21,6 +21,7 @@ ARG PACKAGE_NAME
 ARG PACKAGE_VERSION
 
 COPY dist/$PACKAGE_NAME-$PACKAGE_VERSION-py3-none-any.whl $PACKAGE_NAME-$PACKAGE_VERSION-py3-none-any.whl
+COPY dist/${PACKAGE_NAME}_web-$PACKAGE_VERSION-py3-none-any.whl ${PACKAGE_NAME}_web-$PACKAGE_VERSION-py3-none-any.whl
 
 RUN echo $PACKAGE_NAME > PACKAGE_NAME
 RUN echo $PACKAGE_VERSION > PACKAGE_VERSION
@@ -29,6 +30,7 @@ RUN mkdir -p /root/.ssh
 COPY ssh_config /root/.ssh/config
 RUN pip install --upgrade pip
 RUN --mount=type=ssh --mount=type=cache,target=/root/.cache pip install $PACKAGE_NAME-$PACKAGE_VERSION-py3-none-any.whl
+RUN --mount=type=ssh --mount=type=cache,target=/root/.cache pip install ${PACKAGE_NAME}_web-$PACKAGE_VERSION-py3-none-any.whl
 
 COPY dist/$PACKAGE_NAME-stack.yml compose.yml
 COPY dist/$PACKAGE_NAME-stack.yml compose.dev.yml

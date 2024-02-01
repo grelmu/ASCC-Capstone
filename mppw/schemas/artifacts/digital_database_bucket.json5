@@ -1,8 +1,0 @@
-{
-  type_urn: "urn:x-mfg:artifact:digital:database-bucket",
-  name: "Database Bucket",
-  description: "A set of rows in tables or collections",
-  services: {
-    class_qualname: "mppw.services.artifacts.digital_database_bucket_services:DatabaseBucketServices",
-  },
-}
