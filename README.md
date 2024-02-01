@@ -12,7 +12,7 @@ of the warehouse as well as being a monorepo for integration tests.
 
 For more details installing these basics on WSL, see [`README_WSL.md`](./README_WSL.md).
 
-> If your use case is just to install/deploy released versions of the warehouse, see [`mppw/guide/docs/deploy.md`](./mppw/guide/docs/deploy.md).  The instructions below are for building the data warehouse from source code.
+> If your use case is just to install/deploy released versions of the warehouse, see [`mppw_web/mppw_web/guide/docs/deploy.md`](./mppw_web/mppw_web/guide/docs/deploy.md).  The instructions below are for building the data warehouse from source code.
 
 ## Quickstart
 
