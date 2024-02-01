@@ -12,7 +12,7 @@ of the warehouse as well as being a monorepo for integration tests.
 
 For more details installing these basics on WSL, see [`README_WSL.md`](./README_WSL.md).
 
-> If your use case is just to install/deploy released versions of the warehouse, see [`mppw_web/mppw_web/guide/docs/deploy.md`](https://gitlab.com/composites-maine-edu/advancing-rapid-prototyping/material-process-warehouse-webui/-/blob/main/mppw_web/guide/docs/deploy.md).  The instructions below are for building the data warehouse from source code.
+> If your use case is just to install/deploy released versions of the warehouse, see [`DEPLOY.md`](./DEPLOY.md).  The instructions below are for building the data warehouse from source code.
 
 ## Quickstart
 
@@ -100,8 +100,13 @@ $ poetry run mppw-docker compose-dev down -v
 
 > NOTE be very careful **not** to tear down a production deployment in the same way - it will reset all data!  A password must be specified for production deployments, which provides a level of safety here.  In general, if using docker-compose with production data it is recommended to avoid the use of `down` as containers will be replaced when needed.
 
-## Manage Standard Deployments
+# Attributions
+This work was funded in part by the following projects:
+- Accelerating Rapid Prototyping: Advanced Hardware Development project from the U.S. Army Engineer Research and Development Center. Contract number: W912HZ21C0007P00001
+- Accelerating Rapid Prototyping Phase 3 project - Polymer Naval Vessel and Army Shelter Prototypes that are Large Scale Additive Manufactured.  Other Transaction Agreement Number: W15QKN-17-9-5555, Sub-Agreement Number: C5-21-1011
+- Accelerating Rapid Prototyping Phase 4 project - Polymer Naval Vessel and Army Shelter Prototypes that are Large Scale Additive Manufactured.  Other Transaction Agreement Number: W15QKN-17-9-5555, Sub-Agreement Number: C5-23-1003
 
-See the extended discussion at [`DEPLOY.md`](./DEPLOY.md).
-
-
+# Contributors/Points of Contact
+@gstuder-composites
+@ben1111111111111111111111111111111111111111111111111111111111111111111
+@ngarfield-composites
