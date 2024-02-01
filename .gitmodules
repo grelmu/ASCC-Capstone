@@ -16,3 +16,6 @@
 [submodule "mppw_analysis/material_analysis"]
 	path = mppw_analysis/material_analysis
 	url = git@gitlab.com:composites-maine-edu/advancing-rapid-prototyping/material-analysis-module.git
+[submodule "mppw_clients"]
+	path = mppw_clients
+	url = git@gitlab.com:composites-maine-edu/advancing-rapid-prototyping/material-process-warehouse-clients.git
