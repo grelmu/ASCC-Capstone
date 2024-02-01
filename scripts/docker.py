@@ -60,7 +60,7 @@ def build(*args):
             jupyterhub_dist_dir, ignore_errors=True
         )
 
-        fff_analysis_dir = os.path.join(root_dir, "fff_analysis")
+        fff_analysis_dir = os.path.join(root_dir, "mppw_analysis/laam_analysis")
         subprocess.run(["poetry", "build"], cwd=fff_analysis_dir)
 
         shutil.copytree(
@@ -68,7 +68,7 @@ def build(*args):
             jupyterhub_dist_dir, dirs_exist_ok=True,
         )
 
-        mat_analysis_dir = os.path.join(root_dir, "mat_analysis")
+        mat_analysis_dir = os.path.join(root_dir, "mppw_analysis/material_analysis")
         subprocess.run(["poetry", "build"], cwd=mat_analysis_dir)
 
         shutil.copytree(
@@ -76,7 +76,7 @@ def build(*args):
             jupyterhub_dist_dir, dirs_exist_ok=True
         )
 
-        prop_analysis_dir = os.path.join(root_dir, "prop_analysis")
+        prop_analysis_dir = os.path.join(root_dir, "mppw_analysis/process_property_analysis")
         subprocess.run(["poetry", "build"], cwd=prop_analysis_dir)
 
         shutil.copytree(
