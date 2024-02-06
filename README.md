@@ -110,3 +110,5 @@ This work was funded in part by the following projects:
 @gstuder-composites
 @ben1111111111111111111111111111111111111111111111111111111111111111111
 @ngarfield-composites
+
+Copyright (c) 2024-01-01 University of Maine

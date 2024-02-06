@@ -2,6 +2,7 @@
 name = "mppw"
 version = "0.13.0" 
 description = ""
+license = "GPL-3.0-only"
 authors = ["ASCC <ascc@maine.edu>"]
 
 [tool.poetry.dependencies]
