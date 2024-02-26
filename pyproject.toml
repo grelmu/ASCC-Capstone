@@ -58,6 +58,7 @@ licensecheck = "^2023.5.1"
 testcontainers-mongodb = "^0.0.1rc1"
 papermill = "^2.5.0"
 nbconvert = "^7.14.2"
+stream-zip = "^0.0.71"
 
 [tool.black]
 extend-exclude = '''
