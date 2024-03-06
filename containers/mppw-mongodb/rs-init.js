@@ -16,3 +16,8 @@ if (status.codeName == "NotYetInitialized") {
     config = JSON.parse(_getEnv('MONGO_INITRS_CONFIG'))
     print(JSON.stringify(rs.initiate(config)));
 }
+else if (status.members == undefined) {
+    msg = "Replication state not stable - wait for full startup.";
+    print(msg);
+    throw new Error(msg);
+}
