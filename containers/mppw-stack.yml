@@ -4,12 +4,15 @@ services:
   mppw:
     image: ${MPPW_REPOSITORY_PREFIX}ascc/mppw:${MPPW_VERSION:-dev}
     restart: unless-stopped
+    volumes:
+      - oidc:/etc/oidc
     environment:
       MPPW_ADMIN_USERNAME: ${MPPW_ADMIN_USERNAME:-}
       MPPW_ADMIN_PASSWORD: ${MPPW_ADMIN_PASSWORD:-}
       MONGODB_URL: ${MONGODB_URL:-mongodb://mongodb/mppw?authSource=admin&tls=true&tlsAllowInvalidCertificates=true}
       MONGODB_ADMIN_USERNAME: ${MONGODB_ADMIN_USERNAME:-admin}
       MONGODB_ADMIN_PASSWORD: ${MONGODB_ADMIN_PASSWORD}
+      MPPW_OAUTH_PROVIDERS_DIR: ${MPPW_OAUTH_PROVIDERS_DIR:-/etc/oidc}
 
   mongodb:
     image: ${MPPW_REPOSITORY_PREFIX}ascc/mppw-mongodb:${MPPW_VERSION:-dev}
@@ -61,3 +64,4 @@ volumes:
   data_notebooks:
   data_hub:
   certificates:
+  oidc:
