@@ -123,7 +123,8 @@ c.JupyterHub.admin_access = True
 #    - null: jupyterhub.auth.NullAuthenticator
 #    - pam: jupyterhub.auth.PAMAuthenticator
 #  Default: 'jupyterhub.auth.PAMAuthenticator'
-c.JupyterHub.authenticator_class = 'mppwauth.MppwAuthenticator'
+import mppwauth
+c.JupyterHub.authenticator_class = mppwauth.MppwAuthenticator
 
 ## The base URL of the entire application.
 #  

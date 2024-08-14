@@ -5,6 +5,12 @@ RUN --mount=type=cache,target=/var/cache/apt apt-get update && apt-get install g
 COPY dist /root/dist
 RUN mkdir -p /root/.ssh
 COPY ssh_config /root/.ssh/config
+
+RUN pip install --upgrade pip && pip install poetry
+
+COPY mppwauth /root/mppwauth
+RUN cd /root/mppwauth && poetry build
+RUN --mount=type=ssh --mount=type=cache,target=/root/.cache ["bash", "-c", "pip install /root/mppwauth/dist/*.whl"]
 RUN --mount=type=ssh --mount=type=cache,target=/root/.cache ["bash", "-c", "pip install /root/dist/*.whl"]
 
 RUN pip install pkginfo
@@ -12,9 +18,6 @@ RUN mkdir -p /etc/skel/notebooks
 RUN touch /etc/skel/notebooks/.touch
 COPY skel_notebooks.py /root/dist/skel_notebooks.py
 RUN python3 /root/dist/skel_notebooks.py
-
-COPY mppwauth /root/mppwauth
-RUN pip install /root/mppwauth
 
 COPY jupyterhub_config.py ./jupyterhub_config.py
 
