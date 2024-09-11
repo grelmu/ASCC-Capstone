@@ -52,6 +52,7 @@ requests-toolbelt = "^1"
 
 [tool.poetry.scripts]
 mppw_docker = "scripts.docker:main"
+mppw-docker = "scripts.docker:main"
 
 [tool.poetry.group.dev.dependencies]
 licensecheck = "^2023.5.1"
