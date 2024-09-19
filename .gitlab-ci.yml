@@ -1,0 +1,80 @@
+# DRAGONS: Note that the current Gitlab "latest" python CI uses deprecated
+# YAML syntax.  This version attempts to document best-practice CI syntax
+
+# List of stages for jobs, and their order of execution
+stages:
+  - build
+  - test
+  - deploy
+
+# Added to every job as env vars
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  # Tell docker CLI how to talk to Docker daemon; see
+  # https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker-executor
+  DOCKER_HOST: tcp://docker:2375/
+  # Use the overlayfs driver for improved performance:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+
+# Added to every job unless explicitly overridden
+default:
+  image: python:3.8.3
+  services:
+    - docker:dind
+  cache:
+    paths:
+      - .cache/pip
+  before_script:
+    - echo "Running before-script steps..."
+    - pip install poetry
+    - poetry install
+    # SSH
+    - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
+    - eval $(ssh-agent -s)
+    - chmod 400 "$SSH_PRIVATE_KEY"
+    - ssh-add "$SSH_PRIVATE_KEY"
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    # END SSH
+    # SUBMODULES
+    - 'command -v git >/dev/null || ( apt-get update -y && apt-get install git -y )'
+    - git submodule update --init --recursive
+    # END SUBMODULES
+    - echo "Done running before-script steps."
+  after_script:
+    - echo "Running after-script steps..."
+    # noop
+    - echo "Done running after-script steps."
+
+build-job:
+  stage: build
+  script:
+    - echo "Building the containers..."
+    - ./.gitlab-ci/install_docker_cli.debian.sh
+    - docker --version
+    - docker container ls
+    - poetry run mppw-docker build
+    - echo "Build complete."
+
+test-job:
+  stage: test
+  script:
+    - echo "Running tests..."
+    # - poetry run pytest
+    - echo "Done running tests."
+
+# Note that jobs in the same stage can run in parallel without dependencies
+lint-job:
+  stage: test
+  script:
+    - echo "Checking code standards..."
+    - # noop
+    - echo "Done enforcing code standards."
+
+deploy-job: # This job runs in the deploy stage.
+  stage: deploy # It only runs when *both* jobs in the test stage complete successfully.
+  script:
+    - echo "Deploying application..."
+    # noop
+    - echo "Done deploying application."
