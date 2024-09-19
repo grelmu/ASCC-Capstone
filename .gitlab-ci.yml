@@ -27,20 +27,23 @@ default:
       - .cache/pip
   before_script:
     - echo "Running before-script steps..."
-    - pip install poetry
-    - poetry install
+    # SYSTEM
+    - ./.gitlab-ci/install_sshgit.debian.sh
+    - ./.gitlab-ci/install_docker_cli.debian.sh
     # SSH
-    - "command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )"
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh && touch ~/.ssh/known_hosts && chmod 600 ~/.ssh/known_hosts
     - eval $(ssh-agent -s)
-    - chmod 400 "$SSH_PRIVATE_KEY"
-    - ssh-add "$SSH_PRIVATE_KEY"
-    - mkdir -p ~/.ssh
-    - chmod 700 ~/.ssh
-    # END SSH
+    # SSH HOSTS
+    - ssh-keyscan gitlab.com >> ~/.ssh/known_hosts
+    - cat ~/.ssh/known_hosts
+    # SSH KEYS
+    - chmod 400 "$SSH_ID_CI_ARP" && ssh-add "$SSH_ID_CI_ARP"
+    - ssh-add -L
     # SUBMODULES
-    - "command -v git >/dev/null || ( apt-get update -y && apt-get install git -y )"
     - git submodule update --init --recursive
-    # END SUBMODULES
+    # PYTHON
+    - pip install poetry
+    # END
     - echo "Done running before-script steps."
   after_script:
     - echo "Running after-script steps..."
@@ -51,9 +54,9 @@ build-job:
   stage: build
   script:
     - echo "Building the containers..."
-    - ./.gitlab-ci/install_docker_cli.debian.sh
     - docker --version
     - docker container ls
+    - poetry install
     - poetry run mppw-docker build
     - echo "Build complete."
 
