@@ -4,8 +4,8 @@
 # List of stages for jobs, and their order of execution
 stages:
   - build
-  - test
-  - deploy
+  # - test
+  # - deploy
 
 # Added to every job as env vars
 variables:
@@ -60,24 +60,24 @@ build-job:
     - poetry run mppw-docker build
     - echo "Build complete."
 
-test-job:
-  stage: test
-  script:
-    - echo "Running tests..."
-    # - poetry run pytest
-    - echo "Done running tests."
+# test-job:
+#   stage: test
+#   script:
+#     - echo "Running tests..."
+#     # - poetry run pytest
+#     - echo "Done running tests."
 
-# Note that jobs in the same stage can run in parallel without dependencies
-lint-job:
-  stage: test
-  script:
-    - echo "Checking code standards..."
-    # noop
-    - echo "Done enforcing code standards."
+# # Note that jobs in the same stage can run in parallel without dependencies
+# lint-job:
+#   stage: test
+#   script:
+#     - echo "Checking code standards..."
+#     # noop
+#     - echo "Done enforcing code standards."
 
-deploy-job: # This job runs in the deploy stage.
-  stage: deploy # It only runs when *both* jobs in the test stage complete successfully.
-  script:
-    - echo "Deploying application..."
-    # noop
-    - echo "Done deploying application."
+# deploy-job: # This job runs in the deploy stage.
+#   stage: deploy # It only runs when *both* jobs in the test stage complete successfully.
+#   script:
+#     - echo "Deploying application..."
+#     # noop
+#     - echo "Done deploying application."
