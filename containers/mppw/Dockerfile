@@ -37,4 +37,8 @@ COPY dist/$PACKAGE_NAME-stack.yml compose.dev.yml
 RUN pip install docker-compose==1.29.2
 ENV COMPOSE_PROJECT_NAME=$PACKAGE_NAME-stack
 
-CMD ["uvicorn", "--host", "0.0.0.0", "mppw.main:app"]
+RUN pip install gunicorn[gevent]
+CMD ["gunicorn", "-w", "3", "-b", "0.0.0.0", "-k", "uvicorn.workers.UvicornWorker", "mppw.main:app"]
+
+
+#CMD ["uvicorn", "--host", "0.0.0.0", "mppw.main:app"]

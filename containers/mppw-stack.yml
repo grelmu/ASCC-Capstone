@@ -6,6 +6,8 @@ services:
     restart: unless-stopped
     volumes:
       - oidc:/etc/oidc
+      - type: tmpfs
+        target: /tmp
     environment:
       MPPW_ADMIN_USERNAME: ${MPPW_ADMIN_USERNAME:-}
       MPPW_ADMIN_PASSWORD: ${MPPW_ADMIN_PASSWORD:-}
@@ -13,6 +15,24 @@ services:
       MONGODB_ADMIN_USERNAME: ${MONGODB_ADMIN_USERNAME:-admin}
       MONGODB_ADMIN_PASSWORD: ${MONGODB_ADMIN_PASSWORD}
       MPPW_OAUTH_PROVIDERS_DIR: ${MPPW_OAUTH_PROVIDERS_DIR:-/etc/oidc}
+    #command: bash -c 'cd local && gunicorn -w 3 -b 0.0.0.0 --log-level=debug --access-logfile="-" -k uvicorn.workers.UvicornWorker mppw.main:app'
+    command: "bash -c 'cd local && uvicorn --host 0.0.0.0 --log-level debug mppw.main:app'"
+
+  mppw-two:
+    image: ${MPPW_REPOSITORY_PREFIX}ascc/mppw:${MPPW_VERSION:-dev}
+    restart: unless-stopped
+    volumes:
+      - oidc:/etc/oidc
+      - type: tmpfs
+        target: /tmp
+    environment:
+      MPPW_ADMIN_USERNAME: ${MPPW_ADMIN_USERNAME:-}
+      MPPW_ADMIN_PASSWORD: ${MPPW_ADMIN_PASSWORD:-}
+      MONGODB_URL: ${MONGODB_URL:-mongodb://mongodb/mppw?authSource=admin&tls=true&tlsAllowInvalidCertificates=true}
+      MONGODB_ADMIN_USERNAME: ${MONGODB_ADMIN_USERNAME:-admin}
+      MONGODB_ADMIN_PASSWORD: ${MONGODB_ADMIN_PASSWORD}
+      MPPW_OAUTH_PROVIDERS_DIR: ${MPPW_OAUTH_PROVIDERS_DIR:-/etc/oidc}
+    command: bash -c 'cd local && gunicorn -w 3 -b 0.0.0.0 --log-level=debug --access-logfile="-" -k uvicorn.workers.UvicornWorker mppw.main:app'
 
   mongodb:
     image: ${MPPW_REPOSITORY_PREFIX}ascc/mppw-mongodb:${MPPW_VERSION:-dev}
