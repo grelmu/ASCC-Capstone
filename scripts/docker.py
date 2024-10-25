@@ -12,7 +12,7 @@ dist_dir = os.path.join(root_dir, "dist")
 containers_dir = os.path.join(root_dir, "containers")
 
 
-def build(*args):
+def build(*args, pre_release=None):
 
     project = None
     with open("pyproject.toml") as f:
@@ -20,6 +20,9 @@ def build(*args):
 
     project_name = project["tool"]["poetry"]["name"]
     project_version = project["tool"]["poetry"]["version"]
+    tag = project_version
+    if pre_release is not None:
+        tag += f"-{pre_release}"
 
     os.environ["DOCKER_BUILDKIT"] = "1"
 
@@ -34,7 +37,7 @@ def build(*args):
                 "--tag",
                 f"ascc/{project_name}-nginx:dev",
                 "--tag",
-                f"ascc/{project_name}-nginx:{project_version}",
+                f"ascc/{project_name}-nginx:{tag}",
             ]
         )
 
@@ -49,23 +52,22 @@ def build(*args):
                 "--tag",
                 f"ascc/{project_name}-mongodb:dev",
                 "--tag",
-                f"ascc/{project_name}-mongodb:{project_version}",
+                f"ascc/{project_name}-mongodb:{tag}",
             ]
         )
 
     if not args or "jupyterhub" in args or "mppw-jupyterhub" in args:
 
         jupyterhub_dist_dir = os.path.join(containers_dir, "mppw-jupyterhub", "dist")
-        shutil.rmtree(
-            jupyterhub_dist_dir, ignore_errors=True
-        )
+        shutil.rmtree(jupyterhub_dist_dir, ignore_errors=True)
 
         fff_analysis_dir = os.path.join(root_dir, "mppw_analysis/laam_analysis")
         subprocess.run(["poetry", "build"], cwd=fff_analysis_dir)
 
         shutil.copytree(
             os.path.join(fff_analysis_dir, "dist"),
-            jupyterhub_dist_dir, dirs_exist_ok=True,
+            jupyterhub_dist_dir,
+            dirs_exist_ok=True,
         )
 
         mat_analysis_dir = os.path.join(root_dir, "mppw_analysis/material_analysis")
@@ -73,15 +75,19 @@ def build(*args):
 
         shutil.copytree(
             os.path.join(mat_analysis_dir, "dist"),
-            jupyterhub_dist_dir, dirs_exist_ok=True
+            jupyterhub_dist_dir,
+            dirs_exist_ok=True,
         )
 
-        prop_analysis_dir = os.path.join(root_dir, "mppw_analysis/process_property_analysis")
+        prop_analysis_dir = os.path.join(
+            root_dir, "mppw_analysis/process_property_analysis"
+        )
         subprocess.run(["poetry", "build"], cwd=prop_analysis_dir)
 
         shutil.copytree(
             os.path.join(prop_analysis_dir, "dist"),
-            jupyterhub_dist_dir, dirs_exist_ok=True
+            jupyterhub_dist_dir,
+            dirs_exist_ok=True,
         )
 
         subprocess.run(
@@ -94,31 +100,27 @@ def build(*args):
                 "--tag",
                 f"ascc/{project_name}-jupyterhub:dev",
                 "--tag",
-                f"ascc/{project_name}-jupyterhub:{project_version}",
+                f"ascc/{project_name}-jupyterhub:{tag}",
             ]
         )
 
     if not args or "mppw" in args:
 
         mppw_dist_dir = os.path.join(containers_dir, "mppw", "dist")
-        shutil.rmtree(
-            mppw_dist_dir, ignore_errors=True
-        )
+        shutil.rmtree(mppw_dist_dir, ignore_errors=True)
 
         mppw_dir = os.path.join(root_dir, "mppw")
         subprocess.run(["poetry", "build"], cwd=mppw_dir)
 
         shutil.copytree(
-            os.path.join(mppw_dir, "dist"),
-            mppw_dist_dir, dirs_exist_ok=True
+            os.path.join(mppw_dir, "dist"), mppw_dist_dir, dirs_exist_ok=True
         )
 
         mppw_web_dir = os.path.join(root_dir, "mppw_web")
         subprocess.run(["poetry", "build"], cwd=mppw_web_dir)
 
         shutil.copytree(
-            os.path.join(mppw_web_dir, "dist"),
-            mppw_dist_dir, dirs_exist_ok=True
+            os.path.join(mppw_web_dir, "dist"), mppw_dist_dir, dirs_exist_ok=True
         )
 
         # mppw_clients_dir = os.path.join(root_dir, "mppw_clients")
@@ -136,6 +138,10 @@ def build(*args):
             os.path.join(containers_dir, f"{project_name}-stack.dev.yml"),
             os.path.join(containers_dir, project_name, "dist"),
         )
+        shutil.copy(
+            os.path.join(containers_dir, f"{project_name}-stack.bmark.yml"),
+            os.path.join(containers_dir, project_name, "dist"),
+        )
 
         subprocess.run(
             [
@@ -151,12 +157,12 @@ def build(*args):
                 "--tag",
                 f"ascc/{project_name}:dev",
                 "--tag",
-                f"ascc/{project_name}:{project_version}",
+                f"ascc/{project_name}:{tag}",
             ]
         )
 
     if not args or "registry" in args or "mppw-registry" in args:
-        
+
         subprocess.run(
             [
                 "docker",
@@ -167,9 +173,10 @@ def build(*args):
                 "--tag",
                 f"ascc/{project_name}-registry:dev",
                 "--tag",
-                f"ascc/{project_name}-registry:{project_version}",
+                f"ascc/{project_name}-registry:{tag}",
             ]
         )
+
 
 def compose():
 
@@ -192,10 +199,12 @@ def compose_dev():
     os.environ.setdefault("MONGODB_ADMIN_USERNAME", "admin")
     os.environ.setdefault("MONGODB_ADMIN_PASSWORD", "password")
     os.environ.setdefault(
-        "MPPW_LOCAL_PACKAGE_DIR", os.path.abspath(os.path.join(root_dir, "mppw", "mppw"))
+        "MPPW_LOCAL_PACKAGE_DIR",
+        os.path.abspath(os.path.join(root_dir, "mppw", "mppw")),
     )
     os.environ.setdefault(
-        "MPPW_WEB_LOCAL_PACKAGE_DIR", os.path.abspath(os.path.join(root_dir, "mppw_web", "mppw_web"))
+        "MPPW_WEB_LOCAL_PACKAGE_DIR",
+        os.path.abspath(os.path.join(root_dir, "mppw_web", "mppw_web")),
     )
 
     subprocess.run(
@@ -211,6 +220,36 @@ def compose_dev():
         + sys.argv[2:]
     )
 
+
+def compose_bmark():
+
+    os.environ.setdefault("MPPW_EXTERNAL_PORT", "8000")
+    os.environ.setdefault("MONGODB_EXTERNAL_PORT", "27027")
+    os.environ.setdefault("MONGODB_ADMIN_USERNAME", "admin")
+    os.environ.setdefault("MONGODB_ADMIN_PASSWORD", "password")
+    os.environ.setdefault(
+        "MPPW_LOCAL_PACKAGE_DIR",
+        os.path.abspath(os.path.join(root_dir, "mppw", "mppw")),
+    )
+    os.environ.setdefault(
+        "MPPW_WEB_LOCAL_PACKAGE_DIR",
+        os.path.abspath(os.path.join(root_dir, "mppw_web", "mppw_web")),
+    )
+
+    subprocess.run(
+        [
+            "docker-compose",
+            "-p",
+            "mppw-bmark",
+            "-f",
+            os.path.join(containers_dir, "mppw-stack.yml"),
+            "-f",
+            os.path.join(containers_dir, "mppw-stack.bmark.yml"),
+        ]
+        + sys.argv[2:]
+    )
+
+
 def compose_registry(dev=True):
 
     subprocess.run(
@@ -220,15 +259,20 @@ def compose_registry(dev=True):
             "mppw-registry" + ("-dev" if dev else ""),
             "-f",
             os.path.join(containers_dir, "mppw-registry.yml"),
-        ] +
-        ([
-            "-f",
-            os.path.join(containers_dir, "mppw-registry.dev.yml"),
-        ] if dev else [])
+        ]
+        + (
+            [
+                "-f",
+                os.path.join(containers_dir, "mppw-registry.dev.yml"),
+            ]
+            if dev
+            else []
+        )
         + sys.argv[2:]
     )
 
-def push(repository: str, *images):
+
+def push(repository: str, *images, pre_release=None):
 
     project = None
     with open("pyproject.toml") as f:
@@ -238,18 +282,32 @@ def push(repository: str, *images):
     project_version = project["tool"]["poetry"]["version"]
 
     for image in ["mppw", "mongodb", "nginx", "jupyterhub", "registry"]:
-        
+
         if images and (image not in images and f"mppw-{image}" not in images):
             continue
 
         image = f"ascc/mppw-{image}" if image != "mppw" else f"ascc/{image}"
 
-        for tag in ["dev", project_version]:
+        tag = project_version
+        if pre_release is not None:
+            tag += f"-{pre_release}"
 
-            subprocess.run(["docker", "image", "tag",
-                f"{image}:{tag}", f"{repository}/{image}:{tag}"])
+        for next_tag in ["dev", tag] if pre_release is None else [tag]:
 
-            subprocess.run(["docker", "image", "push", f"{repository}/{image}:{tag}"])
+            subprocess.run(
+                [
+                    "docker",
+                    "image",
+                    "tag",
+                    f"{image}:{next_tag}",
+                    f"{repository}/{image}:{next_tag}",
+                ]
+            )
+
+            subprocess.run(
+                ["docker", "image", "push", f"{repository}/{image}:{next_tag}"]
+            )
+
 
 def tunnel():
 
@@ -281,6 +339,8 @@ def main():
         compose()
     elif sys.argv[1] == "compose-dev":
         compose_dev()
+    elif sys.argv[1] == "compose-bmark":
+        compose_bmark()
     elif sys.argv[1] == "compose-registry":
         compose_registry(dev=False)
     elif sys.argv[1] == "compose-registry-dev":

@@ -33,8 +33,12 @@ RUN --mount=type=ssh --mount=type=cache,target=/root/.cache pip install $PACKAGE
 RUN --mount=type=ssh --mount=type=cache,target=/root/.cache pip install ${PACKAGE_NAME}_web-$PACKAGE_VERSION-py3-none-any.whl
 
 COPY dist/$PACKAGE_NAME-stack.yml compose.yml
-COPY dist/$PACKAGE_NAME-stack.yml compose.dev.yml
+COPY dist/$PACKAGE_NAME-stack.dev.yml compose.dev.yml
+COPY dist/$PACKAGE_NAME-stack.bmark.yml compose.bmark.yml
+
 RUN pip install docker-compose==1.29.2
 ENV COMPOSE_PROJECT_NAME=$PACKAGE_NAME-stack
 
+RUN pip install gunicorn[gevent]
+#CMD ["gunicorn", "-w", "3", "-b", "0.0.0.0", "-k", "uvicorn.workers.UvicornWorker", "mppw.main:app"]
 CMD ["uvicorn", "--host", "0.0.0.0", "mppw.main:app"]
