@@ -1,6 +1,5 @@
 version: "3.8"
 services:
-
   mppw:
     image: ${MPPW_REPOSITORY_PREFIX}ascc/mppw:${MPPW_VERSION:-dev}
     restart: unless-stopped
@@ -16,7 +15,6 @@ services:
       MONGODB_ADMIN_PASSWORD: ${MONGODB_ADMIN_PASSWORD}
       MPPW_OAUTH_PROVIDERS_DIR: ${MPPW_OAUTH_PROVIDERS_DIR:-/etc/oidc}
       WEB_CONCURRENCY: ${MPPW_NUM_WORKERS:-3}
-    command: "bash -c 'cd local && uvicorn --host 0.0.0.0 --log-level debug mppw.main:app'"
 
   mongodb:
     image: ${MPPW_REPOSITORY_PREFIX}ascc/mppw-mongodb:${MPPW_VERSION:-dev}
@@ -33,7 +31,18 @@ services:
       MONGO_INITDB_DATABASE: admin
       MONGO_INITRS_CONFIG: '{ "_id": "${MONGODB_INITRS_NAME:-mppw0}", "version": 1,  "members": [{ "_id": 0, "host": "mongodb:27017"}] }'
       MONGO_INITRS_TLS: 1
-    command: ["mongod", "--tlsMode", "preferTLS", "--tlsCertificateKeyFile", "/etc/certificates/mongodb/key-cert.pem", "--replSet", "${MONGODB_INITRS_NAME:-mppw0}", "--keyFile", "/etc/certificates/mongodb/root-password-keyfile.key"]
+    command:
+      [
+        "mongod",
+        "--tlsMode",
+        "preferTLS",
+        "--tlsCertificateKeyFile",
+        "/etc/certificates/mongodb/key-cert.pem",
+        "--replSet",
+        "${MONGODB_INITRS_NAME:-mppw0}",
+        "--keyFile",
+        "/etc/certificates/mongodb/root-password-keyfile.key",
+      ]
 
   jupyterhub:
     image: ${MPPW_REPOSITORY_PREFIX}ascc/mppw-jupyterhub:${MPPW_VERSION:-dev}

@@ -9,6 +9,7 @@ services:
     volumes:
       - "${MPPW_LOCAL_PACKAGE_DIR:-./mppw/mppw}:/local/mppw"
       - "${MPPW_WEB_LOCAL_PACKAGE_DIR:-./mppw_web/mppw_web}:/local/mppw_web"
+    command: "bash -c 'cd local && uvicorn --host 0.0.0.0 --log-level debug mppw.main:app'"
 
   jupyterhub:
     ports:
