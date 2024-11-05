@@ -182,7 +182,8 @@ def compose():
 
     subprocess.run(
         [
-            "docker-compose",
+            "docker",
+            "compose",
             "-p",
             "mppw",
             "-f",
@@ -209,7 +210,8 @@ def compose_dev():
 
     subprocess.run(
         [
-            "docker-compose",
+            "docker",
+            "compose",
             "-p",
             "mppw-dev",
             "-f",
@@ -238,7 +240,8 @@ def compose_bmark():
 
     subprocess.run(
         [
-            "docker-compose",
+            "docker",
+            "compose",
             "-p",
             "mppw-bmark",
             "-f",
@@ -254,7 +257,8 @@ def compose_registry(dev=True):
 
     subprocess.run(
         [
-            "docker-compose",
+            "docker",
+            "compose",
             "-p",
             "mppw-registry" + ("-dev" if dev else ""),
             "-f",
