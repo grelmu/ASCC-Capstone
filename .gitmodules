@@ -3,7 +3,7 @@
 	url = git@gitlab.com:composites-maine-edu/advancing-rapid-prototyping/material-process-warehouse-api.git
 [submodule "mppw_web"]
 	path = mppw_web
-	url = git@gitlab.com:composites-maine-edu/advancing-rapid-prototyping/material-process-warehouse-webui.git
+	url = git@gitlab.com:norus04/mppw-web-fork.git
 [submodule "mppw_analysis/laam_image_analysis"]
 	path = mppw_analysis/laam_image_analysis
 	url = git@gitlab.com:composites-maine-edu/advancing-rapid-prototyping/laam-image-analysis-module.git
